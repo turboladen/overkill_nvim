@@ -1,0 +1,3 @@
+[workspace]
+members = ["neovim-sys", "neovim"]
+resolver = "2"
