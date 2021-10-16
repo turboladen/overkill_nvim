@@ -110,6 +110,13 @@ impl Drop for Dictionary {
     }
 }
 
+impl Clone for Dictionary {
+    fn clone(&self) -> Self {
+        unsafe { helpers::copy_dictionary(*self) }
+    }
+}
+
+#[derive(Clone)]
 #[repr(C)]
 pub struct KeyValuePair {
     pub key: String,
