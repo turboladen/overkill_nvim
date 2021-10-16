@@ -9,7 +9,7 @@ extern "C" {
     pub fn nvim_get_mode() -> Dictionary;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 #[repr(C)]
 pub struct Object {
     pub object_type: ObjectType,
@@ -19,6 +19,12 @@ pub struct Object {
 impl Object {
     pub fn new(object_type: ObjectType, data: ObjectData) -> Self {
         Self { object_type, data }
+    }
+}
+
+impl Drop for Object {
+    fn drop(&mut self) {
+        unsafe { helpers::api_free_object(*self) }
     }
 }
 
@@ -40,7 +46,7 @@ pub enum ObjectType {
     // kObjectTypeTabpage,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 #[repr(C)]
 pub union ObjectData {
     pub boolean: Boolean,
@@ -57,7 +63,7 @@ pub type Integer = i64;
 pub type Float = f64;
 pub type LuaRef = isize;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 #[repr(C)]
 pub struct Array {
     items: *const Object,
@@ -75,7 +81,12 @@ impl Default for Array {
     }
 }
 
-#[derive(Clone, Copy)]
+impl Drop for Array {
+    fn drop(&mut self) {
+        unsafe { helpers::api_free_array(*self) }
+    }
+}
+
 #[repr(C)]
 pub struct Dictionary {
     pub items: *const KeyValuePair,
@@ -83,18 +94,29 @@ pub struct Dictionary {
     pub capacity: usize,
 }
 
-#[derive(Clone, Copy)]
+impl Drop for Dictionary {
+    fn drop(&mut self) {
+        unsafe { helpers::api_free_dictionary(*self) }
+    }
+}
+
 #[repr(C)]
 pub struct KeyValuePair {
     pub key: String,
     pub value: Object,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 #[repr(C)]
 pub struct String {
     pub data: *const c_char,
     pub size: usize,
+}
+
+impl Drop for String {
+    fn drop(&mut self) {
+        unsafe { helpers::api_free_string(*self) }
+    }
 }
 
 #[repr(C)]
