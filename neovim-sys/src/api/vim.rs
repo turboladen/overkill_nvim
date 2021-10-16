@@ -1,3 +1,4 @@
+use super::{buffer::Buffer, helpers};
 use std::os::raw::c_char;
 
 extern "C" {
@@ -7,6 +8,19 @@ extern "C" {
     pub fn nvim_feedkeys(keys: self::String, mode: self::String, escape_csi: Boolean);
 
     pub fn nvim_get_mode() -> Dictionary;
+    pub fn nvim_get_current_buf() -> Buffer;
+    pub fn nvim_replace_termcodes(
+        s: String,
+        from_part: Boolean,
+        do_lt: Boolean,
+        special: Boolean,
+    ) -> String;
+
+    pub fn nvim_exec(src: String, output: Boolean, err: *mut Error) -> String;
+
+    pub fn nvim_set_hl(namespace_id: Integer, name: String, val: Dictionary, err: *mut Error);
+    pub fn nvim_get_namespaces() -> Dictionary;
+    pub fn nvim_create_namespace(name: String) -> Integer;
 }
 
 #[derive(Clone)]

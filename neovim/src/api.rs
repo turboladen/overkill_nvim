@@ -1,13 +1,14 @@
+pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef};
+
+use neovim_sys::api::vim::{self, Array, ObjectType};
 use std::borrow::Cow;
 
-use neovim_sys::api::vim::{self, Array, Boolean, Float, Integer, LuaRef, ObjectType};
-
-pub enum Object {
+pub enum Object<'a> {
     Nil,
     Boolean(Boolean),
     Integer(Integer),
     Float(Float),
-    String(String),
+    String(String<'a>),
     Array(Array),
     Dictionary(Dictionary),
     LuaRef(LuaRef),
@@ -16,7 +17,7 @@ pub enum Object {
     // Tabpage,
 }
 
-impl From<vim::Object> for Object {
+impl<'a> From<vim::Object> for Object<'a> {
     fn from(api_object: vim::Object) -> Self {
         unsafe {
             match api_object.object_type {
@@ -24,7 +25,9 @@ impl From<vim::Object> for Object {
                 ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.data.boolean),
                 ObjectType::kObjectTypeInteger => Self::Integer(api_object.data.integer),
                 ObjectType::kObjectTypeFloat => Self::Float(api_object.data.floating),
-                ObjectType::kObjectTypeString => Self::String(String::new(api_object.data.string)),
+                ObjectType::kObjectTypeString => {
+                    Self::String(String::new(Cow::Owned(api_object.data.string)))
+                }
                 ObjectType::kObjectTypeArray => Self::Array(api_object.data.array),
                 ObjectType::kObjectTypeDictionary => Self::Dictionary(Dictionary {
                     inner: api_object.data.dictionary,
@@ -35,6 +38,28 @@ impl From<vim::Object> for Object {
     }
 }
 
+impl<'a, 'b: 'a> From<&'b vim::Object> for Object<'a> {
+    fn from(api_object: &'b vim::Object) -> Self {
+        unsafe {
+            match api_object.object_type {
+                ObjectType::kObjectTypeNil => Self::Nil,
+                ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.data.boolean),
+                ObjectType::kObjectTypeInteger => Self::Integer(api_object.data.integer),
+                ObjectType::kObjectTypeFloat => Self::Float(api_object.data.floating),
+                ObjectType::kObjectTypeString => {
+                    Self::String(String::new(Cow::Borrowed(&api_object.data.string)))
+                }
+                ObjectType::kObjectTypeArray => Self::Array(api_object.data.array),
+                ObjectType::kObjectTypeDictionary => Self::Dictionary(Dictionary {
+                    inner: api_object.data.dictionary,
+                }),
+                ObjectType::kObjectTypeLuaRef => Self::LuaRef(api_object.data.luaref),
+            }
+        }
+    }
+}
+
+#[derive(Default)]
 pub struct Dictionary {
     inner: vim::Dictionary,
 }
@@ -44,44 +69,54 @@ impl Dictionary {
         Self { inner }
     }
 
-    pub fn get(&self, key: &str) -> Option<Object> {
-        self.kvs_as_slice()
-            .iter()
-            .map(|kv| KeyValuePair::new(Cow::Borrowed(kv)))
-            .find(|kv| kv.key() == key)
-            .map(|kv| kv.value())
+    pub fn get<'b>(&'b self, key: &str) -> Option<Object<'b>> {
+        self.iter().find(|(k, _)| k.as_str() == key).map(|(_, v)| v)
+    }
+
+    pub fn iter(&self) -> DictionaryIter<'_> {
+        DictionaryIter {
+            kv_iter: self.kvs_as_slice().iter(),
+        }
     }
 
     fn kvs_as_slice(&self) -> &[vim::KeyValuePair] {
         unsafe { std::slice::from_raw_parts(self.inner.items, self.inner.size) }
     }
 
-}
-
-pub struct KeyValuePair<'a> {
-    inner: Cow<'a, vim::KeyValuePair>,
-}
-
-impl<'a> KeyValuePair<'a> {
-    pub fn new(inner: Cow<'a, vim::KeyValuePair>) -> Self {
-        Self { inner }
+    pub fn inner(&self) -> vim::Dictionary {
+        self.inner
     }
 
-    pub fn key(&self) -> &str {
-        String::new(self.inner.key).as_str()
+    pub fn inner_ref(&self) -> &vim::Dictionary {
+        &self.inner
     }
 
-    pub fn value(&self) -> Object {
-        todo!()
+    pub fn inner_mut(&mut self) -> &mut vim::Dictionary {
+        &mut self.inner
     }
 }
 
-pub struct String {
-    inner: vim::String,
+pub struct DictionaryIter<'a> {
+    kv_iter: std::slice::Iter<'a, vim::KeyValuePair>,
 }
 
-impl String {
-    pub fn new(inner: vim::String) -> Self {
+impl<'a> Iterator for DictionaryIter<'a> {
+    type Item = (String<'a>, Object<'a>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.kv_iter
+            .next()
+            .map(|kv| (String::new(Cow::Borrowed(&kv.key)), Object::from(&kv.value)))
+    }
+}
+
+#[derive(Clone)]
+pub struct String<'a> {
+    inner: Cow<'a, vim::String>,
+}
+
+impl<'a> String<'a> {
+    pub fn new(inner: Cow<'a, vim::String>) -> Self {
         Self { inner }
     }
 
