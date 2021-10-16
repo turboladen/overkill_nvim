@@ -94,6 +94,16 @@ pub struct Dictionary {
     pub capacity: usize,
 }
 
+impl Default for Dictionary {
+    fn default() -> Self {
+        Self {
+            items: std::ptr::null(),
+            size: 0,
+            capacity: 0,
+        }
+    }
+}
+
 impl Drop for Dictionary {
     fn drop(&mut self) {
         unsafe { helpers::api_free_dictionary(*self) }
