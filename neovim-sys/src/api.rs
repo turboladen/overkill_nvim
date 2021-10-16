@@ -1,10 +1,5 @@
-pub mod helpers;
+//!
+//! This module really only exists just to mimic neovim's file structre: `neovim/src/api/`
+//!
+pub mod buffer;
 pub mod vim;
-
-// pub mod private {
-//     pub struct Array {
-//         items: *const Object,
-//         size: usize,
-//         capacity: usize
-//     }
-// }
