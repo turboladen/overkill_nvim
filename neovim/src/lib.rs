@@ -94,11 +94,13 @@ pub fn nvim_get_mode() -> Mode {
     //
     let d = Dictionary::new(unsafe { sys::api::vim::nvim_get_mode() });
 
-    if let Some(Object::String(mode)) = d.get("mode") {
+    let mode = if let Some(Object::String(mode)) = d.get("mode") {
         Mode::from(mode.as_str())
     } else {
         Mode::Normal
-    }
+    };
+
+    mode
 }
 
 pub fn nvim_replace_termcodes(

@@ -23,7 +23,6 @@ extern "C" {
     pub fn nvim_create_namespace(name: String) -> Integer;
 }
 
-#[derive(Clone)]
 #[repr(C)]
 pub struct Object {
     pub object_type: ObjectType,
@@ -34,13 +33,19 @@ impl Object {
     pub fn new(object_type: ObjectType, data: ObjectData) -> Self {
         Self { object_type, data }
     }
-}
 
-impl Drop for Object {
-    fn drop(&mut self) {
-        unsafe { helpers::api_free_object(*self) }
+    pub fn free(self) {
+        unsafe { helpers::api_free_object(self) }
     }
 }
+
+impl Clone for Object {
+    fn clone(&self) -> Self {
+        unsafe { helpers::copy_object(*self) }
+    }
+}
+
+impl Copy for Object {}
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
@@ -60,7 +65,7 @@ pub enum ObjectType {
     // kObjectTypeTabpage,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub union ObjectData {
     pub boolean: Boolean,
@@ -77,12 +82,17 @@ pub type Integer = i64;
 pub type Float = f64;
 pub type LuaRef = isize;
 
-#[derive(Clone)]
 #[repr(C)]
 pub struct Array {
     items: *const Object,
     size: usize,
     capacity: usize,
+}
+
+impl Array {
+    pub fn free(self) {
+        unsafe { helpers::api_free_array(self) }
+    }
 }
 
 impl Default for Array {
@@ -95,17 +105,25 @@ impl Default for Array {
     }
 }
 
-impl Drop for Array {
-    fn drop(&mut self) {
-        unsafe { helpers::api_free_array(*self) }
+impl Clone for Array {
+    fn clone(&self) -> Self {
+        unsafe { helpers::copy_array(*self) }
     }
 }
+
+impl Copy for Array {}
 
 #[repr(C)]
 pub struct Dictionary {
     pub items: *const KeyValuePair,
     pub size: usize,
     pub capacity: usize,
+}
+
+impl Dictionary {
+    pub fn free(self) {
+        unsafe { helpers::api_free_dictionary(self) }
+    }
 }
 
 impl Default for Dictionary {
@@ -118,17 +136,13 @@ impl Default for Dictionary {
     }
 }
 
-impl Drop for Dictionary {
-    fn drop(&mut self) {
-        unsafe { helpers::api_free_dictionary(*self) }
-    }
-}
-
 impl Clone for Dictionary {
     fn clone(&self) -> Self {
         unsafe { helpers::copy_dictionary(*self) }
     }
 }
+
+impl Copy for Dictionary {}
 
 #[derive(Clone)]
 #[repr(C)]
@@ -137,18 +151,25 @@ pub struct KeyValuePair {
     pub value: Object,
 }
 
-#[derive(Clone)]
 #[repr(C)]
 pub struct String {
     pub data: *const c_char,
     pub size: usize,
 }
 
-impl Drop for String {
-    fn drop(&mut self) {
-        unsafe { helpers::api_free_string(*self) }
+impl String {
+    pub fn free(self) {
+        unsafe { helpers::api_free_string(self) }
     }
 }
+
+impl Clone for String {
+    fn clone(&self) -> Self {
+        unsafe { helpers::copy_string(*self) }
+    }
+}
+
+impl Copy for String {}
 
 #[repr(C)]
 pub struct Error {

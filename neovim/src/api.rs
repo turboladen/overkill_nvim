@@ -96,6 +96,12 @@ impl Dictionary {
     }
 }
 
+impl Drop for Dictionary {
+    fn drop(&mut self) {
+        self.inner.free()
+    }
+}
+
 pub struct DictionaryIter<'a> {
     kv_iter: std::slice::Iter<'a, vim::KeyValuePair>,
 }
@@ -126,5 +132,11 @@ impl<'a> String<'a> {
 
     pub fn as_str(&self) -> &str {
         std::str::from_utf8(self.as_slice()).unwrap()
+    }
+}
+
+impl<'a> Drop for String<'a> {
+    fn drop(&mut self) {
+        self.inner.free()
     }
 }
