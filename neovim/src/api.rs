@@ -1,142 +1,117 @@
+pub(crate) mod dictionary;
+pub(crate) mod mode;
+pub(crate) mod object;
+pub(crate) mod string;
+
+pub use self::{dictionary::Dictionary, mode::Mode, object::Object, string::String};
 pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef};
 
-use neovim_sys::api::vim::{self, Array, ObjectType};
-use std::borrow::Cow;
+use neovim_sys::api::{
+    buffer::{self, Buffer},
+    helpers::cstr_to_string,
+    vim,
+};
+use std::{borrow::Cow, os::raw::c_char};
 
-pub enum Object<'a> {
-    Nil,
-    Boolean(Boolean),
-    Integer(Integer),
-    Float(Float),
-    String(String<'a>),
-    Array(Array),
-    Dictionary(Dictionary),
-    LuaRef(LuaRef),
-    // Buffer,
-    // Window,
-    // Tabpage,
-}
+pub fn nvim_get_var(name: &str) -> Object {
+    unsafe {
+        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+        let mut out_err = vim::Error::default();
 
-impl<'a> From<vim::Object> for Object<'a> {
-    fn from(api_object: vim::Object) -> Self {
-        unsafe {
-            match api_object.object_type {
-                ObjectType::kObjectTypeNil => Self::Nil,
-                ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.data.boolean),
-                ObjectType::kObjectTypeInteger => Self::Integer(api_object.data.integer),
-                ObjectType::kObjectTypeFloat => Self::Float(api_object.data.floating),
-                ObjectType::kObjectTypeString => {
-                    Self::String(String::new(Cow::Owned(api_object.data.string)))
-                }
-                ObjectType::kObjectTypeArray => Self::Array(api_object.data.array),
-                ObjectType::kObjectTypeDictionary => Self::Dictionary(Dictionary {
-                    inner: api_object.data.dictionary,
-                }),
-                ObjectType::kObjectTypeLuaRef => Self::LuaRef(api_object.data.luaref),
-            }
-        }
+        Object::from(vim::nvim_get_var(api_name, &mut out_err))
     }
 }
 
-impl<'a, 'b: 'a> From<&'b vim::Object> for Object<'a> {
-    fn from(api_object: &'b vim::Object) -> Self {
-        unsafe {
-            match api_object.object_type {
-                ObjectType::kObjectTypeNil => Self::Nil,
-                ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.data.boolean),
-                ObjectType::kObjectTypeInteger => Self::Integer(api_object.data.integer),
-                ObjectType::kObjectTypeFloat => Self::Float(api_object.data.floating),
-                ObjectType::kObjectTypeString => {
-                    Self::String(String::new(Cow::Borrowed(&api_object.data.string)))
-                }
-                ObjectType::kObjectTypeArray => Self::Array(api_object.data.array),
-                ObjectType::kObjectTypeDictionary => Self::Dictionary(Dictionary {
-                    inner: api_object.data.dictionary,
-                }),
-                ObjectType::kObjectTypeLuaRef => Self::LuaRef(api_object.data.luaref),
-            }
-        }
+pub fn nvim_buf_get_var(name: &str) -> Object {
+    unsafe {
+        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+        let mut out_err = vim::Error::default();
+
+        Object::from(vim::nvim_buf_get_var(api_name, &mut out_err))
     }
 }
 
-#[derive(Default)]
-pub struct Dictionary {
-    inner: vim::Dictionary,
-}
+pub fn nvim_feedkeys(keys: &str, mode: &str, escape_csi: bool) {
+    unsafe {
+        let api_keys = cstr_to_string(keys.as_ptr() as *const c_char);
+        let api_mode = cstr_to_string(mode.as_ptr() as *const c_char);
 
-impl Dictionary {
-    pub fn new(inner: vim::Dictionary) -> Self {
-        Self { inner }
-    }
-
-    pub fn get<'b>(&'b self, key: &str) -> Option<Object<'b>> {
-        self.iter().find(|(k, _)| k.as_str() == key).map(|(_, v)| v)
-    }
-
-    pub fn iter(&self) -> DictionaryIter<'_> {
-        DictionaryIter {
-            kv_iter: self.kvs_as_slice().iter(),
-        }
-    }
-
-    fn kvs_as_slice(&self) -> &[vim::KeyValuePair] {
-        unsafe { std::slice::from_raw_parts(self.inner.items, self.inner.size) }
-    }
-
-    pub fn inner(&self) -> vim::Dictionary {
-        self.inner
-    }
-
-    pub fn inner_ref(&self) -> &vim::Dictionary {
-        &self.inner
-    }
-
-    pub fn inner_mut(&mut self) -> &mut vim::Dictionary {
-        &mut self.inner
+        vim::nvim_feedkeys(api_keys, api_mode, escape_csi);
     }
 }
 
-impl Drop for Dictionary {
-    fn drop(&mut self) {
-        self.inner.free()
+pub fn nvim_get_current_buf() -> Buffer {
+    unsafe { vim::nvim_get_current_buf() }
+}
+
+pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Object {
+    unsafe {
+        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+        let mut out_err = vim::Error::default();
+
+        Object::from(buffer::nvim_buf_get_option(
+            buffer,
+            api_name,
+            &mut out_err,
+        ))
     }
 }
 
-pub struct DictionaryIter<'a> {
-    kv_iter: std::slice::Iter<'a, vim::KeyValuePair>,
+pub fn nvim_get_mode() -> Mode {
+    // @returns Dictionary { "mode": String, "blocking": Boolean }
+    //
+    let d = Dictionary::new(unsafe { vim::nvim_get_mode() });
+
+    let mode = if let Some(Object::String(mode)) = d.get("mode") {
+        Mode::from(mode.as_str())
+    } else {
+        Mode::Normal
+    };
+
+    mode
 }
 
-impl<'a> Iterator for DictionaryIter<'a> {
-    type Item = (String<'a>, Object<'a>);
+pub fn nvim_replace_termcodes(
+    string_to_convert: &str,
+    from_part: bool,
+    do_lt: bool,
+    special: bool,
+) -> String {
+    unsafe {
+        let api_string = cstr_to_string(string_to_convert.as_ptr() as *const c_char);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.kv_iter
-            .next()
-            .map(|kv| (String::new(Cow::Borrowed(&kv.key)), Object::from(&kv.value)))
+        String::new(Cow::Owned(vim::nvim_replace_termcodes(
+            api_string, from_part, do_lt, special,
+        )))
     }
 }
 
-#[derive(Clone)]
-pub struct String<'a> {
-    inner: Cow<'a, vim::String>,
-}
+pub fn nvim_exec(src: &str, output: bool) -> String {
+    unsafe {
+        let api_src = cstr_to_string(src.as_ptr() as *const c_char);
+        let mut out_err = vim::Error::default();
 
-impl<'a> String<'a> {
-    pub fn new(inner: Cow<'a, vim::String>) -> Self {
-        Self { inner }
-    }
-
-    pub fn as_slice(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.inner.data as *const u8, self.inner.size) }
-    }
-
-    pub fn as_str(&self) -> &str {
-        std::str::from_utf8(self.as_slice()).unwrap()
+        String::new(Cow::Owned(vim::nvim_exec(api_src, output, &mut out_err)))
     }
 }
 
-impl<'a> Drop for String<'a> {
-    fn drop(&mut self) {
-        self.inner.free()
+pub fn nvim_set_hl(namespace_id: Integer, name: &str, val: Dictionary) {
+    unsafe {
+        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+        let mut out_err = vim::Error::default();
+
+        vim::nvim_set_hl(namespace_id, api_name, val.inner(), &mut out_err)
+    }
+}
+
+pub fn nvim_get_namespaces() -> Dictionary {
+    unsafe { Dictionary::new(vim::nvim_get_namespaces()) }
+}
+
+pub fn nvim_create_namespace(name: &str) -> Integer {
+    unsafe {
+        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+
+        vim::nvim_create_namespace(api_name)
     }
 }
