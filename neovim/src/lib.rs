@@ -40,6 +40,11 @@ pub fn nvim_get_current_buf() -> Buffer {
     unsafe { sys::api::vim::nvim_get_current_buf() }
 }
 
+#[no_mangle]
+pub extern "C" fn rs_nvim_get_current_buf() -> Buffer {
+    nvim_get_current_buf()
+}
+
 pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Object {
     unsafe {
         let api_name = cstr_to_string(name.as_ptr() as *const c_char);
