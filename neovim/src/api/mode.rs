@@ -27,7 +27,7 @@ impl From<&str> for Mode {
             "<C-s>" => Mode::SelectBlock,
             "t" => Mode::Terminal,
             m => {
-                // error!("unknown mode {}, falling back to Mode::Normal", m);
+                eprintln!("unknown mode {}, falling back to Mode::Normal", m);
                 Mode::Normal
             }
         }

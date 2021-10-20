@@ -1,8 +1,10 @@
 use super::{buffer::Buffer, helpers};
-use std::os::raw::c_char;
+use std::{os::raw::c_char};
 
 extern "C" {
     pub fn nvim_get_var(name: self::String, err: *mut Error) -> Object;
+    pub fn nvim_set_var(name: self::String, value: Object, err: *mut Error);
+
     pub fn nvim_buf_get_var(name: self::String, err: *mut Error) -> Object;
 
     pub fn nvim_feedkeys(keys: self::String, mode: self::String, escape_csi: Boolean);
@@ -82,11 +84,12 @@ pub type Integer = i64;
 pub type Float = f64;
 pub type LuaRef = isize;
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct Array {
-    items: *const Object,
-    size: usize,
-    capacity: usize,
+    pub items: *const Object,
+    pub size: usize,
+    pub capacity: usize,
 }
 
 impl Array {
@@ -113,6 +116,7 @@ impl Clone for Array {
 
 impl Copy for Array {}
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct Dictionary {
     pub items: *const KeyValuePair,
@@ -151,9 +155,10 @@ pub struct KeyValuePair {
     pub value: Object,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct String {
-    pub data: *const c_char,
+    pub data: *mut c_char,
     pub size: usize,
 }
 
@@ -173,8 +178,8 @@ impl Copy for String {}
 
 #[repr(C)]
 pub struct Error {
-    error_type: ErrorType,
-    msg: *const c_char,
+    pub error_type: ErrorType,
+    pub msg: *const c_char,
 }
 
 impl Default for Error {

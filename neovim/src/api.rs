@@ -1,9 +1,13 @@
+pub(crate) mod array;
 pub(crate) mod dictionary;
+pub(crate) mod error;
 pub(crate) mod mode;
 pub(crate) mod object;
 pub(crate) mod string;
 
-pub use self::{dictionary::Dictionary, mode::Mode, object::Object, string::String};
+pub use self::{
+    array::Array, dictionary::Dictionary, error::Error, mode::Mode, object::Object, string::String,
+};
 pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef};
 
 use neovim_sys::api::{
@@ -16,18 +20,39 @@ use std::{borrow::Cow, os::raw::c_char};
 pub fn nvim_get_var(name: &str) -> Object {
     unsafe {
         let api_name = cstr_to_string(name.as_ptr() as *const c_char);
-        let mut out_err = vim::Error::default();
+        let mut out_err = Error::default();
 
-        Object::from(vim::nvim_get_var(api_name, &mut out_err))
+        Object::from(vim::nvim_get_var(api_name, out_err.inner_mut()))
     }
 }
 
-pub fn nvim_buf_get_var(name: &str) -> Object {
+pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     unsafe {
         let api_name = cstr_to_string(name.as_ptr() as *const c_char);
-        let mut out_err = vim::Error::default();
+        let mut out_err = Error::default();
 
-        Object::from(vim::nvim_buf_get_var(api_name, &mut out_err))
+        vim::nvim_set_var(api_name, value.into_vim(), out_err.inner_mut());
+
+        if out_err.is_err() {
+            Err(out_err)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+pub fn nvim_buf_get_var(name: &str) -> Result<Object, Error> {
+    unsafe {
+        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+        let mut out_err = Error::default();
+
+        let vim_object = vim::nvim_buf_get_var(api_name, out_err.inner_mut());
+
+        if out_err.is_err() {
+            Err(out_err)
+        } else {
+            Ok(Object::from(vim_object))
+        }
     }
 }
 
@@ -44,16 +69,18 @@ pub fn nvim_get_current_buf() -> Buffer {
     unsafe { vim::nvim_get_current_buf() }
 }
 
-pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Object {
+pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Result<Object, Error> {
     unsafe {
         let api_name = cstr_to_string(name.as_ptr() as *const c_char);
-        let mut out_err = vim::Error::default();
+        let mut out_err = Error::default();
 
-        Object::from(buffer::nvim_buf_get_option(
-            buffer,
-            api_name,
-            &mut out_err,
-        ))
+        let vim_object = buffer::nvim_buf_get_option(buffer, api_name, out_err.inner_mut());
+
+        if out_err.is_err() {
+            Err(out_err)
+        } else {
+            Ok(Object::from(vim_object))
+        }
     }
 }
 
@@ -86,21 +113,33 @@ pub fn nvim_replace_termcodes(
     }
 }
 
-pub fn nvim_exec(src: &str, output: bool) -> String {
+pub fn nvim_exec(src: &str, output: bool) -> Result<String, Error> {
     unsafe {
         let api_src = cstr_to_string(src.as_ptr() as *const c_char);
-        let mut out_err = vim::Error::default();
+        let mut out_err = Error::default();
 
-        String::new(Cow::Owned(vim::nvim_exec(api_src, output, &mut out_err)))
+        let vim_string = vim::nvim_exec(api_src, output, out_err.inner_mut());
+
+        if out_err.is_err() {
+            Err(out_err)
+        } else {
+            Ok(String::new(Cow::Owned(vim_string)))
+        }
     }
 }
 
-pub fn nvim_set_hl(namespace_id: Integer, name: &str, val: Dictionary) {
+pub fn nvim_set_hl(namespace_id: Integer, name: &str, val: Dictionary) -> Result<(), Error> {
     unsafe {
         let api_name = cstr_to_string(name.as_ptr() as *const c_char);
-        let mut out_err = vim::Error::default();
+        let mut out_err = Error::default();
 
-        vim::nvim_set_hl(namespace_id, api_name, val.inner(), &mut out_err)
+        vim::nvim_set_hl(namespace_id, api_name, val.inner(), out_err.inner_mut());
+
+        if out_err.is_err() {
+            Err(out_err)
+        } else {
+            Ok(())
+        }
     }
 }
 

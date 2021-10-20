@@ -1,8 +1,8 @@
-use super::{String, Object};
+use super::{Object, String};
 use neovim_sys::api::vim;
 use std::borrow::Cow;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Dictionary {
     inner: vim::Dictionary,
 }
@@ -37,6 +37,10 @@ impl Dictionary {
     pub fn inner_mut(&mut self) -> &mut vim::Dictionary {
         &mut self.inner
     }
+
+    pub fn into_inner(self) -> vim::Dictionary {
+        self.inner
+    }
 }
 
 impl Drop for Dictionary {
@@ -44,6 +48,17 @@ impl Drop for Dictionary {
         self.inner.free()
     }
 }
+
+// impl PartialEq for Dictionary {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.kvs_as_slice() == other.kvs_as_slice()
+//     }
+// }
+
+pub struct KeyValuePair {
+    inner: vim::KeyValuePair,
+}
+
 
 pub struct DictionaryIter<'a> {
     kv_iter: std::slice::Iter<'a, vim::KeyValuePair>,

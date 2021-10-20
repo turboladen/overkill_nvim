@@ -10,4 +10,12 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+# mlua = { version = "0.6", optional = true, features = ["lua51"] }
+# hlua = { version = "0.4", optional = true }
 neovim-sys = { path = "../neovim-sys" }
+
+[features]
+default = []
+# lua_test = ["mlua"]
+# lua_test = ["hlua"]
+lua_test = []
