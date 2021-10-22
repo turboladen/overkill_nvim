@@ -24,7 +24,7 @@ impl List {
 }
 
 pub struct ListItem {
-    inner: NonNull<ListitemS>,
+    pub inner: NonNull<ListitemS>,
 }
 
 impl ListItem {

@@ -1,111 +1,106 @@
-pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef};
-
-use super::{Array, Dictionary, String};
-use neovim_sys::api::vim::{self, ObjectData, ObjectType};
-use std::{borrow::Cow, };
+use super::{Array, Dictionary, RustObject};
+use neovim_sys::api::vim::{self, ObjectType};
 
 #[derive(Debug)]
-pub enum Object<'a> {
-    Nil,
-    Boolean(Boolean),
-    Integer(Integer),
-    Float(Float),
-    String(String<'a>),
-    Array(Array<'a>),
-    Dictionary(Dictionary),
-    LuaRef(LuaRef),
-    // Buffer,
-    // Window,
-    // Tabpage,
+pub struct Object {
+    inner: vim::Object,
 }
 
-impl<'a> Object<'a> {
-    pub fn into_vim(self) -> vim::Object {
-        match self {
-            Self::Nil => vim::Object {
+impl Object {
+    pub fn new(inner: vim::Object) -> Self {
+        Self { inner }
+    }
+
+    pub fn inner(&self) -> &vim::Object {
+        &self.inner
+    }
+
+    pub fn to_inner(&self) -> vim::Object {
+        self.inner.clone()
+    }
+}
+
+impl Clone for Object {
+    fn clone(&self) -> Self {
+        Object::new(self.inner.clone())
+    }
+}
+
+impl From<RustObject> for Object {
+    fn from(rust_object: RustObject) -> Self {
+        let vim_object = match rust_object {
+            RustObject::Nil => vim::Object {
                 object_type: ObjectType::kObjectTypeNil,
-                data: ObjectData { boolean: false },
+                data: vim::ObjectData { boolean: false },
             },
-            Self::Boolean(boolean) => vim::Object {
+            RustObject::Boolean(boolean) => vim::Object {
                 object_type: ObjectType::kObjectTypeBoolean,
-                data: ObjectData { boolean },
+                data: vim::ObjectData { boolean },
             },
-            Self::Integer(integer) => vim::Object {
+            RustObject::Integer(integer) => vim::Object {
                 object_type: ObjectType::kObjectTypeInteger,
-                data: ObjectData { integer },
+                data: vim::ObjectData { integer },
             },
-            Self::Float(floating) => vim::Object {
+            RustObject::Float(floating) => vim::Object {
                 object_type: ObjectType::kObjectTypeFloat,
-                data: ObjectData { floating },
+                data: vim::ObjectData { floating },
             },
-            Self::String(string) => vim::Object {
+            RustObject::String(string) => vim::Object {
                 object_type: ObjectType::kObjectTypeString,
-                data: ObjectData {
-                    string: string.as_inner(),
+                data: vim::ObjectData {
+                    string: string.to_inner(),
                 },
             },
-            Self::Array(array) => vim::Object {
+            RustObject::Array(array) => vim::Object {
                 object_type: ObjectType::kObjectTypeArray,
-                data: ObjectData {
-                    array: array.into_inner(),
+                data: vim::ObjectData {
+                    array: array.to_inner(),
                 },
             },
-            Self::Dictionary(dictionary) => vim::Object {
+            RustObject::Dictionary(dictionary) => vim::Object {
                 object_type: ObjectType::kObjectTypeDictionary,
-                data: ObjectData {
-                    dictionary: dictionary.into_inner(),
+                data: vim::ObjectData {
+                    dictionary: dictionary.to_inner(),
                 },
             },
-            Self::LuaRef(luaref) => vim::Object {
-                object_type: ObjectType::kObjectTypeLuaRef,
-                data: ObjectData { luaref },
+        };
+        Self::new(vim_object)
+    }
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.inner.object_type, other.inner.object_type) {
+            (ObjectType::kObjectTypeNil, ObjectType::kObjectTypeNil) => true,
+            (ObjectType::kObjectTypeBoolean, ObjectType::kObjectTypeBoolean) => unsafe {
+                self.inner.data.boolean == other.inner.data.boolean
             },
-        }
-    }
-}
-
-impl<'a> From<vim::Object> for Object<'a> {
-    fn from(api_object: vim::Object) -> Self {
-        unsafe {
-            match api_object.object_type {
-                ObjectType::kObjectTypeNil => Self::Nil,
-                ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.data.boolean),
-                ObjectType::kObjectTypeInteger => Self::Integer(api_object.data.integer),
-                ObjectType::kObjectTypeFloat => Self::Float(api_object.data.floating),
-                ObjectType::kObjectTypeString => {
-                    Self::String(String::new(Cow::Owned(api_object.data.string)))
-                }
-                ObjectType::kObjectTypeArray => {
-                    Self::Array(Array::new(Cow::Owned(api_object.data.array)))
-                }
-                ObjectType::kObjectTypeDictionary => {
-                    Self::Dictionary(Dictionary::new(api_object.data.dictionary))
-                }
-                ObjectType::kObjectTypeLuaRef => Self::LuaRef(api_object.data.luaref),
+            (ObjectType::kObjectTypeInteger, ObjectType::kObjectTypeInteger) => unsafe {
+                self.inner.data.integer == other.inner.data.integer
+            },
+            (ObjectType::kObjectTypeFloat, ObjectType::kObjectTypeFloat) => unsafe {
+                self.inner.data.floating == other.inner.data.floating
+            },
+            (ObjectType::kObjectTypeString, ObjectType::kObjectTypeString) => unsafe {
+                self.inner.data.string.as_bytes() == other.inner.data.string.as_bytes()
+            },
+            (ObjectType::kObjectTypeArray, ObjectType::kObjectTypeArray) => {
+                let (lhs, rhs) = unsafe {
+                    let l = Array::new(self.inner.data.array);
+                    let r = Array::new(other.inner.data.array);
+                    (l, r)
+                };
+                lhs == rhs
             }
-        }
-    }
-}
-
-impl<'a, 'b: 'a> From<&'b vim::Object> for Object<'a> {
-    fn from(api_object: &'b vim::Object) -> Self {
-        unsafe {
-            match api_object.object_type {
-                ObjectType::kObjectTypeNil => Self::Nil,
-                ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.data.boolean),
-                ObjectType::kObjectTypeInteger => Self::Integer(api_object.data.integer),
-                ObjectType::kObjectTypeFloat => Self::Float(api_object.data.floating),
-                ObjectType::kObjectTypeString => {
-                    Self::String(String::new(Cow::Borrowed(&api_object.data.string)))
-                }
-                ObjectType::kObjectTypeArray => {
-                    Self::Array(Array::new(Cow::Borrowed(&api_object.data.array)))
-                }
-                ObjectType::kObjectTypeDictionary => {
-                    Self::Dictionary(Dictionary::new(api_object.data.dictionary))
-                }
-                ObjectType::kObjectTypeLuaRef => Self::LuaRef(api_object.data.luaref),
+            (ObjectType::kObjectTypeDictionary, ObjectType::kObjectTypeDictionary) => {
+                let (lhs, rhs) = unsafe {
+                    let l = Dictionary::new(self.inner.data.dictionary);
+                    let r = Dictionary::new(other.inner.data.dictionary);
+                    (l, r)
+                };
+                lhs == rhs
             }
+            _ => false,
         }
     }
 }
