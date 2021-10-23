@@ -1,5 +1,6 @@
 use super::Object;
 use neovim_sys::api::vim;
+use std::mem::ManuallyDrop;
 
 #[derive(Default, Debug, Clone)]
 pub struct Array {
@@ -32,86 +33,24 @@ impl Array {
     }
 
     pub fn to_inner(&self) -> vim::Array {
-        self.inner.clone()
+        self.inner
+    }
+
+    pub fn to_vec(&self) -> Vec<Object> {
+        self.as_slice()
+            .iter()
+            .map(|vim_object| Object::new(vim_object.clone()))
+            .collect()
     }
 }
 
-// impl<'a, 'b: 'a> From<&'a [Object<'b>]> for Array<'a> {
-//     fn from(v: &'a [Object<'b>]) -> Self {
-//         let size = v.len();
-//         let capacity = v.len();
-//         let mut vim_vec: Vec<vim::Object> =
-//             v.to_owned().into_iter().map(|o| o.into_vim()).collect();
-//         let slice = vim_vec.as_mut_slice();
-//         let items = slice.as_mut_ptr();
-
-//         Self {
-//             inner: Cow::Owned(vim::Array {
-//                 items,
-//                 size,
-//                 capacity,
-//             }),
-//         }
-//     }
-// }
-
-// impl<'b, 'a: 'b> From<Vec<&'b Object<'a>>> for Array<'b> {
-//     fn from(v: Vec<&'b Object<'a>>) -> Self {
-//         let size = v.len();
-//         let capacity = v.capacity();
-//         let mut vim_vec: Vec<vim::Object> = v.into_iter().map(|o| o.clone().as_inner()).collect();
-//         let slice = vim_vec.as_mut_slice();
-//         let items = slice.as_mut_ptr();
-
-//         Self {
-//             inner: Cow::Owned(vim::Array {
-//                 items,
-//                 size,
-//                 capacity,
-//             }),
-//         }
-//     }
-// }
-// impl<'a> From<Vec<Object<'a>>> for Array<'a> {
-//     fn from(v: Vec<Object<'a>>) -> Self {
-//         let size = v.len();
-//         eprintln!("vec size: {}", size);
-//         let capacity = v.capacity();
-//         eprintln!("vec capacity: {}", capacity);
-//         // let mut vim_vec: Vec<vim::Object> = v.into_iter().map(|o| o.into_inner()).collect();
-//         // let slice = vim_vec.as_mut_slice();
-//         // let items = slice.as_mut_ptr();
-//         let vim_vec: Vec<vim::Object> = v.into_iter().map(|o| o.into_inner()).collect();
-//         let mut slice = vim_vec.into_boxed_slice();
-//         let items = slice.as_mut_ptr();
-
-//         Self {
-//             inner: Cow::Owned(vim::Array {
-//                 items,
-//                 size,
-//                 capacity,
-//             }),
-//         }
-//     }
-// }
 impl<'a> From<&'a [Object]> for Array {
     fn from(v: &'a [Object]) -> Self {
         let size = v.len();
-        eprintln!("vec size: {}", size);
         let capacity = v.len();
-        eprintln!("vec capacity: {}", capacity);
-        // let mut vim_vec: Vec<vim::Object> = v.into_iter().map(|o| o.into_inner()).collect();
-        // let slice = vim_vec.as_mut_slice();
-        // let items = slice.as_mut_ptr();
-        let mut vim_vec: Vec<vim::Object> = v.to_owned().iter().map(|o| o.to_inner()).collect();
-        let slice = vim_vec.as_mut_slice();
-        for o in slice.iter() {
-            eprintln!("Object type: {:?}", o.object_type);
-            eprintln!("Object type: {}", o.object_type as u32);
-            eprintln!("Object: {:?}", o);
-        }
-        let items = slice.as_mut_ptr();
-        eprintln!("items is null? {}", items.is_null());
+
+        let boxed_slice = ManuallyDrop::new(v.to_vec().into_boxed_slice());
+        let items = Box::into_raw(ManuallyDrop::into_inner(boxed_slice)) as *mut vim::Object;
 
         Self {
             inner: vim::Array {
@@ -120,6 +59,13 @@ impl<'a> From<&'a [Object]> for Array {
                 capacity,
             },
         }
+    }
+}
+
+impl<'a> From<&'a [i64]> for Array {
+    fn from(ints: &'a [i64]) -> Self {
+        let ints: Vec<Object> = ints.iter().map(|i| Object::from(*i)).collect();
+        Array::from(ints.as_slice())
     }
 }
 

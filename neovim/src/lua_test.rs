@@ -1,5 +1,6 @@
 use super::api;
-use crate::api::{Boolean, NString, RustObject};
+use crate::api::{Array, Boolean, NString, RustObject};
+use std::convert::TryFrom;
 
 // #[no_mangle]
 // pub extern "C" fn nvim_get_current_buf_test() -> Boolean {
@@ -14,7 +15,24 @@ pub extern "C" fn test_primitives() -> Boolean {
     {
         let nstring = NString::from("meow");
         if &nstring.to_string() != "meow" {
-            eprintln!("Uh oh: {}", nstring);
+            eprintln!("Uh oh: '{}'", nstring);
+            result = false;
+        }
+    }
+
+    // Array
+    {
+        let things = vec![42_i64];
+        let array = Array::from(things.as_slice());
+
+        if array
+            .to_vec()
+            .into_iter()
+            .map(|i| i64::try_from(i).unwrap())
+            .collect::<Vec<i64>>()
+            != things
+        {
+            eprintln!("Uh oh: '{:?}'", array);
             result = false;
         }
     }

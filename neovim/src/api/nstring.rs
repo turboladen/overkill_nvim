@@ -1,5 +1,5 @@
 use neovim_sys::api::vim;
-use std::{ffi::CString, fmt, mem::ManuallyDrop, os::raw::c_char};
+use std::{ffi::CString, fmt, mem::ManuallyDrop};
 
 #[derive(Debug, Clone)]
 pub struct NString {
@@ -28,7 +28,7 @@ impl NString {
     }
 
     pub fn to_inner(&self) -> vim::String {
-        self.inner.clone()
+        self.inner
     }
 }
 

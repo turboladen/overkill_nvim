@@ -1,4 +1,6 @@
-use super::{Array, Dictionary, RustObject};
+use std::convert::TryFrom;
+
+use super::{Array, Dictionary, NString, RustObject};
 use neovim_sys::api::vim::{self, ObjectType};
 
 #[derive(Debug)]
@@ -26,45 +28,103 @@ impl Clone for Object {
     }
 }
 
-impl From<RustObject> for Object {
-    fn from(rust_object: RustObject) -> Self {
-        let vim_object = match rust_object {
-            RustObject::Nil => vim::Object {
-                object_type: ObjectType::kObjectTypeNil,
-                data: vim::ObjectData { boolean: false },
-            },
-            RustObject::Boolean(boolean) => vim::Object {
+impl From<bool> for Object {
+    fn from(boolean: bool) -> Self {
+        Self {
+            inner: vim::Object {
                 object_type: ObjectType::kObjectTypeBoolean,
                 data: vim::ObjectData { boolean },
             },
-            RustObject::Integer(integer) => vim::Object {
+        }
+    }
+}
+
+impl From<i64> for Object {
+    fn from(integer: i64) -> Self {
+        Self {
+            inner: vim::Object {
                 object_type: ObjectType::kObjectTypeInteger,
                 data: vim::ObjectData { integer },
             },
-            RustObject::Float(floating) => vim::Object {
+        }
+    }
+}
+
+impl TryFrom<Object> for i64 {
+    type Error = ();
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.inner.object_type {
+            ObjectType::kObjectTypeInteger => Ok(unsafe { value.inner.data.integer }),
+            _ => Err(()),
+        }
+    }
+}
+
+impl From<f64> for Object {
+    fn from(floating: f64) -> Self {
+        Self {
+            inner: vim::Object {
                 object_type: ObjectType::kObjectTypeFloat,
                 data: vim::ObjectData { floating },
             },
-            RustObject::String(string) => vim::Object {
+        }
+    }
+}
+
+impl From<NString> for Object {
+    fn from(string: NString) -> Self {
+        Self {
+            inner: vim::Object {
                 object_type: ObjectType::kObjectTypeString,
                 data: vim::ObjectData {
                     string: string.to_inner(),
                 },
             },
-            RustObject::Array(array) => vim::Object {
+        }
+    }
+}
+
+impl From<Array> for Object {
+    fn from(array: Array) -> Self {
+        Self {
+            inner: vim::Object {
                 object_type: ObjectType::kObjectTypeArray,
                 data: vim::ObjectData {
                     array: array.to_inner(),
                 },
             },
-            RustObject::Dictionary(dictionary) => vim::Object {
+        }
+    }
+}
+
+impl From<Dictionary> for Object {
+    fn from(dictionary: Dictionary) -> Self {
+        Self {
+            inner: vim::Object {
                 object_type: ObjectType::kObjectTypeDictionary,
                 data: vim::ObjectData {
                     dictionary: dictionary.to_inner(),
                 },
             },
-        };
-        Self::new(vim_object)
+        }
+    }
+}
+
+impl From<RustObject> for Object {
+    fn from(rust_object: RustObject) -> Self {
+        match rust_object {
+            RustObject::Nil => Self::new(vim::Object {
+                object_type: ObjectType::kObjectTypeNil,
+                data: vim::ObjectData { boolean: false },
+            }),
+            RustObject::Boolean(boolean) => Object::from(boolean),
+            RustObject::Integer(integer) => Object::from(integer),
+            RustObject::Float(floating) => Object::from(floating),
+            RustObject::String(string) => Object::from(string),
+            RustObject::Array(array) => Object::from(array),
+            RustObject::Dictionary(dictionary) => Object::from(dictionary),
+        }
     }
 }
 

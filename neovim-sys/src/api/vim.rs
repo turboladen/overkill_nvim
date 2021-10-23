@@ -247,15 +247,6 @@ impl String {
     }
 }
 
-impl Default for String {
-    fn default() -> Self {
-        Self {
-            data: std::ptr::null_mut(),
-            size: 0,
-        }
-    }
-}
-
 impl Clone for String {
     fn clone(&self) -> Self {
         if !self.data.is_null() {
