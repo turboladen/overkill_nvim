@@ -1,7 +1,9 @@
-use super::helpers;
-use std::os::raw::c_char;
+use std::{
+    ffi::{CStr, CString},
+    os::raw::c_char,
+};
 
-#[derive(Debug, Copy, Eq)]
+#[derive(Debug, Copy)]
 #[repr(C)]
 pub struct String {
     pub data: *mut c_char,
@@ -9,18 +11,8 @@ pub struct String {
 }
 
 impl String {
-    pub fn as_bytes(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.data as *const u8, self.size) }
-    }
-
-    pub fn free(self) {
-        unsafe { helpers::api_free_string(self) }
-    }
-}
-
-impl PartialEq for String {
-    fn eq(&self, other: &Self) -> bool {
-        self.as_bytes() == other.as_bytes()
+    pub fn as_cstr(&self) -> &CStr {
+        unsafe { CStr::from_ptr(self.data) }
     }
 }
 
@@ -42,5 +34,20 @@ impl Clone for String {
                 size: 0,
             }
         }
+    }
+}
+
+impl From<CString> for String {
+    fn from(cstring: CString) -> Self {
+        Self {
+            size: cstring.as_bytes().len(),
+            data: cstring.into_raw(),
+        }
+    }
+}
+
+impl From<String> for CString {
+    fn from(string: String) -> Self {
+        unsafe { CString::from_raw(string.data) }
     }
 }

@@ -11,7 +11,7 @@ extern "C" {
     pub fn copy_string(string: String) -> String;
 
     pub fn api_free_object(object: Object);
-    pub fn api_free_dictionary(dictionary: Dictionary);
+    // pub fn api_free_dictionary(dictionary: Dictionary);
     pub fn api_free_array(array: Array);
     pub fn api_free_string(string: String);
 }

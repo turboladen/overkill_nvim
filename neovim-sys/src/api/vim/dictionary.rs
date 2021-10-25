@@ -1,4 +1,4 @@
-use super::{Object, String, helpers};
+use super::{helpers, Object, String};
 
 #[derive(Debug, Copy)]
 #[repr(C)]
@@ -11,10 +11,6 @@ pub struct Dictionary {
 impl Dictionary {
     pub fn as_slice(&self) -> &[KeyValuePair] {
         unsafe { std::slice::from_raw_parts(self.items, self.size) }
-    }
-
-    pub fn free(self) {
-        unsafe { helpers::api_free_dictionary(self) }
     }
 }
 

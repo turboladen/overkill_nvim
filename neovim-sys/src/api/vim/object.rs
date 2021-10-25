@@ -1,5 +1,5 @@
 use super::{helpers, Array, Boolean, Dictionary, Float, Integer, LuaRef, String};
-use std::{fmt::Debug, };
+use std::fmt::Debug ;
 
 #[repr(C)]
 pub struct Object {
@@ -86,7 +86,7 @@ impl Debug for Object {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
 #[repr(usize)]
 pub enum ObjectType {
