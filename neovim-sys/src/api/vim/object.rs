@@ -1,5 +1,6 @@
 use super::{helpers, Array, Boolean, Dictionary, Float, Integer, LuaRef, String};
-use std::fmt::Debug ;
+use log::debug;
+use std::{fmt::Debug, mem::ManuallyDrop};
 
 #[repr(C)]
 pub struct Object {
@@ -19,6 +20,7 @@ impl Object {
 
 impl Clone for Object {
     fn clone(&self) -> Self {
+        debug!("Cloning Object...");
         match self.object_type {
             ObjectType::kObjectTypeNil => Self {
                 object_type: self.object_type,
@@ -45,19 +47,19 @@ impl Clone for Object {
             ObjectType::kObjectTypeString => Self {
                 object_type: self.object_type,
                 data: ObjectData {
-                    string: unsafe { helpers::copy_string(self.data.string) },
+                    string: unsafe { self.data.string.clone() },
                 },
             },
             ObjectType::kObjectTypeArray => Self {
                 object_type: self.object_type,
                 data: ObjectData {
-                    array: unsafe { helpers::copy_array(self.data.array) },
+                    array: unsafe { self.data.array.clone() },
                 },
             },
             ObjectType::kObjectTypeDictionary => Self {
                 object_type: self.object_type,
                 data: ObjectData {
-                    dictionary: unsafe { helpers::copy_dictionary(self.data.dictionary) },
+                    dictionary: unsafe { self.data.dictionary.clone() },
                 },
             },
         }
@@ -109,8 +111,8 @@ pub union ObjectData {
     pub boolean: Boolean,
     pub integer: Integer,
     pub floating: Float,
-    pub string: String,
-    pub array: Array,
-    pub dictionary: Dictionary,
+    pub string: ManuallyDrop<String>,
+    pub array: ManuallyDrop<Array>,
+    pub dictionary: ManuallyDrop<Dictionary>,
     pub luaref: LuaRef,
 }

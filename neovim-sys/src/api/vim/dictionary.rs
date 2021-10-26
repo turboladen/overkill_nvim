@@ -1,6 +1,6 @@
 use super::{Object, String};
 
-#[derive(Debug, Copy)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct Dictionary {
     pub items: *mut KeyValuePair,

@@ -4,11 +4,11 @@ pub(crate) mod error;
 pub(crate) mod mode;
 pub(crate) mod object;
 pub(crate) mod rust_object;
-pub(crate) mod nstring;
+// pub(crate) mod nstring;
 
 pub use self::{
     array::Array, dictionary::Dictionary, error::Error, mode::Mode, object::Object,
-    rust_object::RustObject, nstring::NString,
+    rust_object::RustObject
 };
 pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef};
 
