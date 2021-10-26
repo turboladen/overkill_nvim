@@ -7,8 +7,12 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[dependencies]
+log = "0.4"
+
 [dev-dependencies]
 approx = "0.5"
+simple_logger = "1.13"
 
 [build-dependencies]
 bindgen = "0.59.1"

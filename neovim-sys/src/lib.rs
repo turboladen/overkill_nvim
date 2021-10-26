@@ -27,3 +27,13 @@ pub type FunPtr = extern "C" fn() -> *const c_void;
 pub extern "C" fn no_op_fn_ptr() -> *const c_void {
     std::ptr::null()
 }
+
+#[cfg(test)]
+#[allow(dead_code)]
+pub(crate) fn init_logger() {
+    simple_logger::SimpleLogger::new()
+        .with_colors(true)
+        .with_timestamps(true)
+        .init()
+        .ok();
+}
