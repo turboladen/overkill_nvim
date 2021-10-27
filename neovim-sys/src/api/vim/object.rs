@@ -1,6 +1,6 @@
 use super::{helpers, Array, Boolean, Dictionary, Float, Integer, LuaRef, String};
 use log::debug;
-use std::{fmt::Debug, mem::ManuallyDrop};
+use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
 
 #[repr(C)]
 pub struct Object {
@@ -44,12 +44,14 @@ impl Clone for Object {
                     floating: unsafe { self.data.floating },
                 },
             },
-            ObjectType::kObjectTypeString => Self {
+            ObjectType::kObjectTypeString => {
+                debug!("Cloning Object::String...");
+                Self {
                 object_type: self.object_type,
                 data: ObjectData {
                     string: unsafe { self.data.string.clone() },
                 },
-            },
+            }},
             ObjectType::kObjectTypeArray => Self {
                 object_type: self.object_type,
                 data: ObjectData {
@@ -85,6 +87,39 @@ impl Debug for Object {
         }
 
         d.finish()
+    }
+}
+
+impl TryFrom<Object> for Boolean {
+    type Error = ();
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.object_type {
+            ObjectType::kObjectTypeBoolean => Ok(unsafe { value.data.boolean }),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Object> for Integer {
+    type Error = ();
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.object_type {
+            ObjectType::kObjectTypeInteger => Ok(unsafe { value.data.integer }),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Object> for Float {
+    type Error = ();
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.object_type {
+            ObjectType::kObjectTypeFloat => Ok(unsafe { value.data.floating }),
+            _ => Err(()),
+        }
     }
 }
 

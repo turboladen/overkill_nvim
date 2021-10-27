@@ -1,10 +1,13 @@
 use log::debug;
 use std::{
+    convert::TryFrom,
     ffi::{CStr, CString},
     mem::ManuallyDrop,
     os::raw::c_char,
     ptr::NonNull,
 };
+
+use super::{Object, ObjectType};
 
 #[derive(Debug)]
 #[repr(C)]
@@ -27,6 +30,7 @@ impl String {
 
 impl Clone for String {
     fn clone(&self) -> Self {
+        debug!("Cloning String: '{}'", self.as_cstr().to_string_lossy());
         let dst = ManuallyDrop::new(CString::new(self.as_bytes()).unwrap());
 
         unsafe {
@@ -62,6 +66,19 @@ impl From<String> for CString {
         CString::new(string.as_bytes()).unwrap()
     }
 }
+
+// impl TryFrom<Object> for String {
+//     type Error = ();
+
+//     fn try_from(value: Object) -> Result<Self, Self::Error> {
+//         match value.object_type {
+//             ObjectType::kObjectTypeString => {
+//                 Ok(unsafe { ManuallyDrop::into_inner(value.data.string) })
+//             }
+//             _ => Err(()),
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
