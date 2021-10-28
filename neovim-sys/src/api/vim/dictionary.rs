@@ -1,4 +1,4 @@
-use super::{Object, ObjectType, String as LuaString};
+use super::{KeyValuePair, Object, ObjectType};
 use log::debug;
 use std::{convert::TryFrom, mem::ManuallyDrop, ptr::NonNull};
 
@@ -56,24 +56,6 @@ impl From<Vec<KeyValuePair>> for Dictionary {
     }
 }
 
-impl From<Dictionary> for Vec<KeyValuePair> {
-    fn from(dict: Dictionary) -> Self {
-        debug!("Vec::from(Dictionary)");
-        let mut vec = Vec::with_capacity(dict.capacity);
-
-        for object in dict.as_slice() {
-            vec.push(object.clone());
-        }
-        vec
-    }
-}
-
-impl<'a> From<&'a Dictionary> for &'a [KeyValuePair] {
-    fn from(dict: &'a Dictionary) -> Self {
-        dict.as_slice()
-    }
-}
-
 impl TryFrom<Object> for Dictionary {
     type Error = ();
 
@@ -87,28 +69,15 @@ impl TryFrom<Object> for Dictionary {
     }
 }
 
-#[derive(Debug, Clone)]
-#[repr(C)]
-pub struct KeyValuePair {
-    pub key: LuaString,
-    pub value: Object,
-}
-
-impl KeyValuePair {
-    pub fn new(key: LuaString, value: Object) -> Self {
-        Self { key, value }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::api::vim::{Boolean, Float, Integer, ObjectData, ObjectType};
+    use super::{Dictionary, KeyValuePair, ManuallyDrop, Object, TryFrom};
+    use crate::api::vim::{Boolean, Float, Integer, ObjectData, ObjectType, String as LuaString};
     use approx::assert_ulps_eq;
     use std::ffi::CString;
 
     #[test]
-    fn test_from_vec_bool_values() {
+    fn test_from_vec_of_bool_values() {
         let vec = vec![
             KeyValuePair {
                 key: CString::new("one").unwrap().into(),
@@ -147,7 +116,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_vec_string_values() {
+    fn test_from_vec_of_string_values() {
         let vec = vec![
             KeyValuePair {
                 key: CString::new("one").unwrap().into(),

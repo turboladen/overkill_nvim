@@ -1,13 +1,15 @@
 pub mod array;
 pub mod dictionary;
 pub mod error;
+pub mod key_value_pair;
 pub mod object;
 pub mod string;
 
 pub use self::{
     array::Array,
-    dictionary::{Dictionary, KeyValuePair},
+    dictionary::{Dictionary},
     error::{Error, ErrorType},
+    key_value_pair::KeyValuePair,
     object::{Object, ObjectData, ObjectType},
     string::String,
 };
