@@ -25,10 +25,10 @@ impl Clone for Array {
             dst.set_len(self.size);
         }
 
-        dst.shrink_to_fit();
+        let ptr = dst.as_mut_ptr();
 
         Self {
-            items: NonNull::new(dst.as_mut_ptr()).unwrap(),
+            items: NonNull::new(ptr).unwrap(),
             size: self.size,
             capacity: self.size,
         }
@@ -57,13 +57,10 @@ impl From<Vec<Object>> for Array {
 
 impl From<Array> for Vec<Object> {
     fn from(array: Array) -> Self {
-        debug!("Vec::from(Array)");
-        let mut vec = Vec::with_capacity(array.capacity);
+        let v = unsafe { Vec::from_raw_parts(array.items.as_ptr(), array.size, array.capacity) };
+        std::mem::forget(array);
 
-        for object in array.as_slice() {
-            vec.push(object.clone());
-        }
-        vec
+        v
     }
 }
 
@@ -79,7 +76,23 @@ impl TryFrom<Object> for Array {
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type {
             ObjectType::kObjectTypeArray => {
-                Ok(unsafe { ManuallyDrop::into_inner(value.data.array) })
+                let size = unsafe { value.data.array.size };
+                let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
+
+                unsafe {
+                    std::ptr::copy(value.data.array.items.as_ref(), dst.as_mut_ptr(), size);
+                    dst.set_len(size);
+                }
+
+                let ptr = dst.as_mut_ptr();
+
+                let a = Self {
+                    items: NonNull::new(ptr).unwrap(),
+                    size,
+                    capacity: size,
+                };
+                std::mem::forget(value);
+                Ok(a)
             }
             _ => Err(()),
         }
@@ -313,44 +326,41 @@ mod tests {
 
         // Clone happens here
         let cloned = original_array.clone();
+        assert_eq!(cloned.size, 2);
+        assert_eq!(cloned.capacity, 2);
+
         {
             let mut cloned_vec = Vec::from(cloned);
+            assert_eq!(cloned_vec.len(), 2);
+            assert_eq!(cloned_vec.capacity(), 2);
 
             let first_element = cloned_vec.remove(0);
-            assert_eq!(
-                CString::new("first one").unwrap(),
-                CString::from(ManuallyDrop::into_inner(unsafe {
-                    first_element.data.string
-                })),
-            );
+
+            let actual = LuaString::try_from(first_element).unwrap();
+            assert_eq!(CString::new("first one").unwrap(), CString::from(actual),);
 
             let second_element = cloned_vec.remove(0);
             assert_eq!(
                 CString::new("second one").unwrap(),
-                CString::from(ManuallyDrop::into_inner(unsafe {
-                    second_element.data.string
-                })),
+                CString::from(LuaString::try_from(second_element).unwrap()),
             );
         }
 
         // Make sure we can still access the original's values
-
         {
             let mut original_vec = Vec::from(original_array);
+            assert_eq!(original_vec.len(), 2);
+            assert_eq!(original_vec.capacity(), 2);
 
             let first_element = original_vec.remove(0);
-            assert_eq!(
-                CString::new("first one").unwrap(),
-                CString::from(ManuallyDrop::into_inner(unsafe {
-                    first_element.data.string
-                })),
-            );
+
+            let actual = LuaString::try_from(first_element).unwrap();
+            assert_eq!(CString::new("first one").unwrap(), CString::from(actual));
 
             let second_element = original_vec.remove(0);
-            assert_eq!(
-                CString::new("second one").unwrap(),
-                CString::from(ManuallyDrop::into_inner(unsafe { second_element.data.string })),
-            );
+
+            let actual = LuaString::try_from(second_element).unwrap();
+            assert_eq!(CString::new("second one").unwrap(), CString::from(actual));
         }
     }
 }
