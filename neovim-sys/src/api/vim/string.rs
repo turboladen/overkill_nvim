@@ -1,13 +1,11 @@
+use super::{Object, ObjectType};
 use log::debug;
 use std::{
     convert::TryFrom,
-    ffi::{CStr, CString},
-    mem::ManuallyDrop,
+    ffi::{CStr, CString, NulError},
     os::raw::c_char,
     ptr::NonNull,
 };
-
-use super::{Object, ObjectType};
 
 #[derive(Debug)]
 #[repr(C)]
@@ -17,14 +15,23 @@ pub struct String {
 }
 
 impl String {
-    pub fn as_cstr(&self) -> &CStr {
+    pub fn new<T: Into<Vec<u8>>>(s: T) -> Result<Self, NulError> {
+        let cstring = CString::new(s)?;
+
+        Ok(Self {
+            size: cstring.as_bytes().len(),
+            data: unsafe { NonNull::new_unchecked(cstring.into_raw()) },
+        })
+    }
+
+    pub fn as_c_str(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.data.as_ptr()) }
     }
 
     /// Does not contain the trailing nul byte.
     ///
-    pub fn as_bytes(&self) -> &[u8] {
-        self.as_cstr().to_bytes()
+    pub fn to_bytes(&self) -> &[u8] {
+        self.as_c_str().to_bytes()
     }
 }
 
@@ -32,10 +39,10 @@ impl Clone for String {
     fn clone(&self) -> Self {
         debug!(
             "Cloning String: '{}' ({})",
-            self.as_cstr().to_string_lossy(),
+            self.as_c_str().to_string_lossy(),
             self.size
         );
-        let dst = CString::new(self.as_bytes()).unwrap();
+        let dst = CString::new(self.to_bytes()).unwrap();
         let ptr = dst.into_raw();
 
         Self {
@@ -49,7 +56,7 @@ impl Drop for String {
     fn drop(&mut self) {
         debug!(
             "Droppping String...: '{}'",
-            self.as_cstr().to_string_lossy()
+            self.as_c_str().to_string_lossy()
         );
         unsafe { CString::from_raw(self.data.as_mut()) };
     }
@@ -69,9 +76,9 @@ impl From<String> for CString {
     fn from(string: String) -> Self {
         debug!(
             "CString::from(string)...: '{}'",
-            string.as_cstr().to_string_lossy()
+            string.as_c_str().to_string_lossy()
         );
-        CString::new(string.as_bytes()).unwrap()
+        CString::new(string.to_bytes()).unwrap()
     }
 }
 
@@ -80,12 +87,12 @@ impl TryFrom<Object> for String {
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         debug!("String::try_from(Object): '{}'", unsafe {
-            value.data.string.as_cstr().to_string_lossy()
+            value.data.string.as_c_str().to_string_lossy()
         });
 
         match value.object_type {
             ObjectType::kObjectTypeString => {
-                let dst = CString::new(unsafe { value.data.string.as_bytes() }).unwrap();
+                let dst = CString::new(unsafe { value.data.string.to_bytes() }).unwrap();
                 let ptr = dst.into_raw();
 
                 let s = Self {
@@ -101,9 +108,35 @@ impl TryFrom<Object> for String {
     }
 }
 
+impl PartialEq for String {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_bytes().eq(other.to_bytes())
+    }
+}
+
+impl Eq for String {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_as_c_str() {
+        let subject = String::new("things are cool").unwrap();
+        let cstring = CString::new("things are cool").unwrap();
+        assert_eq!(subject.as_c_str(), cstring.as_c_str());
+    }
+
+    #[test]
+    fn test_partial_eq() {
+        let lhs = String::new("meow meow stuff").unwrap();
+        let rhs = String::new("meow meow stuff").unwrap();
+        assert_eq!(lhs, rhs);
+
+        let lhs = String::new("meow meow stuff").unwrap();
+        let rhs = String::new("meow stuff").unwrap();
+        assert_ne!(lhs, rhs);
+    }
 
     #[test]
     fn test_from_cstring() {
@@ -113,18 +146,16 @@ mod tests {
         assert_eq!(string.size, 5);
         assert_eq!(cstring.as_c_str().to_bytes().len(), 5);
         assert_eq!(string.size, cstring.as_c_str().to_bytes().len());
-        assert_eq!(string.as_cstr(), cstring.as_c_str());
+        assert_eq!(string.as_c_str(), cstring.as_c_str());
     }
 
     #[test]
     fn test_into_cstring() {
-        let string = {
-            let cstring = CString::new("burritos").unwrap();
-            String::from(cstring)
-        };
+        let string = String::new("burritos").unwrap();
         assert_eq!(string.size, 8);
+
         let string_size = string.size;
-        let lossy = string.as_cstr().to_string_lossy().to_string();
+        let lossy = string.as_c_str().to_string_lossy().to_string();
 
         let cstring = CString::from(string);
 
@@ -134,12 +165,9 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let string = {
-            let cstring = CString::new("burritos").unwrap();
-            String::from(cstring)
-        };
+        let string = String::new("burritos").unwrap();
         let clone = string.clone();
-        assert_eq!(clone.as_cstr(), string.as_cstr());
+        assert_eq!(clone.as_c_str(), string.as_c_str());
 
         // read after copy
         assert_eq!(string.size, 8);
