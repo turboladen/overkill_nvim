@@ -7,14 +7,14 @@ pub mod string;
 
 pub use self::{
     array::Array,
-    dictionary::{Dictionary},
+    dictionary::Dictionary,
     error::{Error, ErrorType},
     key_value_pair::KeyValuePair,
     object::{Object, ObjectData, ObjectType},
     string::String,
 };
 
-use super::{buffer::Buffer, helpers};
+use super::{buffer::Buffer};
 
 extern "C" {
     pub fn nvim_get_var(name: self::String, err: *mut Error) -> Object;

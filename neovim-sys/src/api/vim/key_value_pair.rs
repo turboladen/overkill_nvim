@@ -1,7 +1,4 @@
-use std::mem::ManuallyDrop;
-
 use log::debug;
-
 use super::{Dictionary, Object, String as LuaString};
 
 #[derive(Debug)]

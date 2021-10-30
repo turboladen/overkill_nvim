@@ -18,6 +18,7 @@ impl Array {
 
 impl Clone for Array {
     fn clone(&self) -> Self {
+        debug!("Clone Array...");
         let mut dst = ManuallyDrop::new(Vec::with_capacity(self.size));
 
         unsafe {
@@ -57,6 +58,7 @@ impl From<Vec<Object>> for Array {
 
 impl From<Array> for Vec<Object> {
     fn from(array: Array) -> Self {
+        debug!("Vec<Object>::from(Array)");
         let v = unsafe { Vec::from_raw_parts(array.items.as_ptr(), array.size, array.capacity) };
         std::mem::forget(array);
 
@@ -74,13 +76,16 @@ impl TryFrom<Object> for Array {
     type Error = ();
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
+        debug!("Array::try_from(Object)");
+
         match value.object_type {
             ObjectType::kObjectTypeArray => {
-                let size = unsafe { value.data.array.size };
+                let data = &value.data;
+                let size = unsafe { &data.array }.size;
                 let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
 
                 unsafe {
-                    std::ptr::copy(value.data.array.items.as_ref(), dst.as_mut_ptr(), size);
+                    std::ptr::copy(data.array.items.as_ref(), dst.as_mut_ptr(), size);
                     dst.set_len(size);
                 }
 
@@ -102,19 +107,12 @@ impl TryFrom<Object> for Array {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::vim::{ObjectData, ObjectType, String as LuaString};
+    use crate::api::vim::String as LuaString;
     use approx::assert_ulps_eq;
-    use std::ffi::CString;
 
     #[test]
     fn test_from_vec_bool() {
-        let vec = vec![
-            Object::new(ObjectType::kObjectTypeBoolean, ObjectData { boolean: true }),
-            Object::new(
-                ObjectType::kObjectTypeBoolean,
-                ObjectData { boolean: false },
-            ),
-        ];
+        let vec = vec![Object::new_boolean(true), Object::new_boolean(false)];
 
         let array = Array::from(vec);
         assert_eq!(array.size, 2);
@@ -123,27 +121,16 @@ mod tests {
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
-        assert_eq!(out_vec[0].object_type, ObjectType::kObjectTypeBoolean);
-        assert!(unsafe { out_vec[0].data.boolean });
-        assert_eq!(out_vec[1].object_type, ObjectType::kObjectTypeBoolean);
-        assert!(unsafe { !out_vec[1].data.boolean });
+
+        assert!(out_vec[0].try_as_boolean().unwrap());
+        assert!(!out_vec[1].try_as_boolean().unwrap());
     }
 
     #[test]
     fn test_from_vec_int() {
         let vec = vec![
-            Object::new(
-                ObjectType::kObjectTypeInteger,
-                ObjectData {
-                    integer: i64::max_value(),
-                },
-            ),
-            Object::new(
-                ObjectType::kObjectTypeInteger,
-                ObjectData {
-                    integer: i64::min_value(),
-                },
-            ),
+            Object::new_integer(i64::max_value()),
+            Object::new_integer(i64::min_value()),
         ];
 
         let array = Array::from(vec);
@@ -153,24 +140,14 @@ mod tests {
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
-        assert_eq!(out_vec[0].object_type, ObjectType::kObjectTypeInteger);
-        assert_eq!(unsafe { out_vec[0].data.integer }, i64::max_value());
-        assert_eq!(out_vec[1].object_type, ObjectType::kObjectTypeInteger);
-        assert_eq!(unsafe { out_vec[1].data.integer }, i64::min_value());
+
+        assert_eq!(out_vec[0].try_as_integer().unwrap(), i64::max_value());
+        assert_eq!(out_vec[1].try_as_integer().unwrap(), i64::min_value());
     }
 
     #[test]
     fn test_from_vec_floats() {
-        let vec = vec![
-            Object::new(
-                ObjectType::kObjectTypeFloat,
-                ObjectData { floating: f64::MAX },
-            ),
-            Object::new(
-                ObjectType::kObjectTypeFloat,
-                ObjectData { floating: f64::MAX },
-            ),
-        ];
+        let vec = vec![Object::new_float(f64::MAX), Object::new_float(f64::MIN)];
 
         let array = Array::from(vec);
         assert_eq!(array.size, 2);
@@ -179,27 +156,16 @@ mod tests {
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
-        assert_eq!(out_vec[0].object_type, ObjectType::kObjectTypeFloat);
-        assert_ulps_eq!(unsafe { out_vec[0].data.floating }, f64::MAX);
-        assert_eq!(out_vec[1].object_type, ObjectType::kObjectTypeFloat);
-        assert_ulps_eq!(unsafe { out_vec[1].data.floating }, f64::MAX);
+
+        assert_ulps_eq!(out_vec[0].try_as_float().unwrap(), f64::MAX);
+        assert_ulps_eq!(out_vec[1].try_as_float().unwrap(), f64::MIN);
     }
 
     #[test]
     fn test_from_vec_strings() {
         let vec = vec![
-            Object::new(
-                ObjectType::kObjectTypeString,
-                ObjectData {
-                    string: ManuallyDrop::new(LuaString::from(CString::new("first one").unwrap())),
-                },
-            ),
-            Object::new(
-                ObjectType::kObjectTypeString,
-                ObjectData {
-                    string: ManuallyDrop::new(LuaString::from(CString::new("second one").unwrap())),
-                },
-            ),
+            Object::new_string(LuaString::new("first one").unwrap()),
+            Object::new_string(LuaString::new("second one").unwrap()),
         ];
 
         let array = Array::from(vec);
@@ -209,94 +175,66 @@ mod tests {
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
-        assert_eq!(out_vec[0].object_type, ObjectType::kObjectTypeString);
+
         assert_eq!(
-            CString::from(ManuallyDrop::into_inner(unsafe {
-                out_vec[0].data.string.clone()
-            })),
-            CString::new("first one").unwrap()
+            out_vec[0].try_as_cloned_string().unwrap(),
+            LuaString::new("first one").unwrap()
         );
-        assert_eq!(out_vec[1].object_type, ObjectType::kObjectTypeString);
         assert_eq!(
-            CString::from(ManuallyDrop::into_inner(unsafe {
-                out_vec[1].data.string.clone()
-            })),
-            CString::new("second one").unwrap()
+            out_vec[1].try_as_cloned_string().unwrap(),
+            LuaString::new("second one").unwrap()
         );
     }
 
     #[test]
     fn test_from_vec_of_vecs() {
-        let inner1_vec = vec![
-            Object::new(ObjectType::kObjectTypeInteger, ObjectData { integer: 42 }),
-            Object::new(ObjectType::kObjectTypeFloat, ObjectData { floating: 42.42 }),
-        ];
+        let inner1_vec = vec![Object::new_integer(42), Object::new_float(42.42)];
+        debug!("TEST Array::from(inner1_vec)...");
         let inner1_array = Array::from(inner1_vec);
 
         let inner2_vec = vec![
-            Object::new(
-                ObjectType::kObjectTypeString,
-                ObjectData {
-                    string: ManuallyDrop::new(LuaString::from(CString::new("first one").unwrap())),
-                },
-            ),
-            Object::new(ObjectType::kObjectTypeBoolean, ObjectData { boolean: true }),
+            Object::new_string(LuaString::new("first one").unwrap()),
+            Object::new_boolean(true),
         ];
+        debug!("TEST Array::from(inner2_vec)...");
         let inner2_array = Array::from(inner2_vec);
 
         let vec = vec![
-            Object::new(
-                ObjectType::kObjectTypeArray,
-                ObjectData {
-                    array: ManuallyDrop::new(inner1_array),
-                },
-            ),
-            Object::new(
-                ObjectType::kObjectTypeArray,
-                ObjectData {
-                    array: ManuallyDrop::new(inner2_array),
-                },
-            ),
+            Object::new_array(inner1_array),
+            Object::new_array(inner2_array),
         ];
 
+        debug!("TEST Array::from(vec)...");
         let array = Array::from(vec);
         assert_eq!(array.size, 2);
         assert_eq!(array.capacity, 2);
 
+        debug!("TEST Vec::from(array)...");
         let mut out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
 
         {
-            let out_vec_inner1: Vec<Object> = Array::try_from(out_vec.remove(0)).unwrap().into();
+            let out_vec_inner1: Vec<Object> =
+                out_vec.remove(0).try_as_cloned_array().unwrap().into();
             assert_eq!(out_vec_inner1.len(), 2);
             assert_eq!(out_vec_inner1.capacity(), 2);
-            assert_eq!(
-                out_vec_inner1[0].object_type,
-                ObjectType::kObjectTypeInteger
-            );
-            assert_eq!(unsafe { out_vec_inner1[0].data.integer }, 42);
-            assert_eq!(out_vec_inner1[1].object_type, ObjectType::kObjectTypeFloat);
-            assert_ulps_eq!(unsafe { out_vec_inner1[1].data.floating }, 42.42);
+            assert_eq!(out_vec_inner1[0].try_as_integer().unwrap(), 42);
+            assert_ulps_eq!(out_vec_inner1[1].try_as_float().unwrap(), 42.42);
         }
 
         {
-            let out_vec_inner2: Vec<Object> = Array::try_from(out_vec.remove(0)).unwrap().into();
+            // let out_vec_inner2: Vec<Object> = Array::try_from(out_vec.remove(0)).unwrap().into();
+            let out_vec_inner2: Vec<Object> =
+                out_vec.remove(0).try_as_cloned_array().unwrap().into();
             assert_eq!(out_vec_inner2.len(), 2);
             assert_eq!(out_vec_inner2.capacity(), 2);
 
-            assert_eq!(out_vec_inner2[0].object_type, ObjectType::kObjectTypeString);
             assert_eq!(
-                CString::from(ManuallyDrop::into_inner(unsafe {
-                    out_vec_inner2[0].data.string.clone()
-                })),
-                CString::new("first one").unwrap()
+                out_vec_inner2[0].try_as_cloned_string().unwrap(),
+                LuaString::new("first one").unwrap()
             );
-            assert_eq!(
-                out_vec_inner2[1].object_type,
-                ObjectType::kObjectTypeBoolean
-            );
-            assert!(unsafe { out_vec_inner2[1].data.boolean });
+            assert!(out_vec_inner2[1].try_as_boolean().unwrap());
         }
     }
 
@@ -304,63 +242,60 @@ mod tests {
     fn test_clone() {
         let original_array = {
             let original_vec = vec![
-                Object::new(
-                    ObjectType::kObjectTypeString,
-                    ObjectData {
-                        string: ManuallyDrop::new(LuaString::from(
-                            CString::new("first one").unwrap(),
-                        )),
-                    },
-                ),
-                Object::new(
-                    ObjectType::kObjectTypeString,
-                    ObjectData {
-                        string: ManuallyDrop::new(LuaString::from(
-                            CString::new("second one").unwrap(),
-                        )),
-                    },
-                ),
+                Object::new_string(LuaString::new("first one").unwrap()),
+                Object::new_string(LuaString::new("second one").unwrap()),
             ];
+            debug!("TEST Array::from(Vec<Object>)...");
             Array::from(original_vec)
         };
 
         // Clone happens here
+        debug!("TEST Array::clone()...");
         let cloned = original_array.clone();
         assert_eq!(cloned.size, 2);
         assert_eq!(cloned.capacity, 2);
+        debug!("TEST------------------------------------");
 
         {
+            debug!("TEST Vec<Object>::from(cloned Array)...");
             let mut cloned_vec = Vec::from(cloned);
             assert_eq!(cloned_vec.len(), 2);
             assert_eq!(cloned_vec.capacity(), 2);
 
             let first_element = cloned_vec.remove(0);
 
-            let actual = LuaString::try_from(first_element).unwrap();
-            assert_eq!(CString::new("first one").unwrap(), CString::from(actual),);
+            debug!("TEST LuaString::try_from(first_element)...");
+            let actual = first_element.try_as_cloned_string().unwrap();
+            assert_eq!(LuaString::new("first one").unwrap(), actual);
 
             let second_element = cloned_vec.remove(0);
+            debug!("TEST LuaString::try_from(second_element)...");
             assert_eq!(
-                CString::new("second one").unwrap(),
-                CString::from(LuaString::try_from(second_element).unwrap()),
+                LuaString::new("second one").unwrap(),
+                second_element.try_as_cloned_string().unwrap(),
             );
         }
+        debug!("TEST------------------------------------");
 
         // Make sure we can still access the original's values
         {
+            debug!("TEST Vec<Object>::from(original Array)...");
             let mut original_vec = Vec::from(original_array);
             assert_eq!(original_vec.len(), 2);
             assert_eq!(original_vec.capacity(), 2);
 
             let first_element = original_vec.remove(0);
 
-            let actual = LuaString::try_from(first_element).unwrap();
-            assert_eq!(CString::new("first one").unwrap(), CString::from(actual));
+            debug!("TEST LuaString::try_from(first_element)...");
+            let actual = first_element.try_as_cloned_string().unwrap();
+            assert_eq!(LuaString::new("first one").unwrap(), actual);
 
             let second_element = original_vec.remove(0);
 
-            let actual = LuaString::try_from(second_element).unwrap();
-            assert_eq!(CString::new("second one").unwrap(), CString::from(actual));
+            debug!("TEST LuaString::try_from(second)...");
+            // let actual = LuaString::try_from(second_element).unwrap();
+            let actual = second_element.try_as_cloned_string().unwrap();
+            assert_eq!(LuaString::new("second one").unwrap(), actual);
         }
     }
 }

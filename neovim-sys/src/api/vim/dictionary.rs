@@ -26,10 +26,10 @@ impl Clone for Dictionary {
             dst.set_len(self.size);
         }
 
-        dst.shrink_to_fit();
+        let ptr = dst.as_mut_ptr();
 
         Self {
-            items: NonNull::new(dst.as_mut_ptr()).unwrap(),
+            items: NonNull::new(ptr).unwrap(),
             size: self.size,
             capacity: self.size,
         }
@@ -60,9 +60,30 @@ impl TryFrom<Object> for Dictionary {
     type Error = ();
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
+        debug!("Dictionary::try_from(Object)");
+
         match value.object_type {
             ObjectType::kObjectTypeDictionary => {
-                Ok(unsafe { ManuallyDrop::into_inner(value.data.dictionary) })
+                let data = &value.data;
+                // Move all the value (Object) data into the new Dictionary.
+                // Since we moved the data, don't call drop for the Object.
+                let size = unsafe { &data.dictionary }.size;
+                let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
+
+                unsafe {
+                    std::ptr::copy(data.dictionary.items.as_ref(), dst.as_mut_ptr(), size);
+                    dst.set_len(size);
+                }
+
+                let ptr = dst.as_mut_ptr();
+
+                let d = Self {
+                    items: NonNull::new(ptr).unwrap(),
+                    size,
+                    capacity: size,
+                };
+                std::mem::forget(value);
+                Ok(d)
             }
             _ => Err(()),
         }
@@ -71,24 +92,22 @@ impl TryFrom<Object> for Dictionary {
 
 #[cfg(test)]
 mod tests {
-    use super::{Dictionary, KeyValuePair, ManuallyDrop, Object, TryFrom};
-    use crate::api::vim::{Boolean, Float, Integer, ObjectData, ObjectType, String as LuaString};
+    use super::{Dictionary, KeyValuePair, Object, TryFrom};
+    use crate::api::vim::String as LuaString;
     use approx::assert_ulps_eq;
+    use log::debug;
     use std::ffi::CString;
 
     #[test]
     fn test_from_vec_of_bool_values() {
         let vec = vec![
             KeyValuePair {
-                key: CString::new("one").unwrap().into(),
-                value: Object::new(ObjectType::kObjectTypeBoolean, ObjectData { boolean: true }),
+                key: LuaString::new("one").unwrap(),
+                value: Object::new_boolean(true),
             },
             KeyValuePair {
-                key: CString::new("two").unwrap().into(),
-                value: Object::new(
-                    ObjectType::kObjectTypeBoolean,
-                    ObjectData { boolean: false },
-                ),
+                key: LuaString::new("two").unwrap(),
+                value: Object::new_boolean(false),
             },
         ];
 
@@ -100,45 +119,23 @@ mod tests {
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
 
-        assert_eq!(
-            out_vec[0].key.as_cstr(),
-            CString::new("one").unwrap().as_c_str()
-        );
-        assert_eq!(out_vec[0].value.object_type, ObjectType::kObjectTypeBoolean);
-        assert!(unsafe { out_vec[0].value.data.boolean });
+        assert_eq!(out_vec[0].key, LuaString::new("one").unwrap());
+        assert!(out_vec[0].value.try_as_boolean().unwrap());
 
-        assert_eq!(
-            out_vec[1].key.as_cstr(),
-            CString::new("two").unwrap().as_c_str()
-        );
-        assert_eq!(out_vec[1].value.object_type, ObjectType::kObjectTypeBoolean);
-        assert!(unsafe { !out_vec[1].value.data.boolean });
+        assert_eq!(out_vec[1].key, LuaString::new("two").unwrap());
+        assert!(!out_vec[1].value.try_as_boolean().unwrap());
     }
 
     #[test]
     fn test_from_vec_of_string_values() {
         let vec = vec![
             KeyValuePair {
-                key: CString::new("one").unwrap().into(),
-                value: Object::new(
-                    ObjectType::kObjectTypeString,
-                    ObjectData {
-                        string: ManuallyDrop::new(LuaString::from(
-                            CString::new("first one").unwrap(),
-                        )),
-                    },
-                ),
+                key: LuaString::new("one").unwrap(),
+                value: Object::new_string(LuaString::new("first one").unwrap()),
             },
             KeyValuePair {
                 key: CString::new("two").unwrap().into(),
-                value: Object::new(
-                    ObjectType::kObjectTypeString,
-                    ObjectData {
-                        string: ManuallyDrop::new(LuaString::from(
-                            CString::new("second one").unwrap(),
-                        )),
-                    },
-                ),
+                value: Object::new_string(LuaString::new("second one").unwrap()),
             },
         ];
 
@@ -150,20 +147,14 @@ mod tests {
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
 
-        assert_eq!(out_vec[0].value.object_type, ObjectType::kObjectTypeString);
         assert_eq!(
-            CString::from(ManuallyDrop::into_inner(unsafe {
-                out_vec[0].value.data.string.clone()
-            })),
-            CString::new("first one").unwrap()
+            out_vec[0].value.try_as_cloned_string().unwrap(),
+            LuaString::new("first one").unwrap()
         );
 
-        assert_eq!(out_vec[1].value.object_type, ObjectType::kObjectTypeString);
         assert_eq!(
-            CString::from(ManuallyDrop::into_inner(unsafe {
-                out_vec[1].value.data.string.clone()
-            })),
-            CString::new("second one").unwrap()
+            out_vec[1].value.try_as_cloned_string().unwrap(),
+            LuaString::new("second one").unwrap()
         );
     }
 
@@ -172,12 +163,12 @@ mod tests {
         let inner1_dictionary = {
             let inner1_vec = vec![
                 KeyValuePair::new(
-                    CString::new("inner one one").unwrap().into(),
-                    Object::new(ObjectType::kObjectTypeInteger, ObjectData { integer: 42 }),
+                    LuaString::new("inner one one").unwrap(),
+                    Object::new_integer(42),
                 ),
                 KeyValuePair::new(
-                    CString::new("inner one two").unwrap().into(),
-                    Object::new(ObjectType::kObjectTypeFloat, ObjectData { floating: 42.42 }),
+                    LuaString::new("inner one two").unwrap(),
+                    Object::new_float(42.42),
                 ),
             ];
             Dictionary::from(inner1_vec)
@@ -186,19 +177,12 @@ mod tests {
         let inner2_dictionary = {
             let inner2_vec = vec![
                 KeyValuePair::new(
-                    CString::new("inner two one").unwrap().into(),
-                    Object::new(
-                        ObjectType::kObjectTypeString,
-                        ObjectData {
-                            string: ManuallyDrop::new(LuaString::from(
-                                CString::new("first one").unwrap(),
-                            )),
-                        },
-                    ),
+                    LuaString::new("inner two one").unwrap(),
+                    Object::new_string(LuaString::new("first one").unwrap()),
                 ),
                 KeyValuePair::new(
-                    CString::new("inner two two").unwrap().into(),
-                    Object::new(ObjectType::kObjectTypeBoolean, ObjectData { boolean: true }),
+                    LuaString::new("inner two two").unwrap(),
+                    Object::new_boolean(true),
                 ),
             ];
             Dictionary::from(inner2_vec)
@@ -206,22 +190,12 @@ mod tests {
 
         let vec = vec![
             KeyValuePair::new(
-                CString::new("outer 1").unwrap().into(),
-                Object::new(
-                    ObjectType::kObjectTypeDictionary,
-                    ObjectData {
-                        dictionary: ManuallyDrop::new(inner1_dictionary),
-                    },
-                ),
+                LuaString::new("outer 1").unwrap(),
+                Object::new_dictionary(inner1_dictionary),
             ),
             KeyValuePair::new(
-                CString::new("outer 2").unwrap().into(),
-                Object::new(
-                    ObjectType::kObjectTypeDictionary,
-                    ObjectData {
-                        dictionary: ManuallyDrop::new(inner2_dictionary),
-                    },
-                ),
+                LuaString::new("outer 2").unwrap(),
+                Object::new_dictionary(inner2_dictionary),
             ),
         ];
 
@@ -236,63 +210,43 @@ mod tests {
         // Validate the Dictionary value
         {
             let kvp1 = out_vec.remove(0);
-            assert_eq!(
-                kvp1.key.as_cstr(),
-                CString::new("outer 1").unwrap().as_c_str()
-            );
+            assert_eq!(kvp1.key, LuaString::new("outer 1").unwrap());
 
             // Validate the Dictionary value
             {
-                let inner_dict1 = Dictionary::try_from(kvp1.value).unwrap();
+                let inner_dict1 = Dictionary::try_from(kvp1.value.clone()).unwrap();
                 let mut inner_vec1 = Vec::from(inner_dict1);
 
                 let inner_kvp1 = inner_vec1.remove(0);
-                assert_eq!(
-                    inner_kvp1.key.as_cstr(),
-                    CString::new("inner one one").unwrap().as_c_str()
-                );
-                assert_eq!(Integer::try_from(inner_kvp1.value).unwrap(), 42);
+                assert_eq!(inner_kvp1.key, LuaString::new("inner one one").unwrap());
+                assert_eq!(inner_kvp1.value.try_as_integer().unwrap(), 42);
 
                 let inner_kvp2 = inner_vec1.remove(0);
-                assert_eq!(
-                    inner_kvp2.key.as_cstr(),
-                    CString::new("inner one two").unwrap().as_c_str()
-                );
-                assert_ulps_eq!(Float::try_from(inner_kvp2.value).unwrap(), 42.42);
+                assert_eq!(inner_kvp2.key, LuaString::new("inner one two").unwrap());
+                assert_ulps_eq!(inner_kvp2.value.try_as_float().unwrap(), 42.42);
             }
         }
 
         // Validate the Dictionary value
         {
             let kvp2 = out_vec.remove(0);
-            assert_eq!(
-                kvp2.key.as_cstr(),
-                CString::new("outer 2").unwrap().as_c_str()
-            );
+            assert_eq!(kvp2.key, LuaString::new("outer 2").unwrap());
 
             // Validate the Dictionary value
             {
-                let inner_dict2 = Dictionary::try_from(kvp2.value).unwrap();
+                let inner_dict2 = kvp2.value.try_as_cloned_dictionary().unwrap();
                 let mut inner_vec2 = Vec::from(inner_dict2);
 
                 let inner_kvp1 = inner_vec2.remove(0);
+                assert_eq!(inner_kvp1.key, LuaString::new("inner two one").unwrap());
                 assert_eq!(
-                    inner_kvp1.key.as_cstr(),
-                    CString::new("inner two one").unwrap().as_c_str()
-                );
-                assert_eq!(
-                    // CString::from(LuaString::try_from(inner_kvp1.value).unwrap()).as_c_str(),
-                    CString::from(ManuallyDrop::into_inner(unsafe { inner_kvp1.value.data.string }))
-                        .as_c_str(),
-                    CString::new("first one").unwrap().as_c_str()
+                    inner_kvp1.value.try_as_cloned_string().unwrap(),
+                    LuaString::new("first one").unwrap()
                 );
 
                 let inner_kvp2 = inner_vec2.remove(0);
-                assert_eq!(
-                    inner_kvp2.key.as_cstr(),
-                    CString::new("inner two two").unwrap().as_c_str()
-                );
-                assert!(Boolean::try_from(inner_kvp2.value).unwrap());
+                assert_eq!(inner_kvp2.key, LuaString::new("inner two two").unwrap());
+                assert!(inner_kvp2.value.try_as_boolean().unwrap());
             }
         }
     }
@@ -302,15 +256,8 @@ mod tests {
         crate::init_logger();
         let original_dict = {
             let original_vec = vec![KeyValuePair::new(
-                CString::new("the key").unwrap().into(),
-                Object::new(
-                    ObjectType::kObjectTypeString,
-                    ObjectData {
-                        string: ManuallyDrop::new(LuaString::from(
-                            CString::new("the value").unwrap(),
-                        )),
-                    },
-                ),
+                LuaString::new("the key").unwrap(),
+                Object::new_string(LuaString::new("the value").unwrap()),
             )];
             Dictionary::from(original_vec)
         };
@@ -322,35 +269,28 @@ mod tests {
 
             let first_element = cloned_vec.remove(0);
             debug!("removed first element from dict vec");
+            assert_eq!(first_element.key, LuaString::new("the key").unwrap());
             assert_eq!(
-                CString::from(first_element.key).as_c_str(),
-                CString::new("the key").unwrap().as_c_str()
+                first_element.value.try_as_cloned_string().unwrap(),
+                LuaString::new("the value").unwrap()
             );
-            // assert_eq!(
-            //     CString::from(LuaString::try_from(first_element.value).unwrap()).as_c_str(),
-            //     CString::new("the value").unwrap().as_c_str()
-            // );
         }
 
         // Make sure we can still access the original's values
-        // {
-        //     let mut original_vec = Vec::from(original_array);
+        {
+            let mut original_vec = Vec::from(original_dict);
 
-        //     let first_element = original_vec.remove(0);
-        //     assert_eq!(
-        //         CString::new("first one").unwrap(),
-        //         CString::from(ManuallyDrop::into_inner(unsafe {
-        //             first_element.data.string
-        //         })),
-        //     );
+            let first_element = original_vec.remove(0);
+            assert_eq!(
+                first_element.value.try_as_cloned_string().unwrap(),
+                LuaString::new("first one").unwrap(),
+            );
 
-        //     let second_element = original_vec.remove(0);
-        //     assert_eq!(
-        //         CString::new("second one").unwrap(),
-        //         CString::from(ManuallyDrop::into_inner(unsafe {
-        //             second_element.data.string
-        //         })),
-        //     );
-        // }
+            let second_element = original_vec.remove(0);
+            assert_eq!(
+                second_element.value.try_as_cloned_string().unwrap(),
+                LuaString::new("second one").unwrap(),
+            );
+        }
     }
 }

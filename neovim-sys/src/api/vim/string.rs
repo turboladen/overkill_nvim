@@ -1,7 +1,5 @@
-use super::{Object, ObjectType};
 use log::debug;
 use std::{
-    convert::TryFrom,
     ffi::{CStr, CString, NulError},
     os::raw::c_char,
     ptr::NonNull,
@@ -79,32 +77,6 @@ impl From<String> for CString {
             string.as_c_str().to_string_lossy()
         );
         CString::new(string.to_bytes()).unwrap()
-    }
-}
-
-impl TryFrom<Object> for String {
-    type Error = ();
-
-    fn try_from(value: Object) -> Result<Self, Self::Error> {
-        debug!("String::try_from(Object): '{}'", unsafe {
-            value.data.string.as_c_str().to_string_lossy()
-        });
-
-        match value.object_type {
-            ObjectType::kObjectTypeString => {
-                let dst = CString::new(unsafe { value.data.string.to_bytes() }).unwrap();
-                let ptr = dst.into_raw();
-
-                let s = Self {
-                    data: NonNull::new(ptr).unwrap(),
-                    size: unsafe { value.data.string.size },
-                };
-                // Since we moved the data, don't call drop for the Object.
-                std::mem::forget(value);
-                Ok(s)
-            }
-            _ => Err(()),
-        }
     }
 }
 
