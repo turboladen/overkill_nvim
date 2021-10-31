@@ -1,26 +1,26 @@
 pub mod array;
 pub mod dictionary;
-pub mod error;
 pub mod key_value_pair;
+pub mod nvim_error;
 pub mod object;
 pub mod string;
 
 pub use self::{
     array::Array,
     dictionary::Dictionary,
-    error::{Error, ErrorType},
+    nvim_error::{ErrorType, NvimError},
     key_value_pair::KeyValuePair,
     object::{Object, ObjectData, ObjectType},
     string::String,
 };
 
-use super::{buffer::Buffer};
+use super::buffer::Buffer;
 
 extern "C" {
-    pub fn nvim_get_var(name: self::String, err: *mut Error) -> Object;
-    pub fn nvim_set_var(name: self::String, value: Object, err: *mut Error);
+    pub fn nvim_get_var(name: self::String, err: *mut NvimError) -> Object;
+    pub fn nvim_set_var(name: self::String, value: Object, err: *mut NvimError);
 
-    pub fn nvim_buf_get_var(name: self::String, err: *mut Error) -> Object;
+    pub fn nvim_buf_get_var(name: self::String, err: *mut NvimError) -> Object;
 
     pub fn nvim_feedkeys(keys: self::String, mode: self::String, escape_csi: Boolean);
 
@@ -33,9 +33,9 @@ extern "C" {
         special: Boolean,
     ) -> String;
 
-    pub fn nvim_exec(src: String, output: Boolean, err: *mut Error) -> String;
+    pub fn nvim_exec(src: String, output: Boolean, err: *mut NvimError) -> String;
 
-    pub fn nvim_set_hl(namespace_id: Integer, name: String, val: Dictionary, err: *mut Error);
+    pub fn nvim_set_hl(namespace_id: Integer, name: String, val: Dictionary, err: *mut NvimError);
     pub fn nvim_get_namespaces() -> Dictionary;
     pub fn nvim_create_namespace(name: String) -> Integer;
 }

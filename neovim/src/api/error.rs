@@ -3,7 +3,7 @@ use std::{ffi::CStr, fmt};
 
 #[derive(Default)]
 pub struct Error {
-    inner: vim::Error,
+    inner: vim::NvimError,
 }
 
 impl Error {
@@ -11,7 +11,7 @@ impl Error {
         !matches!(self.inner.error_type, ErrorType::kErrorTypeNone)
     }
 
-    pub fn inner_mut(&mut self) -> &mut vim::Error {
+    pub fn inner_mut(&mut self) -> &mut vim::NvimError {
         &mut self.inner
     }
 }

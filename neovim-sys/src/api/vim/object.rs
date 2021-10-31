@@ -1,6 +1,15 @@
 use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, String as LuaString};
 use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
 
+#[derive(Debug, Clone, Copy)]
+pub enum Error {
+    Value,
+    TypeError {
+        expected: ObjectType,
+        actual: ObjectType,
+    },
+}
+
 #[repr(C)]
 pub struct Object {
     object_type: ObjectType,
@@ -34,7 +43,10 @@ macro_rules! try_as_type {
                 let data = &$_self.data;
                 Ok(unsafe { data.$field_name })
             }
-            _ => Err(()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::$object_type_variant,
+                actual: $_self.object_type,
+            }),
         }
     };
 }
@@ -46,7 +58,10 @@ macro_rules! try_as_ref_type {
                 let data = &$_self.data;
                 Ok(unsafe { &data.$field_name })
             }
-            _ => Err(()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::$object_type_variant,
+                actual: $_self.object_type,
+            }),
         }
     };
 }
@@ -72,42 +87,46 @@ impl Object {
         &self.data
     }
 
-    pub fn try_as_nil(&self) -> Result<(), ()> {
+    pub fn try_as_nil(&self) -> Result<(), Error> {
         match self.object_type {
             ObjectType::kObjectTypeNil => {
                 let data = &self.data;
 
-                if !unsafe { data.boolean } {
+                // Nils have the data union set to 0.
+                if unsafe { data.integer } == 0 {
                     Ok(())
                 } else {
-                    Err(())
+                    Err(Error::Value)
                 }
             }
-            _ => Err(()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeNil,
+                actual: self.object_type,
+            }),
         }
     }
 
-    pub fn try_as_boolean(&self) -> Result<bool, ()> {
+    pub fn try_as_boolean(&self) -> Result<bool, Error> {
         try_as_type!(self, kObjectTypeBoolean, boolean)
     }
 
-    pub fn try_as_integer(&self) -> Result<Integer, ()> {
+    pub fn try_as_integer(&self) -> Result<Integer, Error> {
         try_as_type!(self, kObjectTypeInteger, integer)
     }
 
-    pub fn try_as_float(&self) -> Result<Float, ()> {
+    pub fn try_as_float(&self) -> Result<Float, Error> {
         try_as_type!(self, kObjectTypeFloat, floating)
     }
 
-    pub fn try_as_string(&self) -> Result<&LuaString, ()> {
+    pub fn try_as_string(&self) -> Result<&LuaString, Error> {
         try_as_ref_type!(self, kObjectTypeString, string)
     }
 
-    pub fn try_as_array(&self) -> Result<&Array, ()> {
+    pub fn try_as_array(&self) -> Result<&Array, Error> {
         try_as_ref_type!(self, kObjectTypeArray, array)
     }
 
-    pub fn try_as_dictionary(&self) -> Result<&Dictionary, ()> {
+    pub fn try_as_dictionary(&self) -> Result<&Dictionary, Error> {
         try_as_ref_type!(self, kObjectTypeDictionary, dictionary)
     }
 
@@ -314,7 +333,7 @@ impl Debug for Object {
 }
 
 impl TryFrom<Object> for Boolean {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type {
@@ -322,13 +341,16 @@ impl TryFrom<Object> for Boolean {
                 let data = &value.data;
                 Ok(unsafe { data.boolean })
             }
-            _ => Err(()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeBoolean,
+                actual: value.object_type,
+            }),
         }
     }
 }
 
 impl TryFrom<Object> for Integer {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type {
@@ -336,13 +358,16 @@ impl TryFrom<Object> for Integer {
                 let data = &value.data;
                 Ok(unsafe { data.integer })
             }
-            _ => Err(()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeInteger,
+                actual: value.object_type,
+            }),
         }
     }
 }
 
 impl TryFrom<Object> for Float {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type {
@@ -350,7 +375,10 @@ impl TryFrom<Object> for Float {
                 let data = &value.data;
                 Ok(unsafe { data.floating })
             }
-            _ => Err(()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeFloat,
+                actual: value.object_type,
+            }),
         }
     }
 }

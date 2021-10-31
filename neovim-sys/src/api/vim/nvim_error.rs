@@ -1,12 +1,12 @@
 use std::os::raw::c_char;
 
 #[repr(C)]
-pub struct Error {
+pub struct NvimError {
     pub error_type: ErrorType,
     pub msg: *const c_char,
 }
 
-impl Default for Error {
+impl Default for NvimError {
     fn default() -> Self {
         Self {
             error_type: ErrorType::kErrorTypeNone,
