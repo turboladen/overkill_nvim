@@ -1,7 +1,7 @@
-use neovim_sys::api::vim::ObjectType;
-
 use super::api;
 use crate::api::{Boolean, LuaString, Object, RustObject};
+use approx::ulps_ne;
+use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 
 // #[no_mangle]
 // pub extern "C" fn nvim_get_current_buf_test() -> Boolean {
@@ -95,7 +95,7 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
         match self::api::nvim_get_var(var).map(RustObject::from) {
             Ok(RustObject::Float(f)) => {
-                if f != 123.456 {
+                if ulps_ne!(f, 123.456) {
                     result = false;
                 }
             }
@@ -143,45 +143,66 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
     // Array
     {
-        // let s = RustObject::Integer(4242);
-        // let o = Object::from(s);
-        // let items = [o];
-        // let value = Array::from(items.as_ref());
+        fn make_subject() -> Array {
+            let o = Object::from(4242);
+            Array::new([o])
+        }
+        let value = Object::from(make_subject());
 
-        // if let Err(e) = self::api::nvim_set_var(var, value) {
-        //     eprintln!("Error setting var: {}", e);
-        // }
+        if let Err(e) = self::api::nvim_set_var(var, value) {
+            eprintln!("Error setting var: {}", e);
+        }
 
-        // match self::api::nvim_get_var(var) {
-        //     Object::Array(a) => {
-        //         if a.as_slice() != items.as_slice() {
-        //             result = false;
-        //         }
-        //     }
-        //     t => {
-        //         eprintln!("Got unexpected value type: {:?}", t);
-        //         result = false;
-        //     }
-        // }
+        match self::api::nvim_get_var(var) {
+            Ok(object) if object.object_type() == ObjectType::kObjectTypeArray => {
+                let array = object.as_array_unchecked();
+                if array != &make_subject() {
+                    eprintln!("FAIL! Expected 'this is a test', got '{:?}'", array);
+                    result = false;
+                }
+            }
+            Ok(t) => {
+                eprintln!("Got unexpected value type: {:?}", t);
+                result = false;
+            }
+            Err(e) => {
+                eprintln!("Got error during test: {}", e);
+                result = false;
+            }
+        }
     }
 
     // Dictionary
-    //     if var.is_null() {
-    //         return false;
-    //     }
+    {
+        fn make_subject() -> Dictionary {
+            let key = LuaString::new("meow").unwrap();
+            let value = Object::from(4242);
+            Dictionary::new([KeyValuePair::new(key, value)])
+        }
+        let value = Object::from(make_subject());
 
-    //     let var = unsafe { CStr::from_ptr(var) };
-    //     // let expected = Array::new(Cow::Borrowed(unsafe { expected.as_ref().unwrap() }));
-    //     let expected = Dictionary::new(Cow::Owned(expected));
+        if let Err(e) = self::api::nvim_set_var(var, value) {
+            eprintln!("Error setting var: {}", e);
+        }
 
-    //     match self::api::nvim_get_var(var.to_str().unwrap()) {
-    //         Object::Dictionary(d) => d == expected,
-    //         t => {
-    //             eprintln!("Got unexpected value type: {:?}", t);
-    //             false
-    //         }
-    //     }
-    // }
+        match self::api::nvim_get_var(var) {
+            Ok(object) if object.object_type() == ObjectType::kObjectTypeDictionary => {
+                let dict = object.as_dictionary_unchecked();
+                if dict != &make_subject() {
+                    eprintln!("FAIL! Expected 'this is a test', got '{:?}'", dict);
+                    result = false;
+                }
+            }
+            Ok(t) => {
+                eprintln!("Got unexpected value type: {:?}", t);
+                result = false;
+            }
+            Err(e) => {
+                eprintln!("Got error during test: {}", e);
+                result = false;
+            }
+        }
+    }
 
     result
 }

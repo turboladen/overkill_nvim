@@ -1,12 +1,6 @@
 use super::{KeyValuePair, Object, ObjectType};
-use std::{
-    convert::TryFrom,
-    mem::{self, ManuallyDrop, MaybeUninit},
-    ptr::{addr_of_mut, NonNull},
-    slice,
-};
+use std::{convert::TryFrom, fmt, mem::{self, ManuallyDrop, MaybeUninit}, ptr::{addr_of_mut, NonNull}, slice};
 
-#[derive(Debug)]
 #[repr(C)]
 pub struct Dictionary {
     items: NonNull<KeyValuePair>,
@@ -74,6 +68,12 @@ impl Clone for Dictionary {
 impl Drop for Dictionary {
     fn drop(&mut self) {
         unsafe { Vec::from_raw_parts(self.items.as_mut(), self.size, self.capacity) };
+    }
+}
+
+impl fmt::Debug for Dictionary {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 

@@ -4,13 +4,13 @@ use self::into_iter::IntoIter;
 use super::{Object, ObjectType};
 use std::{
     convert::TryFrom,
+    fmt,
     marker::PhantomData,
     mem::{self, ManuallyDrop, MaybeUninit},
     ptr::{self, addr_of_mut, NonNull},
     slice,
 };
 
-#[derive(Debug)]
 #[repr(C)]
 pub struct Array {
     items: NonNull<Object>,
@@ -96,6 +96,12 @@ impl IntoIterator for Array {
 impl Clone for Array {
     fn clone(&self) -> Self {
         Self::new(self.as_slice())
+    }
+}
+
+impl fmt::Debug for Array {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 
