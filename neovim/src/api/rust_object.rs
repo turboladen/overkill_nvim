@@ -1,5 +1,5 @@
-use neovim_sys::api::vim::{self,
-    Array, Boolean, Dictionary, Float, Integer, Object, ObjectType, String as LuaString,
+use neovim_sys::api::vim::{
+    self, Array, Boolean, Dictionary, Float, Integer, Object, ObjectType, String as LuaString,
 };
 
 #[derive(Debug, Clone, PartialEq)]
