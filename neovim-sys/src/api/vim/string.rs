@@ -31,15 +31,18 @@ impl String {
     pub fn to_bytes(&self) -> &[u8] {
         self.as_c_str().to_bytes()
     }
+
+    pub fn len(&self) -> usize {
+        self.size
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl Clone for String {
     fn clone(&self) -> Self {
-        debug!(
-            "Cloning String: '{}' ({})",
-            self.as_c_str().to_string_lossy(),
-            self.size
-        );
         let dst = CString::new(self.to_bytes()).unwrap();
         let ptr = dst.into_raw();
 

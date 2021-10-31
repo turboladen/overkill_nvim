@@ -137,9 +137,9 @@ impl TryFrom<Object> for Array {
     type Error = ();
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
-        match value.object_type {
+        match value.object_type() {
             ObjectType::kObjectTypeArray => {
-                let data = &value.data;
+                let data = value.data();
                 let size = unsafe { &data.array }.size;
                 let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
 

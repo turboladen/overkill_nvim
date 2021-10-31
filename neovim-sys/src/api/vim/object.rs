@@ -1,11 +1,10 @@
 use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, String as LuaString};
-use log::debug;
 use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
 
 #[repr(C)]
 pub struct Object {
-    pub object_type: ObjectType,
-    pub data: ObjectData,
+    object_type: ObjectType,
+    data: ObjectData,
 }
 
 macro_rules! new_copy_type {
@@ -64,8 +63,13 @@ impl Object {
         }
     }
 
-    pub fn new_dictionary(dictionary: Dictionary) -> Self {
-        new_clone_type!(kObjectTypeDictionary, dictionary)
+    pub fn object_type(&self) -> ObjectType {
+        self.object_type
+    }
+
+    /// Get a reference to the object's data.
+    pub fn data(&self) -> &ObjectData {
+        &self.data
     }
 
     pub fn try_as_nil(&self) -> Result<(), ()> {
@@ -129,6 +133,30 @@ impl Object {
 
     pub fn as_dictionary_unchecked(&self) -> &Dictionary {
         unsafe { &self.data.dictionary }
+    }
+
+    pub fn into_boolean_unchecked(self) -> Boolean {
+        unsafe { self.data.boolean }
+    }
+
+    pub fn into_integer_unchecked(self) -> Integer {
+        unsafe { self.data.integer }
+    }
+
+    pub fn into_float_unchecked(self) -> Float {
+        unsafe { self.data.floating }
+    }
+
+    pub fn into_string_unchecked(self) -> LuaString {
+        unsafe { ManuallyDrop::into_inner(self.data.string) }
+    }
+
+    pub fn into_array_unchecked(self) -> Array {
+        unsafe { ManuallyDrop::into_inner(self.data.array) }
+    }
+
+    pub fn into_dictionary_unchecked(self) -> Dictionary {
+        unsafe { ManuallyDrop::into_inner(self.data.dictionary) }
     }
 }
 
@@ -204,7 +232,6 @@ macro_rules! clone_inner_for_clone {
 
 impl Clone for Object {
     fn clone(&self) -> Self {
-        debug!("Cloning Object...");
         match self.object_type {
             ObjectType::kObjectTypeNil => Self::new_nil(),
             ObjectType::kObjectTypeBoolean => copy_inner_for_clone!(self, boolean),

@@ -1,44 +1,12 @@
+use neovim_sys::api::vim::ObjectType;
+
 use super::api;
-use crate::api::{Array, Boolean, NString, RustObject};
-use std::convert::TryFrom;
+use crate::api::{Boolean, LuaString, Object, RustObject};
 
 // #[no_mangle]
 // pub extern "C" fn nvim_get_current_buf_test() -> Boolean {
 //     self::api::nvim_get_current_buf() == 1
 // }
-
-#[no_mangle]
-pub extern "C" fn test_primitives() -> Boolean {
-    let mut result = true;
-
-    // NString
-    {
-        let nstring = NString::from("meow");
-        if &nstring.to_string() != "meow" {
-            eprintln!("Uh oh: '{}'", nstring);
-            result = false;
-        }
-    }
-
-    // Array
-    {
-        let things = vec![42_i64];
-        let array = Array::from(things.as_slice());
-
-        if array
-            .to_vec()
-            .into_iter()
-            .map(|i| i64::try_from(i).unwrap())
-            .collect::<Vec<i64>>()
-            != things
-        {
-            eprintln!("Uh oh: '{:?}'", array);
-            result = false;
-        }
-    }
-
-    result
-}
 
 #[no_mangle]
 pub extern "C" fn test_set_get_var() -> Boolean {
@@ -48,9 +16,9 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
     // nil
     {
-        let value = RustObject::Nil;
+        let value = Object::new_nil();
 
-        if let Err(e) = self::api::nvim_set_var(var, value.into()) {
+        if let Err(e) = self::api::nvim_set_var(var, value) {
             eprintln!("Error setting var: {}", e);
         }
 
@@ -69,9 +37,9 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
     // // bool
     {
-        let value = RustObject::Boolean(true);
+        let value = Object::from(true);
 
-        if let Err(e) = self::api::nvim_set_var(var, value.into()) {
+        if let Err(e) = self::api::nvim_set_var(var, value) {
             eprintln!("Error setting var: {}", e);
         }
 
@@ -94,9 +62,9 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
     // Integer
     {
-        let value = RustObject::Integer(42);
+        let value = Object::from(42);
 
-        if let Err(e) = self::api::nvim_set_var(var, value.into()) {
+        if let Err(e) = self::api::nvim_set_var(var, value) {
             eprintln!("Error setting var: {}", e);
         }
 
@@ -119,9 +87,9 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
     // Float
     {
-        let value = RustObject::Float(123.456);
+        let value = Object::from(123.456);
 
-        if let Err(e) = self::api::nvim_set_var(var, value.into()) {
+        if let Err(e) = self::api::nvim_set_var(var, value) {
             eprintln!("Error setting var: {}", e);
         }
 
@@ -144,29 +112,33 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
     // String
     {
-        let string = crate::api::NString::from("this is a test");
-        // let value = RustObject::String(string);
+        let string = LuaString::new("this is a test").unwrap();
+        let value = Object::from(string);
 
-        // if let Err(e) = self::api::nvim_set_var(var, value.into()) {
-        //     eprintln!("Error setting var: {}", e);
-        // }
+        if let Err(e) = self::api::nvim_set_var(var, value) {
+            eprintln!("Error setting var: {}", e);
+        }
 
-        // match self::api::nvim_get_var(var).map(RustObject::from) {
-        //     Ok(RustObject::String(s)) => {
-        //         if s.as_str() != "this is a test" {
-        //             eprintln!("FAIL! Expected 'this is a test', got '{}'", s.as_str());
-        //             result = false;
-        //         }
-        //     }
-        //     Ok(t) => {
-        //         eprintln!("Got unexpected value type: {:?}", t);
-        //         result = false;
-        //     }
-        //     Err(e) => {
-        //         eprintln!("Got error during test: {}", e);
-        //         result = false;
-        //     }
-        // }
+        match self::api::nvim_get_var(var) {
+            Ok(object) if object.object_type() == ObjectType::kObjectTypeString => {
+                let string = object.as_string_unchecked();
+                if string != &LuaString::new("this is a test").unwrap() {
+                    eprintln!(
+                        "FAIL! Expected 'this is a test', got '{}'",
+                        string.as_c_str().to_string_lossy()
+                    );
+                    result = false;
+                }
+            }
+            Ok(t) => {
+                eprintln!("Got unexpected value type: {:?}", t);
+                result = false;
+            }
+            Err(e) => {
+                eprintln!("Got error during test: {}", e);
+                result = false;
+            }
+        }
     }
 
     // Array

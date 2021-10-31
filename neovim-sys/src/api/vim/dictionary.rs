@@ -94,9 +94,9 @@ impl TryFrom<Object> for Dictionary {
     type Error = ();
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
-        match value.object_type {
+        match value.object_type() {
             ObjectType::kObjectTypeDictionary => {
-                let data = &value.data;
+                let data = value.data();
                 // Move all the value (Object) data into the new Dictionary.
                 // Since we moved the data, don't call drop for the Object.
                 let size = unsafe { &data.dictionary }.size;
@@ -227,11 +227,11 @@ mod tests {
         let dictionary = Dictionary::new([
             KeyValuePair::new(
                 LuaString::new("outer 1").unwrap(),
-                Object::new_dictionary(inner1_dictionary),
+                Object::from(inner1_dictionary),
             ),
             KeyValuePair::new(
                 LuaString::new("outer 2").unwrap(),
-                Object::new_dictionary(inner2_dictionary),
+                Object::from(inner2_dictionary),
             ),
         ]);
         assert_eq!(dictionary.size, 2);
@@ -311,10 +311,7 @@ mod tests {
             let mut original_vec = Vec::from(original_dict);
 
             let first_element = original_vec.remove(0);
-            assert_eq!(
-                first_element.key(),
-                &LuaString::new("the key").unwrap(),
-            );
+            assert_eq!(first_element.key(), &LuaString::new("the key").unwrap(),);
             assert_eq!(
                 first_element.value().try_as_string().unwrap(),
                 &LuaString::new("the value").unwrap(),
