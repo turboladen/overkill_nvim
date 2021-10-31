@@ -1,18 +1,96 @@
+pub mod into_iter;
+
+use self::into_iter::IntoIter;
 use super::{Object, ObjectType};
 use log::debug;
-use std::{convert::TryFrom, mem::ManuallyDrop, ptr::NonNull};
+use std::{
+    convert::TryFrom,
+    marker::PhantomData,
+    mem::{self, ManuallyDrop, MaybeUninit},
+    ptr::{self, addr_of_mut, NonNull},
+    slice,
+};
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct Array {
-    pub items: NonNull<Object>,
-    pub size: usize,
-    pub capacity: usize,
+    items: NonNull<Object>,
+    size: usize,
+    capacity: usize,
 }
 
 impl Array {
+    pub fn new<T: Into<Vec<Object>>>(vec: T) -> Self {
+        let mut vec: Vec<Object> = vec.into();
+
+        let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
+        let ptr = uninit.as_mut_ptr();
+
+        // Initializing the `size` field
+        // Using `write` instead of assignment via `=` to not call `drop` on the
+        // old, uninitialized value.
+        unsafe {
+            addr_of_mut!((*ptr).size).write(vec.len());
+            addr_of_mut!((*ptr).capacity).write(vec.capacity());
+        }
+
+        let new_items = NonNull::new(vec.as_mut_ptr()).unwrap();
+
+        unsafe {
+            // Initializing the `list` field
+            // If there is a panic here, then the `String` in the `name` field leaks.
+            addr_of_mut!((*ptr).items).write(new_items)
+        }
+
+        mem::forget(vec);
+
+        unsafe { uninit.assume_init() }
+    }
+
     pub fn as_slice(&self) -> &[Object] {
-        unsafe { std::slice::from_raw_parts(self.items.as_ref(), self.size) }
+        unsafe { slice::from_raw_parts(&*self.items.as_ref(), self.size) }
+    }
+
+    /// Get a reference to the array's size.
+    pub fn len(&self) -> usize {
+        self.size
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Get a reference to the array's capacity.
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+
+    pub fn iter(&self) -> slice::Iter<'_, Object> {
+        self.as_slice().iter()
+    }
+}
+
+impl IntoIterator for Array {
+    type Item = Object;
+    type IntoIter = IntoIter;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        unsafe {
+            let me = ManuallyDrop::new(self);
+            let alloc = ptr::read(me.items.as_ptr());
+            let begin = me.items.as_ptr();
+            let end = begin.add(me.len()) as *const Object;
+            let cap = me.capacity();
+            IntoIter {
+                buf: NonNull::new_unchecked(begin),
+                phantom: PhantomData,
+                cap,
+                alloc,
+                ptr: begin,
+                end,
+            }
+        }
     }
 }
 
@@ -22,7 +100,7 @@ impl Clone for Array {
         let mut dst = ManuallyDrop::new(Vec::with_capacity(self.size));
 
         unsafe {
-            std::ptr::copy(self.items.as_ref(), dst.as_mut_ptr(), self.size);
+            ptr::copy(self.items.as_ref(), dst.as_mut_ptr(), self.size);
             dst.set_len(self.size);
         }
 
@@ -43,23 +121,26 @@ impl Drop for Array {
     }
 }
 
-impl From<Vec<Object>> for Array {
-    fn from(vec: Vec<Object>) -> Self {
-        let mut vec = ManuallyDrop::new(vec);
-        vec.shrink_to_fit();
+// impl From<Vec<Object>> for Array {
+//     fn from(vec: Vec<Object>) -> Self {
+//         let mut vec = ManuallyDrop::new(vec);
+//         vec.shrink_to_fit();
 
-        Self {
-            items: NonNull::new(vec.as_mut_ptr()).unwrap(),
-            size: vec.len(),
-            capacity: vec.len(),
-        }
-    }
-}
+//         Self {
+//             items: NonNull::new(vec.as_mut_ptr()).unwrap(),
+//             size: vec.len(),
+//             capacity: vec.len(),
+//         }
+//     }
+// }
 
 impl From<Array> for Vec<Object> {
     fn from(array: Array) -> Self {
         debug!("Vec<Object>::from(Array)");
         let v = unsafe { Vec::from_raw_parts(array.items.as_ptr(), array.size, array.capacity) };
+        // for object in array.into_iter() {
+        //     mem::forget(object);
+        // }
         std::mem::forget(array);
 
         v
@@ -85,7 +166,7 @@ impl TryFrom<Object> for Array {
                 let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
 
                 unsafe {
-                    std::ptr::copy(data.array.items.as_ref(), dst.as_mut_ptr(), size);
+                    ptr::copy(data.array.items.as_ref(), dst.as_mut_ptr(), size);
                     dst.set_len(size);
                 }
 
@@ -96,11 +177,21 @@ impl TryFrom<Object> for Array {
                     size,
                     capacity: size,
                 };
-                std::mem::forget(value);
+                mem::forget(value);
                 Ok(a)
             }
             _ => Err(()),
         }
+    }
+}
+
+impl PartialEq for Array {
+    fn eq(&self, other: &Self) -> bool {
+        // if self.len() != other.len() {
+        //     return false;
+        // }
+        // self.iter().zip(other.iter()).all(|(x, y)| x == y)
+        self.as_slice().eq(other.as_slice())
     }
 }
 
@@ -111,12 +202,22 @@ mod tests {
     use approx::assert_ulps_eq;
 
     #[test]
-    fn test_from_vec_bool() {
-        let vec = vec![Object::new_boolean(true), Object::new_boolean(false)];
+    fn test_new() {
+        let subject = Array::new([]);
+        assert_eq!(subject.len(), 0);
 
-        let array = Array::from(vec);
-        assert_eq!(array.size, 2);
-        assert_eq!(array.capacity, 2);
+        let subject = Array::new([Object::from(4.2)]);
+        assert_eq!(subject.len(), 1);
+
+        let subject = Array::new([Object::from(4.2), Object::new_nil()]);
+        assert_eq!(subject.len(), 2);
+    }
+
+    #[test]
+    fn test_vec_from_bool() {
+        let array = Array::new([Object::from(true), Object::from(false)]);
+        assert_eq!(array.len(), 2);
+        assert_eq!(array.capacity(), 2);
 
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
@@ -128,14 +229,12 @@ mod tests {
 
     #[test]
     fn test_from_vec_int() {
-        let vec = vec![
-            Object::new_integer(i64::max_value()),
-            Object::new_integer(i64::min_value()),
-        ];
-
-        let array = Array::from(vec);
-        assert_eq!(array.size, 2);
-        assert_eq!(array.capacity, 2);
+        let array = Array::new([
+            Object::from(i64::max_value()),
+            Object::from(i64::min_value()),
+        ]);
+        assert_eq!(array.len(), 2);
+        assert_eq!(array.capacity(), 2);
 
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
@@ -147,11 +246,9 @@ mod tests {
 
     #[test]
     fn test_from_vec_floats() {
-        let vec = vec![Object::new_float(f64::MAX), Object::new_float(f64::MIN)];
-
-        let array = Array::from(vec);
-        assert_eq!(array.size, 2);
-        assert_eq!(array.capacity, 2);
+        let array = Array::new([Object::from(f64::MAX), Object::from(f64::MIN)]);
+        assert_eq!(array.len(), 2);
+        assert_eq!(array.capacity(), 2);
 
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
@@ -162,61 +259,48 @@ mod tests {
     }
 
     #[test]
-    fn test_from_vec_strings() {
-        let vec = vec![
-            Object::new_string(LuaString::new("first one").unwrap()),
-            Object::new_string(LuaString::new("second one").unwrap()),
-        ];
-
-        let array = Array::from(vec);
-        assert_eq!(array.size, 2);
-        assert_eq!(array.capacity, 2);
+    fn test_vec_strings() {
+        let array = Array::new([
+            Object::from(LuaString::new("first one").unwrap()),
+            Object::from(LuaString::new("second one").unwrap()),
+        ]);
+        assert_eq!(array.len(), 2);
+        assert_eq!(array.capacity(), 2);
 
         let out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
 
         assert_eq!(
-            out_vec[0].try_as_cloned_string().unwrap(),
-            LuaString::new("first one").unwrap()
+            out_vec[0].try_as_string().unwrap(),
+            &LuaString::new("first one").unwrap()
         );
         assert_eq!(
-            out_vec[1].try_as_cloned_string().unwrap(),
-            LuaString::new("second one").unwrap()
+            out_vec[1].try_as_string().unwrap(),
+            &LuaString::new("second one").unwrap()
         );
     }
 
     #[test]
     fn test_from_vec_of_vecs() {
-        let inner1_vec = vec![Object::new_integer(42), Object::new_float(42.42)];
-        debug!("TEST Array::from(inner1_vec)...");
-        let inner1_array = Array::from(inner1_vec);
+        let inner1_array = Array::new([Object::from(42), Object::from(42.42)]);
 
-        let inner2_vec = vec![
-            Object::new_string(LuaString::new("first one").unwrap()),
-            Object::new_boolean(true),
-        ];
-        debug!("TEST Array::from(inner2_vec)...");
-        let inner2_array = Array::from(inner2_vec);
+        let inner2_array = Array::new([
+            Object::from(LuaString::new("first one").unwrap()),
+            Object::from(true),
+        ]);
 
-        let vec = vec![
-            Object::new_array(inner1_array),
-            Object::new_array(inner2_array),
-        ];
+        let array = Array::new([Object::from(inner1_array), Object::from(inner2_array)]);
+        assert_eq!(array.len(), 2);
+        assert_eq!(array.capacity(), 2);
 
-        debug!("TEST Array::from(vec)...");
-        let array = Array::from(vec);
-        assert_eq!(array.size, 2);
-        assert_eq!(array.capacity, 2);
-
-        debug!("TEST Vec::from(array)...");
         let mut out_vec = Vec::from(array);
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
 
         {
             let out_vec_inner1: Vec<Object> =
-                out_vec.remove(0).try_as_cloned_array().unwrap().into();
+                out_vec.remove(0).try_as_array().unwrap().clone().into();
             assert_eq!(out_vec_inner1.len(), 2);
             assert_eq!(out_vec_inner1.capacity(), 2);
             assert_eq!(out_vec_inner1[0].try_as_integer().unwrap(), 42);
@@ -224,15 +308,14 @@ mod tests {
         }
 
         {
-            // let out_vec_inner2: Vec<Object> = Array::try_from(out_vec.remove(0)).unwrap().into();
             let out_vec_inner2: Vec<Object> =
-                out_vec.remove(0).try_as_cloned_array().unwrap().into();
+                out_vec.remove(0).try_as_array().unwrap().clone().into();
             assert_eq!(out_vec_inner2.len(), 2);
             assert_eq!(out_vec_inner2.capacity(), 2);
 
             assert_eq!(
-                out_vec_inner2[0].try_as_cloned_string().unwrap(),
-                LuaString::new("first one").unwrap()
+                out_vec_inner2[0].try_as_string().unwrap(),
+                &LuaString::new("first one").unwrap()
             );
             assert!(out_vec_inner2[1].try_as_boolean().unwrap());
         }
@@ -241,61 +324,75 @@ mod tests {
     #[test]
     fn test_clone() {
         let original_array = {
-            let original_vec = vec![
-                Object::new_string(LuaString::new("first one").unwrap()),
-                Object::new_string(LuaString::new("second one").unwrap()),
-            ];
-            debug!("TEST Array::from(Vec<Object>)...");
-            Array::from(original_vec)
+            Array::new([
+                Object::from(LuaString::new("first one").unwrap()),
+                Object::from(LuaString::new("second one").unwrap()),
+            ])
         };
 
         // Clone happens here
-        debug!("TEST Array::clone()...");
         let cloned = original_array.clone();
         assert_eq!(cloned.size, 2);
         assert_eq!(cloned.capacity, 2);
-        debug!("TEST------------------------------------");
 
         {
-            debug!("TEST Vec<Object>::from(cloned Array)...");
             let mut cloned_vec = Vec::from(cloned);
             assert_eq!(cloned_vec.len(), 2);
             assert_eq!(cloned_vec.capacity(), 2);
 
             let first_element = cloned_vec.remove(0);
 
-            debug!("TEST LuaString::try_from(first_element)...");
-            let actual = first_element.try_as_cloned_string().unwrap();
-            assert_eq!(LuaString::new("first one").unwrap(), actual);
+            let actual = first_element.try_as_string().unwrap();
+            assert_eq!(actual, &LuaString::new("first one").unwrap());
 
             let second_element = cloned_vec.remove(0);
-            debug!("TEST LuaString::try_from(second_element)...");
             assert_eq!(
-                LuaString::new("second one").unwrap(),
-                second_element.try_as_cloned_string().unwrap(),
+                second_element.try_as_string().unwrap(),
+                &LuaString::new("second one").unwrap(),
             );
         }
-        debug!("TEST------------------------------------");
 
         // Make sure we can still access the original's values
         {
-            debug!("TEST Vec<Object>::from(original Array)...");
             let mut original_vec = Vec::from(original_array);
             assert_eq!(original_vec.len(), 2);
             assert_eq!(original_vec.capacity(), 2);
 
             let first_element = original_vec.remove(0);
 
-            debug!("TEST LuaString::try_from(first_element)...");
-            let actual = first_element.try_as_cloned_string().unwrap();
-            assert_eq!(LuaString::new("first one").unwrap(), actual);
+            assert_eq!(
+                first_element.try_as_string().unwrap(),
+                &LuaString::new("first one").unwrap()
+            );
 
             let second_element = original_vec.remove(0);
 
-            debug!("TEST LuaString::try_from(second)...");
-            // let actual = LuaString::try_from(second_element).unwrap();
-            let actual = second_element.try_as_cloned_string().unwrap();
-            assert_eq!(LuaString::new("second one").unwrap(), actual);
+            assert_eq!(
+                second_element.try_as_string().unwrap(),
+                &LuaString::new("second one").unwrap()
+            );
         }
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let array = Array::new([
+            Object::from(true),
+            Object::from(42),
+            Object::from(LuaString::new("blah").unwrap()),
+        ]);
+
+        let mut iter = array.into_iter();
+        let boolean = iter.next().unwrap();
+        assert!(boolean.try_as_boolean().unwrap());
+
+        let integer = iter.next().unwrap();
+        assert_eq!(integer.try_as_integer().unwrap(), 42);
+
+        let string = iter.next().unwrap();
+        assert_eq!(
+            string.try_as_string().unwrap(),
+            &LuaString::new("blah").unwrap()
+        );
     }
 }
