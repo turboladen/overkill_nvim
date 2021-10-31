@@ -1,67 +1,99 @@
 use super::{KeyValuePair, Object, ObjectType};
-use log::debug;
-use std::{convert::TryFrom, mem::ManuallyDrop, ptr::NonNull};
+use std::{
+    convert::TryFrom,
+    mem::{self, ManuallyDrop, MaybeUninit},
+    ptr::{addr_of_mut, NonNull},
+    slice,
+};
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct Dictionary {
-    pub items: NonNull<KeyValuePair>,
-    pub size: usize,
-    pub capacity: usize,
+    items: NonNull<KeyValuePair>,
+    size: usize,
+    capacity: usize,
 }
 
 impl Dictionary {
+    pub fn new<T: Into<Vec<KeyValuePair>>>(vec: T) -> Self {
+        let mut vec: Vec<KeyValuePair> = vec.into();
+
+        let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
+        let ptr = uninit.as_mut_ptr();
+
+        // Initializing the `size` field
+        // Using `write` instead of assignment via `=` to not call `drop` on the
+        // old, uninitialized value.
+        unsafe {
+            addr_of_mut!((*ptr).size).write(vec.len());
+            addr_of_mut!((*ptr).capacity).write(vec.capacity());
+        }
+
+        let new_items = NonNull::new(vec.as_mut_ptr()).unwrap();
+
+        unsafe {
+            // Initializing the `list` field
+            // If there is a panic here, then the `String` in the `name` field leaks.
+            addr_of_mut!((*ptr).items).write(new_items)
+        }
+
+        mem::forget(vec);
+
+        unsafe { uninit.assume_init() }
+    }
+
     pub fn as_slice(&self) -> &[KeyValuePair] {
-        unsafe { std::slice::from_raw_parts(self.items.as_ref(), self.size) }
+        unsafe { std::slice::from_raw_parts(&*self.items.as_ref(), self.size) }
+    }
+
+    /// Get a reference to the array's size.
+    pub fn len(&self) -> usize {
+        self.size
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Get a reference to the array's capacity.
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+
+    pub fn iter(&self) -> slice::Iter<'_, KeyValuePair> {
+        self.as_slice().iter()
     }
 }
 
 impl Clone for Dictionary {
     fn clone(&self) -> Self {
-        debug!("Cloning Dictionary...");
-        let mut dst = ManuallyDrop::new(Vec::with_capacity(self.size));
-
-        unsafe {
-            std::ptr::copy(self.items.as_ref(), dst.as_mut_ptr(), self.size);
-            dst.set_len(self.size);
-        }
-
-        let ptr = dst.as_mut_ptr();
-
-        Self {
-            items: NonNull::new(ptr).unwrap(),
-            size: self.size,
-            capacity: self.size,
-        }
+        Self::new(self.as_slice())
     }
 }
 
 impl Drop for Dictionary {
     fn drop(&mut self) {
-        debug!("Droppping Dictionary...");
         unsafe { Vec::from_raw_parts(self.items.as_mut(), self.size, self.capacity) };
     }
 }
 
-impl From<Vec<KeyValuePair>> for Dictionary {
-    fn from(vec: Vec<KeyValuePair>) -> Self {
-        let mut vec = ManuallyDrop::new(vec);
-        vec.shrink_to_fit();
+// impl From<Vec<KeyValuePair>> for Dictionary {
+//     fn from(vec: Vec<KeyValuePair>) -> Self {
+//         let mut vec = ManuallyDrop::new(vec);
+//         vec.shrink_to_fit();
 
-        Self {
-            items: NonNull::new(vec.as_mut_ptr()).unwrap(),
-            size: vec.len(),
-            capacity: vec.len(),
-        }
-    }
-}
+//         Self {
+//             items: NonNull::new(vec.as_mut_ptr()).unwrap(),
+//             size: vec.len(),
+//             capacity: vec.len(),
+//         }
+//     }
+// }
 
 impl TryFrom<Object> for Dictionary {
     type Error = ();
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
-        debug!("Dictionary::try_from(Object)");
-
         match value.object_type {
             ObjectType::kObjectTypeDictionary => {
                 let data = &value.data;
@@ -90,28 +122,46 @@ impl TryFrom<Object> for Dictionary {
     }
 }
 
+impl From<Dictionary> for Vec<KeyValuePair> {
+    fn from(dictionary: Dictionary) -> Self {
+        let v = unsafe {
+            Vec::from_raw_parts(
+                dictionary.items.as_ptr(),
+                dictionary.size,
+                dictionary.capacity,
+            )
+        };
+        std::mem::forget(dictionary);
+
+        v
+    }
+}
+
+impl<'a> From<&'a Dictionary> for &'a [KeyValuePair] {
+    fn from(dict: &'a Dictionary) -> Self {
+        dict.as_slice()
+    }
+}
+
+impl PartialEq for Dictionary {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice().eq(other.as_slice())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Dictionary, KeyValuePair, Object, TryFrom};
     use crate::api::vim::String as LuaString;
     use approx::assert_ulps_eq;
     use log::debug;
-    use std::ffi::CString;
 
     #[test]
     fn test_from_vec_of_bool_values() {
-        let vec = vec![
-            KeyValuePair {
-                key: LuaString::new("one").unwrap(),
-                value: Object::from(true),
-            },
-            KeyValuePair {
-                key: LuaString::new("two").unwrap(),
-                value: Object::from(false),
-            },
-        ];
-
-        let array = Dictionary::from(vec);
+        let array = Dictionary::new([
+            KeyValuePair::new(LuaString::new("one").unwrap(), Object::from(true)),
+            KeyValuePair::new(LuaString::new("two").unwrap(), Object::from(false)),
+        ]);
         assert_eq!(array.size, 2);
         assert_eq!(array.capacity, 2);
 
@@ -119,27 +169,25 @@ mod tests {
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
 
-        assert_eq!(out_vec[0].key, LuaString::new("one").unwrap());
-        assert!(out_vec[0].value.try_as_boolean().unwrap());
+        assert_eq!(out_vec[0].key(), &LuaString::new("one").unwrap());
+        assert!(out_vec[0].value().try_as_boolean().unwrap());
 
-        assert_eq!(out_vec[1].key, LuaString::new("two").unwrap());
-        assert!(!out_vec[1].value.try_as_boolean().unwrap());
+        assert_eq!(out_vec[1].key(), &LuaString::new("two").unwrap());
+        assert!(!out_vec[1].value().try_as_boolean().unwrap());
     }
 
     #[test]
     fn test_from_vec_of_string_values() {
-        let vec = vec![
-            KeyValuePair {
-                key: LuaString::new("one").unwrap(),
-                value: Object::from(LuaString::new("first one").unwrap()),
-            },
-            KeyValuePair {
-                key: CString::new("two").unwrap().into(),
-                value: Object::from(LuaString::new("second one").unwrap()),
-            },
-        ];
-
-        let array = Dictionary::from(vec);
+        let array = Dictionary::new([
+            KeyValuePair::new(
+                LuaString::new("one").unwrap(),
+                Object::from(LuaString::new("first one").unwrap()),
+            ),
+            KeyValuePair::new(
+                LuaString::new("two").unwrap(),
+                Object::from(LuaString::new("second one").unwrap()),
+            ),
+        ]);
         assert_eq!(array.size, 2);
         assert_eq!(array.capacity, 2);
 
@@ -148,41 +196,35 @@ mod tests {
         assert_eq!(out_vec.capacity(), 2);
 
         assert_eq!(
-            out_vec[0].value.try_as_string().unwrap(),
+            out_vec[0].value().try_as_string().unwrap(),
             &LuaString::new("first one").unwrap()
         );
 
         assert_eq!(
-            out_vec[1].value.try_as_string().unwrap(),
+            out_vec[1].value().try_as_string().unwrap(),
             &LuaString::new("second one").unwrap()
         );
     }
 
     #[test]
     fn test_from_vec_of_vecs() {
-        let inner1_dictionary = {
-            let inner1_vec = vec![
-                KeyValuePair::new(LuaString::new("inner one one").unwrap(), Object::from(42)),
-                KeyValuePair::new(
-                    LuaString::new("inner one two").unwrap(),
-                    Object::from(42.42),
-                ),
-            ];
-            Dictionary::from(inner1_vec)
-        };
+        let inner1_dictionary = Dictionary::new([
+            KeyValuePair::new(LuaString::new("inner one one").unwrap(), Object::from(42)),
+            KeyValuePair::new(
+                LuaString::new("inner one two").unwrap(),
+                Object::from(42.42),
+            ),
+        ]);
 
-        let inner2_dictionary = {
-            let inner2_vec = vec![
-                KeyValuePair::new(
-                    LuaString::new("inner two one").unwrap(),
-                    Object::from(LuaString::new("first one").unwrap()),
-                ),
-                KeyValuePair::new(LuaString::new("inner two two").unwrap(), Object::from(true)),
-            ];
-            Dictionary::from(inner2_vec)
-        };
+        let inner2_dictionary = Dictionary::new([
+            KeyValuePair::new(
+                LuaString::new("inner two one").unwrap(),
+                Object::from(LuaString::new("first one").unwrap()),
+            ),
+            KeyValuePair::new(LuaString::new("inner two two").unwrap(), Object::from(true)),
+        ]);
 
-        let vec = vec![
+        let dictionary = Dictionary::new([
             KeyValuePair::new(
                 LuaString::new("outer 1").unwrap(),
                 Object::new_dictionary(inner1_dictionary),
@@ -191,9 +233,7 @@ mod tests {
                 LuaString::new("outer 2").unwrap(),
                 Object::new_dictionary(inner2_dictionary),
             ),
-        ];
-
-        let dictionary = Dictionary::from(vec);
+        ]);
         assert_eq!(dictionary.size, 2);
         assert_eq!(dictionary.capacity, 2);
 
@@ -204,57 +244,53 @@ mod tests {
         // Validate the Dictionary value
         {
             let kvp1 = out_vec.remove(0);
-            assert_eq!(kvp1.key, LuaString::new("outer 1").unwrap());
+            assert_eq!(kvp1.key(), &LuaString::new("outer 1").unwrap());
 
             // Validate the Dictionary value
             {
-                let inner_dict1 = Dictionary::try_from(kvp1.value.clone()).unwrap();
+                let inner_dict1 = Dictionary::try_from(kvp1.value().clone()).unwrap();
                 let mut inner_vec1 = Vec::from(inner_dict1);
 
                 let inner_kvp1 = inner_vec1.remove(0);
-                assert_eq!(inner_kvp1.key, LuaString::new("inner one one").unwrap());
-                assert_eq!(inner_kvp1.value.try_as_integer().unwrap(), 42);
+                assert_eq!(inner_kvp1.key(), &LuaString::new("inner one one").unwrap());
+                assert_eq!(inner_kvp1.value().try_as_integer().unwrap(), 42);
 
                 let inner_kvp2 = inner_vec1.remove(0);
-                assert_eq!(inner_kvp2.key, LuaString::new("inner one two").unwrap());
-                assert_ulps_eq!(inner_kvp2.value.try_as_float().unwrap(), 42.42);
+                assert_eq!(inner_kvp2.key(), &LuaString::new("inner one two").unwrap());
+                assert_ulps_eq!(inner_kvp2.value().try_as_float().unwrap(), 42.42);
             }
         }
 
         // Validate the Dictionary value
         {
             let kvp2 = out_vec.remove(0);
-            assert_eq!(kvp2.key, LuaString::new("outer 2").unwrap());
+            assert_eq!(kvp2.key(), &LuaString::new("outer 2").unwrap());
 
             // Validate the Dictionary value
             {
-                let inner_dict2 = kvp2.value.try_as_dictionary().unwrap();
-                // let mut inner_vec2 = Vec::from(inner_dict2);
+                let inner_dict2 = kvp2.value().try_as_dictionary().unwrap();
+                let mut inner_vec2 = Vec::from(inner_dict2.clone());
 
-                // let inner_kvp1 = inner_vec2.remove(0);
-                // assert_eq!(inner_kvp1.key, LuaString::new("inner two one").unwrap());
-                // assert_eq!(
-                //     inner_kvp1.value.try_as_string().unwrap(),
-                //     &LuaString::new("first one").unwrap()
-                // );
+                let inner_kvp1 = inner_vec2.remove(0);
+                assert_eq!(inner_kvp1.key(), &LuaString::new("inner two one").unwrap());
+                assert_eq!(
+                    inner_kvp1.value().try_as_string().unwrap(),
+                    &LuaString::new("first one").unwrap()
+                );
 
-                // let inner_kvp2 = inner_vec2.remove(0);
-                // assert_eq!(inner_kvp2.key, LuaString::new("inner two two").unwrap());
-                // assert!(inner_kvp2.value.try_as_boolean().unwrap());
+                let inner_kvp2 = inner_vec2.remove(0);
+                assert_eq!(inner_kvp2.key(), &LuaString::new("inner two two").unwrap());
+                assert!(inner_kvp2.value().try_as_boolean().unwrap());
             }
         }
     }
 
     #[test]
     fn test_clone() {
-        crate::init_logger();
-        let original_dict = {
-            let original_vec = vec![KeyValuePair::new(
-                LuaString::new("the key").unwrap(),
-                Object::from(LuaString::new("the value").unwrap()),
-            )];
-            Dictionary::from(original_vec)
-        };
+        let original_dict = Dictionary::new([KeyValuePair::new(
+            LuaString::new("the key").unwrap(),
+            Object::from(LuaString::new("the value").unwrap()),
+        )]);
 
         // Clone happens here
         let cloned = original_dict.clone();
@@ -263,9 +299,9 @@ mod tests {
 
             let first_element = cloned_vec.remove(0);
             debug!("removed first element from dict vec");
-            assert_eq!(first_element.key, LuaString::new("the key").unwrap());
+            assert_eq!(first_element.key(), &LuaString::new("the key").unwrap());
             assert_eq!(
-                first_element.value.try_as_string().unwrap(),
+                first_element.value().try_as_string().unwrap(),
                 &LuaString::new("the value").unwrap()
             );
         }
@@ -276,14 +312,12 @@ mod tests {
 
             let first_element = original_vec.remove(0);
             assert_eq!(
-                first_element.value.try_as_string().unwrap(),
-                &LuaString::new("first one").unwrap(),
+                first_element.key(),
+                &LuaString::new("the key").unwrap(),
             );
-
-            let second_element = original_vec.remove(0);
             assert_eq!(
-                second_element.value.try_as_string().unwrap(),
-                &LuaString::new("second one").unwrap(),
+                first_element.value().try_as_string().unwrap(),
+                &LuaString::new("the value").unwrap(),
             );
         }
     }

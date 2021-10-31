@@ -2,7 +2,6 @@ pub mod into_iter;
 
 use self::into_iter::IntoIter;
 use super::{Object, ObjectType};
-use log::debug;
 use std::{
     convert::TryFrom,
     marker::PhantomData,
@@ -96,27 +95,12 @@ impl IntoIterator for Array {
 
 impl Clone for Array {
     fn clone(&self) -> Self {
-        debug!("Clone Array...");
-        let mut dst = ManuallyDrop::new(Vec::with_capacity(self.size));
-
-        unsafe {
-            ptr::copy(self.items.as_ref(), dst.as_mut_ptr(), self.size);
-            dst.set_len(self.size);
-        }
-
-        let ptr = dst.as_mut_ptr();
-
-        Self {
-            items: NonNull::new(ptr).unwrap(),
-            size: self.size,
-            capacity: self.size,
-        }
+        Self::new(self.as_slice())
     }
 }
 
 impl Drop for Array {
     fn drop(&mut self) {
-        debug!("Droppping Array...");
         unsafe { Vec::from_raw_parts(self.items.as_mut(), self.size, self.capacity) };
     }
 }
@@ -136,11 +120,7 @@ impl Drop for Array {
 
 impl From<Array> for Vec<Object> {
     fn from(array: Array) -> Self {
-        debug!("Vec<Object>::from(Array)");
         let v = unsafe { Vec::from_raw_parts(array.items.as_ptr(), array.size, array.capacity) };
-        // for object in array.into_iter() {
-        //     mem::forget(object);
-        // }
         std::mem::forget(array);
 
         v
@@ -157,8 +137,6 @@ impl TryFrom<Object> for Array {
     type Error = ();
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
-        debug!("Array::try_from(Object)");
-
         match value.object_type {
             ObjectType::kObjectTypeArray => {
                 let data = &value.data;
@@ -187,10 +165,6 @@ impl TryFrom<Object> for Array {
 
 impl PartialEq for Array {
     fn eq(&self, other: &Self) -> bool {
-        // if self.len() != other.len() {
-        //     return false;
-        // }
-        // self.iter().zip(other.iter()).all(|(x, y)| x == y)
         self.as_slice().eq(other.as_slice())
     }
 }
