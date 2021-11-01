@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 log = "0.4"
+thiserror = "1.0"
 
 [dev-dependencies]
 approx = "0.5"

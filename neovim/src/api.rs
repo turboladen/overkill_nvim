@@ -5,35 +5,30 @@ pub(crate) mod rust_object;
 pub use self::{error::Error, mode::Mode, rust_object::RustObject};
 pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef, Object, String as LuaString};
 
-use neovim_sys::api::{vim};
+use neovim_sys::api::vim::{self, NvimError};
 
 pub fn nvim_get_var(name: &str) -> Result<Object, Error> {
-    let mut out_err = Error::default();
+    let mut out_err = NvimError::default();
+    let api_name = LuaString::new(name)?;
 
-    let object = unsafe {
-        let api_name = LuaString::new(name).unwrap();
-
-        vim::nvim_get_var(api_name, out_err.inner_mut())
-    };
+    let object = unsafe { vim::nvim_get_var(api_name, &mut out_err) };
 
     if out_err.is_err() {
-        Err(out_err)
+        Err(Error::from(out_err))
     } else {
         Ok(object)
     }
 }
 
 pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
-    let mut out_err = Error::default();
+    let mut out_err = NvimError::default();
+    let api_name = LuaString::new(name)?;
 
-    unsafe {
-        let api_name = LuaString::new(name).unwrap();
-
-        vim::nvim_set_var(api_name, value, out_err.inner_mut());
+    unsafe { vim::nvim_set_var(api_name, value, &mut out_err);
     }
 
     if out_err.is_err() {
-        Err(out_err)
+        Err(Error::from(out_err))
     } else {
         Ok(())
     }
