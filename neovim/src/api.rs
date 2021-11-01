@@ -5,14 +5,13 @@ pub(crate) mod rust_object;
 pub use self::{error::Error, mode::Mode, rust_object::RustObject};
 pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef, Object, String as LuaString};
 
-use neovim_sys::api::{helpers::cstr_to_string, vim};
-use std::os::raw::c_char;
+use neovim_sys::api::{vim};
 
 pub fn nvim_get_var(name: &str) -> Result<Object, Error> {
     let mut out_err = Error::default();
 
     let object = unsafe {
-        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+        let api_name = LuaString::new(name).unwrap();
 
         vim::nvim_get_var(api_name, out_err.inner_mut())
     };
@@ -28,7 +27,7 @@ pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     let mut out_err = Error::default();
 
     unsafe {
-        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
+        let api_name = LuaString::new(name).unwrap();
 
         vim::nvim_set_var(api_name, value, out_err.inner_mut());
     }

@@ -1,6 +1,6 @@
-use log::debug;
 use std::{
     ffi::{CStr, CString, NulError},
+    fmt,
     os::raw::c_char,
     ptr::NonNull,
 };
@@ -8,8 +8,8 @@ use std::{
 #[derive(Debug)]
 #[repr(C)]
 pub struct String {
-    pub data: NonNull<c_char>,
-    pub size: usize,
+    data: NonNull<c_char>,
+    size: usize,
 }
 
 impl String {
@@ -18,7 +18,7 @@ impl String {
 
         Ok(Self {
             size: cstring.as_bytes().len(),
-            data: unsafe { NonNull::new_unchecked(cstring.into_raw()) },
+            data: NonNull::new(cstring.into_raw()).unwrap(),
         })
     }
 
@@ -53,19 +53,20 @@ impl Clone for String {
     }
 }
 
+impl fmt::Display for String {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.as_c_str().to_string_lossy())
+    }
+}
+
 impl Drop for String {
     fn drop(&mut self) {
-        debug!(
-            "Droppping String...: '{}'",
-            self.as_c_str().to_string_lossy()
-        );
         unsafe { CString::from_raw(self.data.as_mut()) };
     }
 }
 
 impl From<CString> for String {
     fn from(cstring: CString) -> Self {
-        debug!("String::from(cstring)...: '{}'", cstring.to_str().unwrap());
         Self {
             size: cstring.as_bytes().len(),
             data: NonNull::new(cstring.into_raw()).unwrap(),
@@ -75,10 +76,6 @@ impl From<CString> for String {
 
 impl From<String> for CString {
     fn from(string: String) -> Self {
-        debug!(
-            "CString::from(string)...: '{}'",
-            string.as_c_str().to_string_lossy()
-        );
         CString::new(string.to_bytes()).unwrap()
     }
 }
