@@ -3,11 +3,6 @@ use crate::api::{Boolean, LuaString, Object, RustObject};
 use approx::ulps_ne;
 use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 
-// #[no_mangle]
-// pub extern "C" fn nvim_get_current_buf_test() -> Boolean {
-//     self::api::nvim_get_current_buf() == 1
-// }
-
 #[no_mangle]
 pub extern "C" fn test_set_get_var() -> Boolean {
     let mut result = true;
@@ -245,4 +240,9 @@ pub extern "C" fn test_buf_set_get_var() -> Boolean {
         }
     }
     result
+}
+
+#[no_mangle]
+pub extern "C" fn nvim_get_current_buf_test() -> Boolean {
+    self::api::nvim_get_current_buf() == 1
 }

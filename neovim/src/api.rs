@@ -78,9 +78,9 @@ pub fn nvim_buf_set_var(buffer: Buffer, name: &str, value: Object) -> Result<(),
 //    }
 //}
 
-//pub fn nvim_get_current_buf() -> Buffer {
-//    unsafe { vim::nvim_get_current_buf() }
-//}
+pub fn nvim_get_current_buf() -> Buffer {
+    unsafe { vim::nvim_get_current_buf() }
+}
 
 //pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Result<Object, Error> {
 //    unsafe {
