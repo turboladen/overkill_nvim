@@ -1,5 +1,5 @@
 use super::api;
-use crate::api::{Boolean, LuaString, Object, RustObject};
+use crate::api::{Boolean, LuaString, Mode, Object, RustObject};
 use approx::ulps_ne;
 use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 
@@ -283,4 +283,15 @@ pub extern "C" fn test_nvim_buf_set_var() -> Boolean {
 #[no_mangle]
 pub extern "C" fn test_nvim_get_current_buf() -> Boolean {
     self::api::nvim_get_current_buf() == 1
+}
+
+#[no_mangle]
+pub extern "C" fn test_nvim_feedkeys() -> Boolean {
+    match self::api::nvim_feedkeys("j", Mode::Normal, false) {
+        Ok(()) => true,
+        Err(e) => {
+            eprintln!("Got error during test: {}", e);
+            false
+        }
+    }
 }

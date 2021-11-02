@@ -5,6 +5,7 @@ ffi.cdef [[
     bool test_nvim_set_vvar();
     bool test_nvim_buf_set_var();
     bool test_nvim_get_current_buf();
+    bool test_nvim_feedkeys();
   ]]
 
 local lib = ffi.load("./target/debug/libneovim.dylib")
@@ -52,6 +53,18 @@ describe(
             "some test",
             function()
                 assert.True(lib.test_nvim_get_current_buf())
+            end
+        )
+    end
+)
+
+describe(
+    "nvim_feedkeys()",
+    function()
+        it(
+            "some test",
+            function()
+                assert.True(lib.test_nvim_feedkeys())
             end
         )
     end

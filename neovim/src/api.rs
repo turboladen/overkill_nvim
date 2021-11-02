@@ -10,7 +10,7 @@ pub use neovim_sys::api::{
 
 use neovim_sys::api::{
     buffer,
-    vim::{self, NvimError},
+    vim::{self, NvimError, ObjectType},
 };
 
 pub fn nvim_get_var(name: &str) -> Result<Object, Error> {
@@ -97,14 +97,26 @@ pub fn nvim_buf_set_var(buffer: Buffer, name: &str, value: Object) -> Result<(),
     }
 }
 
-//pub fn nvim_feedkeys(keys: &str, mode: &str, escape_csi: bool) {
-//    unsafe {
-//        let api_keys = cstr_to_string(keys.as_ptr() as *const c_char);
-//        let api_mode = cstr_to_string(mode.as_ptr() as *const c_char);
+pub fn nvim_feedkeys(keys: &str, mode: Mode, escape_csi: bool) -> Result<(), Error> {
+    let api_keys = LuaString::new(keys)?;
+    let api_mode = LuaString::from(mode);
 
-//        vim::nvim_feedkeys(api_keys, api_mode, escape_csi);
-//    }
-//}
+    unsafe {
+        vim::nvim_feedkeys(api_keys, api_mode, escape_csi);
+    }
+
+    let errmsg = nvim_get_vvar("errmsg")?;
+
+    match errmsg.object_type() {
+        ObjectType::kObjectTypeNil => Ok(()),
+        ObjectType::kObjectTypeString if errmsg.as_string_unchecked().is_empty() => Ok(()),
+        ObjectType::kObjectTypeString => Err(Error::VErrMsg(errmsg.as_string_unchecked().clone())),
+        _ => {
+            eprintln!("Got unexpected v:errmsg object: {:?}", errmsg);
+            Err(Error::VErrMsg(LuaString::new("Uhohhhh").unwrap()))
+        }
+    }
+}
 
 pub fn nvim_get_current_buf() -> Buffer {
     unsafe { vim::nvim_get_current_buf() }
