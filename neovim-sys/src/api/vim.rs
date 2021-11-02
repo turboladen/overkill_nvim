@@ -19,6 +19,8 @@ use super::buffer::Buffer;
 extern "C" {
     pub fn nvim_get_var(name: self::String, err: *mut NvimError) -> Object;
     pub fn nvim_set_var(name: self::String, value: Object, err: *mut NvimError);
+    pub fn nvim_get_vvar(name: self::String, err: *mut NvimError) -> Object;
+    pub fn nvim_set_vvar(name: self::String, value: Object, err: *mut NvimError);
 
     pub fn nvim_feedkeys(keys: self::String, mode: self::String, escape_csi: Boolean);
 

@@ -1,9 +1,10 @@
 local ffi = require("ffi")
 
 ffi.cdef [[
-    bool test_set_get_var();
-    bool test_buf_set_get_var();
-    bool nvim_get_current_buf_test();
+    bool test_nvim_set_var();
+    bool test_nvim_set_vvar();
+    bool test_nvim_buf_set_var();
+    bool test_nvim_get_current_buf();
   ]]
 
 local lib = ffi.load("./target/debug/libneovim.dylib")
@@ -14,7 +15,19 @@ describe(
         it(
             "tests all the things in rust",
             function()
-                assert.True(lib.test_set_get_var())
+                assert.True(lib.test_nvim_set_var())
+            end
+        )
+    end
+)
+
+describe(
+    "nvim_set_vvar() and nvim_get_vvar()",
+    function()
+        it(
+            "tests all the things in rust",
+            function()
+                assert.True(lib.test_nvim_set_vvar())
             end
         )
     end
@@ -26,7 +39,7 @@ describe(
         it(
             "tests all the things in rust",
             function()
-                assert.True(lib.test_buf_set_get_var())
+                assert.True(lib.test_nvim_buf_set_var())
             end
         )
     end
@@ -38,7 +51,7 @@ describe(
         it(
             "some test",
             function()
-                assert.True(lib.nvim_get_current_buf_test())
+                assert.True(lib.test_nvim_get_current_buf())
             end
         )
     end

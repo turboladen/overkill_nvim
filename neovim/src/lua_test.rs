@@ -4,7 +4,7 @@ use approx::ulps_ne;
 use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 
 #[no_mangle]
-pub extern "C" fn test_set_get_var() -> Boolean {
+pub extern "C" fn test_nvim_set_var() -> Boolean {
     let mut result = true;
 
     let var = "nvim_rs_set_get_var";
@@ -203,7 +203,45 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 }
 
 #[no_mangle]
-pub extern "C" fn test_buf_set_get_var() -> Boolean {
+pub extern "C" fn test_nvim_set_vvar() -> Boolean {
+    let mut result = true;
+
+    let vvar = "warningmsg";
+
+    let string = LuaString::new("meow").unwrap();
+    let value = Object::from(string);
+
+    if let Err(e) = self::api::nvim_set_vvar(vvar, value) {
+        eprintln!("Error setting vvar: {}", e);
+    }
+
+    match self::api::nvim_get_vvar(vvar) {
+        Ok(object) if object.object_type() == ObjectType::kObjectTypeString => {
+            let string = object.as_string_unchecked();
+
+            if string != &LuaString::new("meow").unwrap() {
+                eprintln!(
+                    "FAIL! Expected 'meow', got '{}'",
+                    string.as_c_str().to_string_lossy()
+                );
+                result = false;
+            }
+        }
+        Ok(t) => {
+            eprintln!("Got unexpected value type: {:?}", t);
+            result = false;
+        }
+        Err(e) => {
+            eprintln!("Got error during test: {}", e);
+            result = false;
+        }
+    }
+
+    result
+}
+
+#[no_mangle]
+pub extern "C" fn test_nvim_buf_set_var() -> Boolean {
     let mut result = true;
 
     let var = "nvim_rs_buf_set_get_var";
@@ -243,6 +281,6 @@ pub extern "C" fn test_buf_set_get_var() -> Boolean {
 }
 
 #[no_mangle]
-pub extern "C" fn nvim_get_current_buf_test() -> Boolean {
+pub extern "C" fn test_nvim_get_current_buf() -> Boolean {
     self::api::nvim_get_current_buf() == 1
 }

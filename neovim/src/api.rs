@@ -41,6 +41,34 @@ pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     }
 }
 
+pub fn nvim_get_vvar(name: &str) -> Result<Object, Error> {
+    let mut out_err = NvimError::default();
+    let api_name = LuaString::new(name)?;
+
+    let object = unsafe { vim::nvim_get_vvar(api_name, &mut out_err) };
+
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(object)
+    }
+}
+
+pub fn nvim_set_vvar(name: &str, value: Object) -> Result<(), Error> {
+    let mut out_err = NvimError::default();
+    let api_name = LuaString::new(name)?;
+
+    unsafe {
+        vim::nvim_set_vvar(api_name, value, &mut out_err);
+    }
+
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(())
+    }
+}
+
 pub fn nvim_buf_get_var(buffer: Buffer, name: &str) -> Result<Object, Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
