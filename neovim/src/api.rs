@@ -3,9 +3,15 @@ pub(crate) mod mode;
 pub(crate) mod rust_object;
 
 pub use self::{error::Error, mode::Mode, rust_object::RustObject};
-pub use neovim_sys::api::vim::{Boolean, Float, Integer, LuaRef, Object, String as LuaString};
+pub use neovim_sys::api::{
+    buffer::Buffer,
+    vim::{Boolean, Float, Integer, LuaRef, Object, String as LuaString},
+};
 
-use neovim_sys::api::vim::{self, NvimError};
+use neovim_sys::api::{
+    buffer,
+    vim::{self, NvimError},
+};
 
 pub fn nvim_get_var(name: &str) -> Result<Object, Error> {
     let mut out_err = NvimError::default();
@@ -24,7 +30,8 @@ pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
 
-    unsafe { vim::nvim_set_var(api_name, value, &mut out_err);
+    unsafe {
+        vim::nvim_set_var(api_name, value, &mut out_err);
     }
 
     if out_err.is_err() {
@@ -34,20 +41,33 @@ pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     }
 }
 
-//pub fn nvim_buf_get_var(name: &str) -> Result<Object, Error> {
-//    unsafe {
-//        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
-//        let mut out_err = Error::default();
+pub fn nvim_buf_get_var(buffer: Buffer, name: &str) -> Result<Object, Error> {
+    let mut out_err = NvimError::default();
+    let api_name = LuaString::new(name)?;
 
-//        let vim_object = vim::nvim_buf_get_var(api_name, out_err.inner_mut());
+    let object = unsafe { buffer::nvim_buf_get_var(buffer, api_name, &mut out_err) };
 
-//        if out_err.is_err() {
-//            Err(out_err)
-//        } else {
-//            Ok(Object::from(vim_object))
-//        }
-//    }
-//}
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(object)
+    }
+}
+
+pub fn nvim_buf_set_var(buffer: Buffer, name: &str, value: Object) -> Result<(), Error> {
+    let mut out_err = NvimError::default();
+    let api_name = LuaString::new(name)?;
+
+    unsafe {
+        buffer::nvim_buf_set_var(buffer, api_name, value, &mut out_err);
+    }
+
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(())
+    }
+}
 
 //pub fn nvim_feedkeys(keys: &str, mode: &str, escape_csi: bool) {
 //    unsafe {

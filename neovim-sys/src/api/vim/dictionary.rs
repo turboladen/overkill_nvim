@@ -1,5 +1,11 @@
 use super::{KeyValuePair, Object, ObjectType};
-use std::{convert::TryFrom, fmt, mem::{self, ManuallyDrop, MaybeUninit}, ptr::{addr_of_mut, NonNull}, slice};
+use std::{
+    convert::TryFrom,
+    fmt,
+    mem::{self, ManuallyDrop, MaybeUninit},
+    ptr::{addr_of_mut, NonNull},
+    slice,
+};
 
 #[repr(C)]
 pub struct Dictionary {

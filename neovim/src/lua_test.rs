@@ -206,3 +206,43 @@ pub extern "C" fn test_set_get_var() -> Boolean {
 
     result
 }
+
+#[no_mangle]
+pub extern "C" fn test_buf_set_get_var() -> Boolean {
+    let mut result = true;
+
+    let var = "nvim_rs_buf_set_get_var";
+
+    // Dictionary
+    {
+        fn make_subject() -> Dictionary {
+            let key = LuaString::new("meow").unwrap();
+            let value = Object::from(4242);
+            Dictionary::new([KeyValuePair::new(key, value)])
+        }
+        let value = Object::from(make_subject());
+
+        if let Err(e) = self::api::nvim_buf_set_var(0, var, value) {
+            eprintln!("Error setting var: {}", e);
+        }
+
+        match self::api::nvim_buf_get_var(0, var) {
+            Ok(object) if object.object_type() == ObjectType::kObjectTypeDictionary => {
+                let dict = object.as_dictionary_unchecked();
+                if dict != &make_subject() {
+                    eprintln!("FAIL! Expected 'this is a test', got '{:?}'", dict);
+                    result = false;
+                }
+            }
+            Ok(t) => {
+                eprintln!("Got unexpected value type: {:?}", t);
+                result = false;
+            }
+            Err(e) => {
+                eprintln!("Got error during test: {}", e);
+                result = false;
+            }
+        }
+    }
+    result
+}

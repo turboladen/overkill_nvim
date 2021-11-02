@@ -8,8 +8,8 @@ pub mod string;
 pub use self::{
     array::Array,
     dictionary::Dictionary,
-    nvim_error::{ErrorType, NvimError},
     key_value_pair::KeyValuePair,
+    nvim_error::{ErrorType, NvimError},
     object::{Object, ObjectData, ObjectType},
     string::String,
 };
@@ -19,8 +19,6 @@ use super::buffer::Buffer;
 extern "C" {
     pub fn nvim_get_var(name: self::String, err: *mut NvimError) -> Object;
     pub fn nvim_set_var(name: self::String, value: Object, err: *mut NvimError);
-
-    pub fn nvim_buf_get_var(name: self::String, err: *mut NvimError) -> Object;
 
     pub fn nvim_feedkeys(keys: self::String, mode: self::String, escape_csi: Boolean);
 
