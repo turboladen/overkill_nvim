@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     ffi::{CStr, CString, NulError},
     fmt,
     os::raw::c_char,
@@ -87,6 +88,18 @@ impl PartialEq for String {
 }
 
 impl Eq for String {}
+
+impl PartialEq<String> for str {
+    fn eq(&self, other: &String) -> bool {
+        self.as_bytes().eq(other.to_bytes())
+    }
+}
+
+impl Borrow<str> for String {
+    fn borrow(&self) -> &str {
+        std::str::from_utf8(self.to_bytes()).unwrap()
+    }
+}
 
 #[cfg(test)]
 mod tests {

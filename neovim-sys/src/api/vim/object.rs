@@ -1,9 +1,12 @@
 use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, String as LuaString};
 use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, thiserror::Error)]
 pub enum Error {
+    #[error("Unexpected value as Object")]
     Value,
+
+    #[error("Object expected to be '{expected:?}', but was '{actual:?}'")]
     TypeError {
         expected: ObjectType,
         actual: ObjectType,

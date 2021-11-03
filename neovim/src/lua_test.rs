@@ -295,3 +295,20 @@ pub extern "C" fn test_nvim_feedkeys() -> Boolean {
         }
     }
 }
+
+#[no_mangle]
+pub extern "C" fn test_nvim_get_mode() -> Boolean {
+    match self::api::nvim_get_mode() {
+        Ok(current_mode) => match current_mode.mode() {
+            Mode::Normal => true,
+            m => {
+                eprintln!("FAIL! Expected 'n', got '{:?}'", m);
+                false
+            }
+        },
+        Err(e) => {
+            eprintln!("Got error during test: {}", e);
+            false
+        }
+    }
+}

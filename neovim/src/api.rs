@@ -2,6 +2,9 @@ pub(crate) mod error;
 pub(crate) mod mode;
 pub(crate) mod rust_object;
 
+use std::convert::TryFrom;
+
+use self::mode::CurrentMode;
 pub use self::{error::Error, mode::Mode, rust_object::RustObject};
 pub use neovim_sys::api::{
     buffer::Buffer,
@@ -137,19 +140,11 @@ pub fn nvim_get_current_buf() -> Buffer {
 //    }
 //}
 
-//pub fn nvim_get_mode() -> Mode {
-//    // @returns Dictionary { "mode": String, "blocking": Boolean }
-//    //
-//    let d = Dictionary::new(unsafe { vim::nvim_get_mode() });
+pub fn nvim_get_mode() -> Result<CurrentMode, Error> {
+    let d = unsafe { vim::nvim_get_mode() };
 
-//    let mode = if let Some(Object::String(mode)) = d.get("mode") {
-//        Mode::from(mode.as_str())
-//    } else {
-//        Mode::Normal
-//    };
-
-//    mode
-//}
+    CurrentMode::try_from(d)
+}
 
 //pub fn nvim_replace_termcodes(
 //    string_to_convert: &str,

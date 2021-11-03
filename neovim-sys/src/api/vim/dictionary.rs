@@ -1,5 +1,6 @@
-use super::{KeyValuePair, Object, ObjectType};
+use super::{KeyValuePair, Object, ObjectType, String as LuaString};
 use std::{
+    borrow::Borrow,
     convert::TryFrom,
     fmt,
     mem::{self, ManuallyDrop, MaybeUninit},
@@ -62,6 +63,21 @@ impl Dictionary {
 
     pub fn iter(&self) -> slice::Iter<'_, KeyValuePair> {
         self.as_slice().iter()
+    }
+
+    #[inline]
+    pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&Object>
+    where
+        LuaString: Borrow<Q>,
+        Q: PartialEq<LuaString>,
+    {
+        self.iter().find_map(|kv| {
+            if k == kv.key() {
+                Some(kv.value())
+            } else {
+                None
+            }
+        })
     }
 }
 
