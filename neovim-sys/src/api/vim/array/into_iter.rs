@@ -36,10 +36,8 @@ impl Drop for IntoIter {
         impl Drop for DropGuard<'_> {
             fn drop(&mut self) {
                 unsafe {
-                    // `IntoIter::alloc` is not used anymore after this
-                    let alloc = ptr::read(&self.0.alloc);
-                    // RawVec handles deallocation
-                    let _ = Vec::from_raw_parts(self.0.buf.as_ptr(), self.0.cap, self.0.cap);
+                    let _alloc = ptr::read(&self.0.alloc);
+                    let _v = Vec::from_raw_parts(self.0.buf.as_ptr(), self.0.cap, self.0.cap);
                 }
             }
         }
@@ -58,7 +56,7 @@ impl Iterator for IntoIter {
 
     #[inline]
     fn next(&mut self) -> Option<Object> {
-        if self.ptr as *const _ == self.end {
+        if self.ptr == self.end {
             None
         } else {
             let old = self.ptr;

@@ -1,5 +1,6 @@
 use std::{
     borrow::Borrow,
+    convert::TryFrom,
     ffi::{CStr, CString, NulError},
     fmt,
     os::raw::c_char,
@@ -14,30 +15,38 @@ pub struct String {
 }
 
 impl String {
+    /// # Errors
+    ///
+    /// If `s` can't be converted to a `CString`.
+    ///
     pub fn new<T: Into<Vec<u8>>>(s: T) -> Result<Self, NulError> {
         let cstring = CString::new(s)?;
 
         Ok(Self {
             size: cstring.as_bytes().len(),
-            data: NonNull::new(cstring.into_raw()).unwrap(),
+            data: unsafe { NonNull::new_unchecked(cstring.into_raw()) },
         })
     }
 
+    #[must_use]
     pub fn as_c_str(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.data.as_ptr()) }
     }
 
     /// Does not contain the trailing nul byte.
     ///
+    #[must_use]
     pub fn to_bytes(&self) -> &[u8] {
         self.as_c_str().to_bytes()
     }
 
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.size
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 }
@@ -70,14 +79,16 @@ impl From<CString> for String {
     fn from(cstring: CString) -> Self {
         Self {
             size: cstring.as_bytes().len(),
-            data: NonNull::new(cstring.into_raw()).unwrap(),
+            data: unsafe { NonNull::new_unchecked(cstring.into_raw()) },
         }
     }
 }
 
-impl From<String> for CString {
-    fn from(string: String) -> Self {
-        CString::new(string.to_bytes()).unwrap()
+impl TryFrom<String> for CString {
+    type Error = NulError;
+
+    fn try_from(string: String) -> Result<Self, Self::Error> {
+        Self::new(string.to_bytes())
     }
 }
 

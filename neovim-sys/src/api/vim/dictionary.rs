@@ -1,4 +1,4 @@
-use super::{KeyValuePair, Object, ObjectType, String as LuaString};
+use super::{KeyValuePair, LuaString, Object, ObjectType};
 use std::{
     borrow::Borrow,
     convert::TryFrom,
@@ -30,12 +30,12 @@ impl Dictionary {
             addr_of_mut!((*ptr).capacity).write(vec.capacity());
         }
 
-        let new_items = NonNull::new(vec.as_mut_ptr()).unwrap();
+        let new_items = unsafe { NonNull::new_unchecked(vec.as_mut_ptr()) };
 
         unsafe {
             // Initializing the `list` field
             // If there is a panic here, then the `String` in the `name` field leaks.
-            addr_of_mut!((*ptr).items).write(new_items)
+            addr_of_mut!((*ptr).items).write(new_items);
         }
 
         mem::forget(vec);
@@ -43,24 +43,29 @@ impl Dictionary {
         unsafe { uninit.assume_init() }
     }
 
+    #[must_use]
     pub fn as_slice(&self) -> &[KeyValuePair] {
         unsafe { std::slice::from_raw_parts(&*self.items.as_ref(), self.size) }
     }
 
     /// Get a reference to the array's size.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.size
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Get a reference to the array's capacity.
-    pub fn capacity(&self) -> usize {
+    #[must_use]
+    pub const fn capacity(&self) -> usize {
         self.capacity
     }
 
+    #[must_use]
     pub fn iter(&self) -> slice::Iter<'_, KeyValuePair> {
         self.as_slice().iter()
     }
@@ -147,7 +152,7 @@ impl TryFrom<Object> for Dictionary {
 impl From<Dictionary> for Vec<KeyValuePair> {
     fn from(dictionary: Dictionary) -> Self {
         let v = unsafe {
-            Vec::from_raw_parts(
+            Self::from_raw_parts(
                 dictionary.items.as_ptr(),
                 dictionary.size,
                 dictionary.capacity,
@@ -174,7 +179,7 @@ impl PartialEq for Dictionary {
 #[cfg(test)]
 mod tests {
     use super::{Dictionary, KeyValuePair, Object, TryFrom};
-    use crate::api::vim::String as LuaString;
+    use crate::api::vim::LuaString;
     use approx::assert_ulps_eq;
     use log::debug;
 

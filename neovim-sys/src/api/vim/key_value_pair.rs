@@ -1,4 +1,4 @@
-use super::{Object, String as LuaString};
+use super::{LuaString, Object};
 
 #[derive(Debug, Clone, PartialEq)]
 #[repr(C)]
@@ -8,17 +8,20 @@ pub struct KeyValuePair {
 }
 
 impl KeyValuePair {
+    #[must_use]
     pub fn new(key: LuaString, value: Object) -> Self {
         Self { key, value }
     }
 
     /// Get a reference to the key value pair's key.
-    pub fn key(&self) -> &LuaString {
+    #[must_use]
+    pub const fn key(&self) -> &LuaString {
         &self.key
     }
 
     /// Get a reference to the key value pair's value.
-    pub fn value(&self) -> &Object {
+    #[must_use]
+    pub const fn value(&self) -> &Object {
         &self.value
     }
 }

@@ -33,12 +33,12 @@ impl Array {
             addr_of_mut!((*ptr).capacity).write(vec.capacity());
         }
 
-        let new_items = NonNull::new(vec.as_mut_ptr()).unwrap();
+        let new_items = unsafe { NonNull::new_unchecked(vec.as_mut_ptr()) };
 
         unsafe {
             // Initializing the `list` field
             // If there is a panic here, then the `String` in the `name` field leaks.
-            addr_of_mut!((*ptr).items).write(new_items)
+            addr_of_mut!((*ptr).items).write(new_items);
         }
 
         mem::forget(vec);
@@ -46,24 +46,29 @@ impl Array {
         unsafe { uninit.assume_init() }
     }
 
+    #[must_use]
     pub fn as_slice(&self) -> &[Object] {
         unsafe { slice::from_raw_parts(&*self.items.as_ref(), self.size) }
     }
 
     /// Get a reference to the array's size.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.size
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Get a reference to the array's capacity.
-    pub fn capacity(&self) -> usize {
+    #[must_use]
+    pub const fn capacity(&self) -> usize {
         self.capacity
     }
 
+    #[must_use]
     pub fn iter(&self) -> slice::Iter<'_, Object> {
         self.as_slice().iter()
     }
@@ -79,7 +84,7 @@ impl IntoIterator for Array {
             let me = ManuallyDrop::new(self);
             let alloc = ptr::read(me.items.as_ptr());
             let begin = me.items.as_ptr();
-            let end = begin.add(me.len()) as *const Object;
+            let end: *const Object = begin.add(me.len());
             let cap = me.capacity();
             IntoIter {
                 buf: NonNull::new_unchecked(begin),
@@ -126,7 +131,7 @@ impl Drop for Array {
 
 impl From<Array> for Vec<Object> {
     fn from(array: Array) -> Self {
-        let v = unsafe { Vec::from_raw_parts(array.items.as_ptr(), array.size, array.capacity) };
+        let v = unsafe { Self::from_raw_parts(array.items.as_ptr(), array.size, array.capacity) };
         std::mem::forget(array);
 
         v
@@ -178,7 +183,7 @@ impl PartialEq for Array {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::vim::String as LuaString;
+    use crate::api::vim::LuaString;
     use approx::assert_ulps_eq;
 
     #[test]

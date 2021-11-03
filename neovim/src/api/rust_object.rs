@@ -1,5 +1,5 @@
 use neovim_sys::api::vim::{
-    self, Array, Boolean, Dictionary, Float, Integer, Object, ObjectType, String as LuaString,
+    Array, Boolean, Dictionary, Float, Integer, LuaString, Object, ObjectType,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,7 +18,7 @@ pub enum RustObject {
 }
 
 impl From<Object> for RustObject {
-    fn from(api_object: vim::Object) -> Self {
+    fn from(api_object: Object) -> Self {
         match api_object.object_type() {
             ObjectType::kObjectTypeNil => Self::Nil,
             ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.into_boolean_unchecked()),

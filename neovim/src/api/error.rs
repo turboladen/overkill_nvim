@@ -1,4 +1,4 @@
-use neovim_sys::api::vim::{self, String as LuaString};
+use neovim_sys::api::vim::{self, LuaString};
 use std::ffi::NulError;
 
 #[derive(Debug, thiserror::Error)]

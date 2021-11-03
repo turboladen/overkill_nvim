@@ -1,8 +1,6 @@
-use std::convert::TryFrom;
-
-use neovim_sys::api::vim::{Dictionary, String as LuaString};
-
 use super::Error;
+use neovim_sys::api::vim::{Dictionary, LuaString};
+use std::convert::TryFrom;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Mode {
@@ -22,20 +20,20 @@ pub enum Mode {
 impl From<&str> for Mode {
     fn from(mode: &str) -> Self {
         match mode {
-            "n" => Mode::Normal,
-            "i" => Mode::Insert,
-            "R" => Mode::Replace,
-            "v" => Mode::Visual,
-            "V" => Mode::VisualLine,
-            "<C-v>" => Mode::VisualBlock,
-            "c" => Mode::Command,
-            "s" => Mode::Select,
-            "S" => Mode::SelectLine,
-            "<C-s>" => Mode::SelectBlock,
-            "t" => Mode::Terminal,
+            "n" => Self::Normal,
+            "i" => Self::Insert,
+            "R" => Self::Replace,
+            "v" => Self::Visual,
+            "V" => Self::VisualLine,
+            "<C-v>" => Self::VisualBlock,
+            "c" => Self::Command,
+            "s" => Self::Select,
+            "S" => Self::SelectLine,
+            "<C-s>" => Self::SelectBlock,
+            "t" => Self::Terminal,
             m => {
                 eprintln!("unknown mode {}, falling back to Mode::Normal", m);
-                Mode::Normal
+                Self::Normal
             }
         }
     }
@@ -44,25 +42,26 @@ impl From<&str> for Mode {
 impl From<&LuaString> for Mode {
     fn from(mode: &LuaString) -> Self {
         match mode.as_c_str().to_string_lossy().as_ref() {
-            "n" => Mode::Normal,
-            "i" => Mode::Insert,
-            "R" => Mode::Replace,
-            "v" => Mode::Visual,
-            "V" => Mode::VisualLine,
-            "<C-v>" => Mode::VisualBlock,
-            "c" => Mode::Command,
-            "s" => Mode::Select,
-            "S" => Mode::SelectLine,
-            "<C-s>" => Mode::SelectBlock,
-            "t" => Mode::Terminal,
+            "n" => Self::Normal,
+            "i" => Self::Insert,
+            "R" => Self::Replace,
+            "v" => Self::Visual,
+            "V" => Self::VisualLine,
+            "<C-v>" => Self::VisualBlock,
+            "c" => Self::Command,
+            "s" => Self::Select,
+            "S" => Self::SelectLine,
+            "<C-s>" => Self::SelectBlock,
+            "t" => Self::Terminal,
             m => {
                 eprintln!("unknown mode {}, falling back to Mode::Normal", m);
-                Mode::Normal
+                Self::Normal
             }
         }
     }
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<Mode> for LuaString {
     fn from(mode: Mode) -> Self {
         let s = match mode {
@@ -78,13 +77,14 @@ impl From<Mode> for LuaString {
             Mode::SelectBlock => "<C-s>",
             Mode::Terminal => "t",
         };
-        LuaString::new(s).unwrap()
+        Self::new(s).unwrap()
     }
 }
 
 /// Returned by `nvim_get_mode()`.
 ///
 #[derive(Debug, Clone, Copy)]
+#[allow(clippy::module_name_repetitions)]
 pub struct CurrentMode {
     mode: Mode,
     blocking: bool,
@@ -93,13 +93,13 @@ pub struct CurrentMode {
 impl CurrentMode {
     /// The current mode.
     ///
-    pub fn mode(&self) -> Mode {
+    pub const fn mode(self) -> Mode {
         self.mode
     }
 
     /// `true` if Nvim is waiting for input.
     ///
-    pub fn blocking(&self) -> bool {
+    pub const fn blocking(self) -> bool {
         self.blocking
     }
 }
@@ -111,9 +111,7 @@ impl TryFrom<Dictionary> for CurrentMode {
         match (dict.get("mode"), dict.get("blocking")) {
             (Some(mode), Some(blocking)) => Ok(Self {
                 blocking: blocking.try_as_boolean()?,
-                mode: mode
-                    .try_as_string()
-                    .map(Mode::from)?,
+                mode: mode.try_as_string().map(Mode::from)?,
             }),
             _ => Err(Error::Blargh("meow".into())),
         }

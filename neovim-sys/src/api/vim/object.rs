@@ -1,4 +1,4 @@
-use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, String as LuaString};
+use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, LuaString};
 use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
 
 #[derive(Debug, Clone, Copy, thiserror::Error)]
@@ -70,10 +70,12 @@ macro_rules! try_as_ref_type {
 }
 
 impl Object {
-    pub fn new(object_type: ObjectType, data: ObjectData) -> Self {
+    #[must_use]
+    pub const fn new(object_type: ObjectType, data: ObjectData) -> Self {
         Self { object_type, data }
     }
 
+    #[must_use]
     pub fn new_nil() -> Self {
         Self {
             object_type: ObjectType::kObjectTypeNil,
@@ -81,15 +83,23 @@ impl Object {
         }
     }
 
-    pub fn object_type(&self) -> ObjectType {
+    #[must_use]
+    pub const fn object_type(&self) -> ObjectType {
         self.object_type
     }
 
     /// Get a reference to the object's data.
-    pub fn data(&self) -> &ObjectData {
+    #[must_use]
+    pub const fn data(&self) -> &ObjectData {
         &self.data
     }
 
+    /// Tries to extract a `()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not nil.
+    ///
     pub fn try_as_nil(&self) -> Result<(), Error> {
         match self.object_type {
             ObjectType::kObjectTypeNil => {
@@ -109,74 +119,123 @@ impl Object {
         }
     }
 
+    /// Tries to extract a reference to the inner `Boolean`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Boolean`.
+    ///
     pub fn try_as_boolean(&self) -> Result<bool, Error> {
         try_as_type!(self, kObjectTypeBoolean, boolean)
     }
 
+    /// Tries to extract a reference to the inner `Integer`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Integer`.
+    ///
     pub fn try_as_integer(&self) -> Result<Integer, Error> {
         try_as_type!(self, kObjectTypeInteger, integer)
     }
 
+    /// Tries to extract a reference to the inner `Float`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Float`.
+    ///
     pub fn try_as_float(&self) -> Result<Float, Error> {
         try_as_type!(self, kObjectTypeFloat, floating)
     }
 
+    /// Tries to extract a reference to the inner `LuaString`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `LuaString`.
+    ///
     pub fn try_as_string(&self) -> Result<&LuaString, Error> {
         try_as_ref_type!(self, kObjectTypeString, string)
     }
 
+
+    /// Tries to extract a reference to the inner `Array`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Array`.
+    ///
     pub fn try_as_array(&self) -> Result<&Array, Error> {
         try_as_ref_type!(self, kObjectTypeArray, array)
     }
 
+    /// Tries to extract a reference to the inner `Dictionary`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Dictionary`.
+    ///
     pub fn try_as_dictionary(&self) -> Result<&Dictionary, Error> {
         try_as_ref_type!(self, kObjectTypeDictionary, dictionary)
     }
 
+    #[must_use]
     pub fn as_boolean_unchecked(&self) -> Boolean {
         unsafe { self.data.boolean }
     }
 
+    #[must_use]
     pub fn as_integer_unchecked(&self) -> Integer {
         unsafe { self.data.integer }
     }
 
+    #[must_use]
     pub fn as_float_unchecked(&self) -> Float {
         unsafe { self.data.floating }
     }
 
+    #[must_use]
     pub fn as_string_unchecked(&self) -> &LuaString {
         unsafe { &self.data.string }
     }
 
+    #[must_use]
     pub fn as_array_unchecked(&self) -> &Array {
         unsafe { &self.data.array }
     }
 
+    #[must_use]
     pub fn as_dictionary_unchecked(&self) -> &Dictionary {
         unsafe { &self.data.dictionary }
     }
 
+    #[must_use]
     pub fn into_boolean_unchecked(self) -> Boolean {
         unsafe { self.data.boolean }
     }
 
+    #[must_use]
     pub fn into_integer_unchecked(self) -> Integer {
         unsafe { self.data.integer }
     }
 
+    #[must_use]
     pub fn into_float_unchecked(self) -> Float {
         unsafe { self.data.floating }
     }
 
+    #[must_use]
     pub fn into_string_unchecked(self) -> LuaString {
         unsafe { ManuallyDrop::into_inner(self.data.string) }
     }
 
+    #[must_use]
     pub fn into_array_unchecked(self) -> Array {
         unsafe { ManuallyDrop::into_inner(self.data.array) }
     }
 
+    #[must_use]
     pub fn into_dictionary_unchecked(self) -> Dictionary {
         unsafe { ManuallyDrop::into_inner(self.data.dictionary) }
     }

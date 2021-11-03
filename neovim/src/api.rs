@@ -8,7 +8,7 @@ use self::mode::CurrentMode;
 pub use self::{error::Error, mode::Mode, rust_object::RustObject};
 pub use neovim_sys::api::{
     buffer::Buffer,
-    vim::{Boolean, Float, Integer, LuaRef, Object, String as LuaString},
+    vim::{Boolean, Float, Integer, LuaRef, LuaString, Object},
 };
 
 use neovim_sys::api::{
@@ -16,6 +16,11 @@ use neovim_sys::api::{
     vim::{self, NvimError, ObjectType},
 };
 
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
 pub fn nvim_get_var(name: &str) -> Result<Object, Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
@@ -29,6 +34,11 @@ pub fn nvim_get_var(name: &str) -> Result<Object, Error> {
     }
 }
 
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
 pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
@@ -44,6 +54,11 @@ pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     }
 }
 
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
 pub fn nvim_get_vvar(name: &str) -> Result<Object, Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
@@ -57,6 +72,11 @@ pub fn nvim_get_vvar(name: &str) -> Result<Object, Error> {
     }
 }
 
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
 pub fn nvim_set_vvar(name: &str, value: Object) -> Result<(), Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
@@ -72,6 +92,11 @@ pub fn nvim_set_vvar(name: &str, value: Object) -> Result<(), Error> {
     }
 }
 
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
 pub fn nvim_buf_get_var(buffer: Buffer, name: &str) -> Result<Object, Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
@@ -85,6 +110,11 @@ pub fn nvim_buf_get_var(buffer: Buffer, name: &str) -> Result<Object, Error> {
     }
 }
 
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
 pub fn nvim_buf_set_var(buffer: Buffer, name: &str, value: Object) -> Result<(), Error> {
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
@@ -100,6 +130,11 @@ pub fn nvim_buf_set_var(buffer: Buffer, name: &str, value: Object) -> Result<(),
     }
 }
 
+/// # Errors
+///
+/// * If `keys` can't be converted to a `LuaString`.
+/// * If nvim set an error to `v:errmsg`.
+///
 pub fn nvim_feedkeys(keys: &str, mode: Mode, escape_csi: bool) -> Result<(), Error> {
     let api_keys = LuaString::new(keys)?;
     let api_mode = LuaString::from(mode);
@@ -121,6 +156,7 @@ pub fn nvim_feedkeys(keys: &str, mode: Mode, escape_csi: bool) -> Result<(), Err
     }
 }
 
+#[must_use]
 pub fn nvim_get_current_buf() -> Buffer {
     unsafe { vim::nvim_get_current_buf() }
 }
@@ -140,6 +176,10 @@ pub fn nvim_get_current_buf() -> Buffer {
 //    }
 //}
 
+/// # Errors
+///
+/// If the `Dictionary` returned from nvim doesn't contain both a `mode` and `blocking` key.
+///
 pub fn nvim_get_mode() -> Result<CurrentMode, Error> {
     let d = unsafe { vim::nvim_get_mode() };
 

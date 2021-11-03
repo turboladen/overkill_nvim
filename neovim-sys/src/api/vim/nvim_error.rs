@@ -8,7 +8,8 @@ pub struct NvimError {
 }
 
 impl NvimError {
-    pub fn is_err(&self) -> bool {
+    #[must_use]
+    pub const fn is_err(&self) -> bool {
         !matches!(self.error_type, ErrorType::kErrorTypeNone)
     }
 }
