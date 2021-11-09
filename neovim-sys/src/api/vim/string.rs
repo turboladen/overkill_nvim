@@ -146,14 +146,14 @@ mod tests {
     }
 
     #[test]
-    fn test_into_cstring() {
+    fn test_cstring_try_from() {
         let string = String::new("burritos").unwrap();
         assert_eq!(string.size, 8);
 
         let string_size = string.size;
         let lossy = string.as_c_str().to_string_lossy().to_string();
 
-        let cstring = CString::from(string);
+        let cstring = CString::try_from(string).unwrap();
 
         assert_eq!(cstring.as_c_str().to_bytes().len(), string_size);
         assert_eq!(cstring.as_c_str().to_string_lossy(), lossy);
@@ -167,7 +167,7 @@ mod tests {
 
         // read after copy
         assert_eq!(string.size, 8);
-        let cstring = CString::from(string);
+        let cstring = CString::try_from(string).unwrap();
         assert_eq!(&cstring.into_string().unwrap(), "burritos");
     }
 }

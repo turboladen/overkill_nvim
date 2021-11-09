@@ -159,7 +159,6 @@ impl Object {
         try_as_ref_type!(self, kObjectTypeString, string)
     }
 
-
     /// Tries to extract a reference to the inner `Array`.
     ///
     /// # Errors
