@@ -4,13 +4,13 @@ use std::{
     convert::TryFrom,
     fmt,
     mem::{self, ManuallyDrop, MaybeUninit},
-    ptr::{addr_of_mut, NonNull},
+    ptr::addr_of_mut,
     slice,
 };
 
 #[repr(C)]
 pub struct Dictionary {
-    items: NonNull<KeyValuePair>,
+    items: *mut KeyValuePair,
     size: usize,
     capacity: usize,
 }
@@ -30,7 +30,7 @@ impl Dictionary {
             addr_of_mut!((*ptr).capacity).write(vec.capacity());
         }
 
-        let new_items = unsafe { NonNull::new_unchecked(vec.as_mut_ptr()) };
+        let new_items =  vec.as_mut_ptr() ;
 
         unsafe {
             // Initializing the `list` field
@@ -45,7 +45,7 @@ impl Dictionary {
 
     #[must_use]
     pub fn as_slice(&self) -> &[KeyValuePair] {
-        unsafe { std::slice::from_raw_parts(&*self.items.as_ref(), self.size) }
+        unsafe { std::slice::from_raw_parts(self.items, self.size) }
     }
 
     /// Get a reference to the array's size.
@@ -94,7 +94,7 @@ impl Clone for Dictionary {
 
 impl Drop for Dictionary {
     fn drop(&mut self) {
-        unsafe { Vec::from_raw_parts(self.items.as_mut(), self.size, self.capacity) };
+        unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
     }
 }
 
@@ -130,14 +130,17 @@ impl TryFrom<Object> for Dictionary {
                 let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
 
                 unsafe {
-                    std::ptr::copy(data.dictionary.items.as_ref(), dst.as_mut_ptr(), size);
+                    std::ptr::copy(data.dictionary.items, dst.as_mut_ptr(), size);
                     dst.set_len(size);
                 }
 
                 let ptr = dst.as_mut_ptr();
+                if ptr.is_null() {
+                    return Err(());
+                }
 
                 let d = Self {
-                    items: NonNull::new(ptr).unwrap(),
+                    items: ptr,
                     size,
                     capacity: size,
                 };
@@ -151,13 +154,8 @@ impl TryFrom<Object> for Dictionary {
 
 impl From<Dictionary> for Vec<KeyValuePair> {
     fn from(dictionary: Dictionary) -> Self {
-        let v = unsafe {
-            Self::from_raw_parts(
-                dictionary.items.as_ptr(),
-                dictionary.size,
-                dictionary.capacity,
-            )
-        };
+        let v =
+            unsafe { Self::from_raw_parts(dictionary.items, dictionary.size, dictionary.capacity) };
         std::mem::forget(dictionary);
 
         v

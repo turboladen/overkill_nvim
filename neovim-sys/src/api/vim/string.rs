@@ -4,13 +4,12 @@ use std::{
     ffi::{CStr, CString, NulError},
     fmt,
     os::raw::c_char,
-    ptr::NonNull,
 };
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct String {
-    data: NonNull<c_char>,
+    data: *mut c_char,
     size: usize,
 }
 
@@ -24,13 +23,13 @@ impl String {
 
         Ok(Self {
             size: cstring.as_bytes().len(),
-            data: unsafe { NonNull::new_unchecked(cstring.into_raw()) },
+            data:  cstring.into_raw() ,
         })
     }
 
     #[must_use]
     pub fn as_c_str(&self) -> &CStr {
-        unsafe { CStr::from_ptr(self.data.as_ptr()) }
+        unsafe { CStr::from_ptr(self.data) }
     }
 
     /// Does not contain the trailing nul byte.
@@ -57,7 +56,7 @@ impl Clone for String {
         let ptr = dst.into_raw();
 
         Self {
-            data: NonNull::new(ptr).unwrap(),
+            data: ptr,
             size: self.size,
         }
     }
@@ -71,7 +70,7 @@ impl fmt::Display for String {
 
 impl Drop for String {
     fn drop(&mut self) {
-        unsafe { CString::from_raw(self.data.as_mut()) };
+        unsafe { CString::from_raw(self.data) };
     }
 }
 
@@ -79,7 +78,7 @@ impl From<CString> for String {
     fn from(cstring: CString) -> Self {
         Self {
             size: cstring.as_bytes().len(),
-            data: unsafe { NonNull::new_unchecked(cstring.into_raw()) },
+            data: cstring.into_raw(),
         }
     }
 }
@@ -137,23 +136,23 @@ mod tests {
     #[test]
     fn test_from_cstring() {
         let cstring = CString::new("tacos").unwrap();
-        let string = String::from(cstring.clone());
+        let lua_string = String::from(cstring.clone());
 
-        assert_eq!(string.size, 5);
+        assert_eq!(lua_string.size, 5);
         assert_eq!(cstring.as_c_str().to_bytes().len(), 5);
-        assert_eq!(string.size, cstring.as_c_str().to_bytes().len());
-        assert_eq!(string.as_c_str(), cstring.as_c_str());
+        assert_eq!(lua_string.size, cstring.as_c_str().to_bytes().len());
+        assert_eq!(lua_string.as_c_str(), cstring.as_c_str());
     }
 
     #[test]
     fn test_cstring_try_from() {
-        let string = String::new("burritos").unwrap();
-        assert_eq!(string.size, 8);
+        let lua_string = String::new("burritos").unwrap();
+        assert_eq!(lua_string.size, 8);
 
-        let string_size = string.size;
-        let lossy = string.as_c_str().to_string_lossy().to_string();
+        let string_size = lua_string.size;
+        let lossy = lua_string.as_c_str().to_string_lossy().to_string();
 
-        let cstring = CString::try_from(string).unwrap();
+        let cstring = CString::try_from(lua_string).unwrap();
 
         assert_eq!(cstring.as_c_str().to_bytes().len(), string_size);
         assert_eq!(cstring.as_c_str().to_string_lossy(), lossy);
@@ -161,13 +160,13 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let string = String::new("burritos").unwrap();
-        let clone = string.clone();
-        assert_eq!(clone.as_c_str(), string.as_c_str());
+        let lua_string = String::new("burritos").unwrap();
+        let clone = lua_string.clone();
+        assert_eq!(clone.as_c_str(), lua_string.as_c_str());
 
         // read after copy
-        assert_eq!(string.size, 8);
-        let cstring = CString::try_from(string).unwrap();
+        assert_eq!(lua_string.size, 8);
+        let cstring = CString::try_from(lua_string).unwrap();
         assert_eq!(&cstring.into_string().unwrap(), "burritos");
     }
 }

@@ -568,7 +568,7 @@ mod tests {
 
         do_it("");
         do_it("one \n three");
-        do_it("this is an emoji: 🌮. Tacos are cool.");
+        do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
     }
 
     #[test]
@@ -583,6 +583,6 @@ mod tests {
 
         do_it("");
         do_it("one \n three");
-        do_it("this is an emoji: 🌮. Tacos are cool.");
+        do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
     }
 }

@@ -1,11 +1,8 @@
 use super::Object;
-use std::{
-    marker::PhantomData,
-    ptr::{self, NonNull},
-};
+use std::{marker::PhantomData, ptr};
 
 pub struct IntoIter {
-    pub(super) buf: NonNull<Object>,
+    pub(super) buf: *mut Object,
     pub(super) phantom: PhantomData<Object>,
     pub(super) cap: usize,
     pub(super) alloc: Object,
@@ -37,7 +34,7 @@ impl Drop for IntoIter {
             fn drop(&mut self) {
                 unsafe {
                     let _alloc = ptr::read(&self.0.alloc);
-                    let _v = Vec::from_raw_parts(self.0.buf.as_ptr(), self.0.cap, self.0.cap);
+                    let _v = Vec::from_raw_parts(self.0.buf, self.0.cap, self.0.cap);
                 }
             }
         }
