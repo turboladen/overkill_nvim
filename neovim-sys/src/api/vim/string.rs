@@ -3,14 +3,16 @@ use std::{
     convert::TryFrom,
     ffi::{CStr, CString, NulError},
     fmt,
+    mem::{self, MaybeUninit},
     os::raw::c_char,
+    ptr::addr_of_mut,
 };
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct String {
-    data: *mut c_char,
-    size: usize,
+    pub(super) data: *mut c_char,
+    pub(super) size: usize,
 }
 
 impl String {
@@ -20,11 +22,28 @@ impl String {
     ///
     pub fn new<T: Into<Vec<u8>>>(s: T) -> Result<Self, NulError> {
         let cstring = CString::new(s)?;
+        let mut vec = cstring.into_bytes_with_nul();
 
-        Ok(Self {
-            size: cstring.as_bytes().len(),
-            data:  cstring.into_raw() ,
-        })
+        let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
+        let ptr = uninit.as_mut_ptr();
+
+        // Initializing the `size` field
+        // Using `write` instead of assignment via `=` to not call `drop` on the
+        // old, uninitialized value.
+        unsafe {
+            addr_of_mut!((*ptr).size).write(vec.len());
+        }
+
+        let new_data = vec.as_mut_ptr().cast::<i8>();
+
+        unsafe {
+            // Initializing the `list` field
+            // If there is a panic here, then the `String` in the `name` field leaks.
+            addr_of_mut!((*ptr).data).write(new_data);
+        }
+        mem::forget(vec);
+
+        Ok(unsafe { uninit.assume_init() })
     }
 
     #[must_use]
@@ -70,16 +89,19 @@ impl fmt::Display for String {
 
 impl Drop for String {
     fn drop(&mut self) {
-        unsafe { CString::from_raw(self.data) };
+        let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
+        // if !self.data.is_null() {
+        //     // unsafe { CString::from_raw(self.data) };
+        //     unsafe { CString::from_raw(self.data) };
+        // }
     }
 }
 
-impl From<CString> for String {
-    fn from(cstring: CString) -> Self {
-        Self {
-            size: cstring.as_bytes().len(),
-            data: cstring.into_raw(),
-        }
+impl TryFrom<CString> for String {
+    type Error = NulError;
+
+    fn try_from(cstring: CString) -> Result<Self, Self::Error> {
+        Self::new(cstring.into_bytes())
     }
 }
 
@@ -134,27 +156,27 @@ mod tests {
     }
 
     #[test]
-    fn test_from_cstring() {
+    fn test_try_from_cstring() {
         let cstring = CString::new("tacos").unwrap();
-        let lua_string = String::from(cstring.clone());
+        let lua_string = String::try_from(cstring.clone()).unwrap();
 
-        assert_eq!(lua_string.size, 5);
+        assert_eq!(lua_string.size, 6);
         assert_eq!(cstring.as_c_str().to_bytes().len(), 5);
-        assert_eq!(lua_string.size, cstring.as_c_str().to_bytes().len());
+        assert_eq!(lua_string.size, cstring.as_c_str().to_bytes().len() + 1);
         assert_eq!(lua_string.as_c_str(), cstring.as_c_str());
     }
 
     #[test]
     fn test_cstring_try_from() {
         let lua_string = String::new("burritos").unwrap();
-        assert_eq!(lua_string.size, 8);
+        assert_eq!(lua_string.size, 9);
 
         let string_size = lua_string.size;
         let lossy = lua_string.as_c_str().to_string_lossy().to_string();
 
         let cstring = CString::try_from(lua_string).unwrap();
 
-        assert_eq!(cstring.as_c_str().to_bytes().len(), string_size);
+        assert_eq!(cstring.as_c_str().to_bytes().len(), string_size - 1);
         assert_eq!(cstring.as_c_str().to_string_lossy(), lossy);
     }
 
@@ -165,7 +187,7 @@ mod tests {
         assert_eq!(clone.as_c_str(), lua_string.as_c_str());
 
         // read after copy
-        assert_eq!(lua_string.size, 8);
+        assert_eq!(lua_string.size, 9);
         let cstring = CString::try_from(lua_string).unwrap();
         assert_eq!(&cstring.into_string().unwrap(), "burritos");
     }
