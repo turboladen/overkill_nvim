@@ -161,20 +161,18 @@ pub fn nvim_get_current_buf() -> Buffer {
     unsafe { vim::nvim_get_current_buf() }
 }
 
-//pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Result<Object, Error> {
-//    unsafe {
-//        let api_name = cstr_to_string(name.as_ptr() as *const c_char);
-//        let mut out_err = Error::default();
+pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Result<Object, Error> {
+    let api_name = LuaString::new(name)?;
+    let mut out_err = NvimError::default();
 
-//        let vim_object = buffer::nvim_buf_get_option(buffer, api_name, out_err.inner_mut());
+    let object = unsafe { buffer::nvim_buf_get_option(buffer, api_name, &mut out_err) };
 
-//        if out_err.is_err() {
-//            Err(out_err)
-//        } else {
-//            Ok(Object::from(vim_object))
-//        }
-//    }
-//}
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(object)
+    }
+}
 
 /// # Errors
 ///
