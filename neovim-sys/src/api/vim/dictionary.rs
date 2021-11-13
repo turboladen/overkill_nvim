@@ -1,18 +1,17 @@
-use super::{KeyValuePair, LuaString, Object, ObjectType};
+use super::{KeyValuePair, LuaString, Object};
 use std::{
     borrow::Borrow,
-    convert::TryFrom,
     fmt,
-    mem::{self, ManuallyDrop, MaybeUninit},
+    mem::{self, MaybeUninit},
     ptr::addr_of_mut,
     slice,
 };
 
 #[repr(C)]
 pub struct Dictionary {
-    items: *mut KeyValuePair,
-    size: usize,
-    capacity: usize,
+    pub(super) items: *mut KeyValuePair,
+    pub(super) size: usize,
+    pub(super) capacity: usize,
 }
 
 impl Dictionary {
@@ -30,7 +29,7 @@ impl Dictionary {
             addr_of_mut!((*ptr).capacity).write(vec.capacity());
         }
 
-        let new_items =  vec.as_mut_ptr() ;
+        let new_items = vec.as_mut_ptr();
 
         unsafe {
             // Initializing the `list` field
@@ -94,7 +93,7 @@ impl Clone for Dictionary {
 
 impl Drop for Dictionary {
     fn drop(&mut self) {
-        unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
+        let _vec = unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
     }
 }
 
@@ -117,40 +116,64 @@ impl fmt::Debug for Dictionary {
 //     }
 // }
 
-impl TryFrom<Object> for Dictionary {
-    type Error = ();
+// impl TryFrom<Object> for Dictionary {
+//     type Error = ();
 
-    fn try_from(value: Object) -> Result<Self, Self::Error> {
-        match value.object_type() {
-            ObjectType::kObjectTypeDictionary => {
-                let data = value.data();
-                // Move all the value (Object) data into the new Dictionary.
-                // Since we moved the data, don't call drop for the Object.
-                let size = unsafe { &data.dictionary }.size;
-                let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
+//     // TODO: This is leaking.
+//     fn try_from(value: Object) -> Result<Self, Self::Error> {
+//         match value.object_type() {
+//             ObjectType::kObjectTypeDictionary => {
+//                 let data = value.data();
+//                 // Move all the value (Object) data into the new Dictionary.
+//                 // Since we moved the data, don't call drop for the Object.
+//                 let size = unsafe { &data.dictionary }.size;
+//                 let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
 
-                unsafe {
-                    std::ptr::copy(data.dictionary.items, dst.as_mut_ptr(), size);
-                    dst.set_len(size);
-                }
+//                 unsafe {
+//                     std::ptr::copy(data.dictionary.items, dst.as_mut_ptr(), size);
+//                     dst.set_len(size);
+//                 }
 
-                let ptr = dst.as_mut_ptr();
-                if ptr.is_null() {
-                    return Err(());
-                }
+//                 let ptr = dst.as_mut_ptr();
+//                 if ptr.is_null() {
+//                     return Err(());
+//                 }
 
-                let d = Self {
-                    items: ptr,
-                    size,
-                    capacity: size,
-                };
-                std::mem::forget(value);
-                Ok(d)
-            }
-            _ => Err(()),
-        }
-    }
-}
+//                 let d = Self {
+//                     items: ptr,
+//                     size,
+//                     capacity: size,
+//                 };
+//                 std::mem::forget(value);
+//                 Ok(d)
+//                 // let other_dict = value.into_dictionary_unchecked();
+//                 // let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
+//                 // let ptr = uninit.as_mut_ptr();
+
+//                 // // Initializing the `size` field
+//                 // // Using `write` instead of assignment via `=` to not call `drop` on the
+//                 // // old, uninitialized value.
+//                 // unsafe {
+//                 //     addr_of_mut!((*ptr).size).write(other_dict.len());
+//                 //     addr_of_mut!((*ptr).capacity).write(other_dict.capacity());
+//                 // }
+
+//                 // let new_items = other_dict.items;
+
+//                 // unsafe {
+//                 //     // Initializing the `list` field
+//                 //     // If there is a panic here, then the `String` in the `name` field leaks.
+//                 //     addr_of_mut!((*ptr).items).write(new_items);
+//                 // }
+
+//                 // mem::forget(other_dict);
+
+//                 // Ok(unsafe { uninit.assume_init() })
+//             }
+//             _ => Err(()),
+//         }
+//     }
+// }
 
 impl From<Dictionary> for Vec<KeyValuePair> {
     fn from(dictionary: Dictionary) -> Self {
@@ -176,7 +199,7 @@ impl PartialEq for Dictionary {
 
 #[cfg(test)]
 mod tests {
-    use super::{Dictionary, KeyValuePair, Object, TryFrom};
+    use super::{Dictionary, KeyValuePair, Object, };
     use crate::api::vim::LuaString;
     use approx::assert_ulps_eq;
     use log::debug;
@@ -273,8 +296,8 @@ mod tests {
 
             // Validate the Dictionary value
             {
-                let inner_dict1 = Dictionary::try_from(kvp1.value().clone()).unwrap();
-                let mut inner_vec1 = Vec::from(inner_dict1);
+                let inner_dict1 = kvp1.value().as_dictionary_unchecked();
+                let mut inner_vec1 = Vec::from(inner_dict1.clone());
 
                 let inner_kvp1 = inner_vec1.remove(0);
                 assert_eq!(inner_kvp1.key(), &LuaString::new("inner one one").unwrap());

@@ -89,11 +89,12 @@ impl fmt::Display for String {
 
 impl Drop for String {
     fn drop(&mut self) {
-        let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
-        // if !self.data.is_null() {
-        //     // unsafe { CString::from_raw(self.data) };
-        //     unsafe { CString::from_raw(self.data) };
-        // }
+        // let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
+        if !self.data.is_null() {
+            // unsafe { CString::from_raw(self.data) };
+            // let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
+            let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
+        }
     }
 }
 

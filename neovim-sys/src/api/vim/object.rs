@@ -226,17 +226,34 @@ impl Object {
 
     #[must_use]
     pub fn into_string_unchecked(self) -> LuaString {
-        unsafe { ManuallyDrop::into_inner(self.data.string) }
+        let s = LuaString {
+            data: unsafe { self.data.string.data },
+            size: unsafe { self.data.string.size },
+        };
+        std::mem::forget(self);
+        s
     }
 
     #[must_use]
     pub fn into_array_unchecked(self) -> Array {
-        unsafe { ManuallyDrop::into_inner(self.data.array) }
+        let a = Array {
+            items: unsafe { self.data.array.items },
+            size: unsafe { self.data.array.size },
+            capacity: unsafe { self.data.array.capacity },
+        };
+        std::mem::forget(self);
+        a
     }
 
     #[must_use]
     pub fn into_dictionary_unchecked(self) -> Dictionary {
-        unsafe { ManuallyDrop::into_inner(self.data.dictionary) }
+        let d = Dictionary {
+            items: unsafe { self.data.dictionary.items },
+            size: unsafe { self.data.dictionary.size },
+            capacity: unsafe { self.data.array.capacity },
+        };
+        std::mem::forget(self);
+        d
     }
 }
 
@@ -324,37 +341,28 @@ impl Clone for Object {
     }
 }
 
-// impl Drop for Object {
-//     fn drop(&mut self) {
-//         debug!("Dropping Object...{:?}", self.object_type);
-
-//         match self.object_type {
-//             ObjectType::kObjectTypeNil
-//             | ObjectType::kObjectTypeBoolean
-//             | ObjectType::kObjectTypeInteger
-//             | ObjectType::kObjectTypeFloat => (),
-//             ObjectType::kObjectTypeString => {
-//                 let data = &mut self.data;
-
-//                 debug!(
-//                     "...Object::String...'{}'",
-//                     unsafe { &data.string }.as_c_str().to_string_lossy()
-//                 );
-//                 unsafe { ManuallyDrop::drop(&mut data.string) };
-//             }
-//             ObjectType::kObjectTypeArray => {
-//                 debug!("...Object::Array...");
-//                 let data = &mut self.data;
-//                 unsafe { ManuallyDrop::drop(&mut data.array) };
-//             }
-//             ObjectType::kObjectTypeDictionary => {
-//                 debug!("...Object::Dictionary...");
-//                 let data = &mut self.data;
-//                 unsafe { ManuallyDrop::drop(&mut data.dictionary) };
-//             }
-//         }
-//     }
-// }
+impl Drop for Object {
+    fn drop(&mut self) {
+        match self.object_type {
+            ObjectType::kObjectTypeNil
+            | ObjectType::kObjectTypeBoolean
+            | ObjectType::kObjectTypeInteger
+            | ObjectType::kObjectTypeFloat => (),
+            ObjectType::kObjectTypeString => {
+                let data = &mut self.data;
+                unsafe { ManuallyDrop::drop(&mut data.string) };
+            }
+            ObjectType::kObjectTypeArray => {
+                let data = &mut self.data;
+                unsafe { ManuallyDrop::drop(&mut data.array) };
+            }
+            ObjectType::kObjectTypeDictionary => {
+                let data = &mut self.data;
+                unsafe { ManuallyDrop::drop(&mut data.dictionary) };
+            }
+        }
+    }
+}
 
 impl Debug for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
