@@ -1,6 +1,6 @@
-pub mod into_iter;
+// pub mod into_iter;
 
-use self::into_iter::IntoIter;
+// use self::into_iter::IntoIter;
 use super::{Object, ObjectType};
 use std::{
     convert::TryFrom,
@@ -13,9 +13,9 @@ use std::{
 
 #[repr(C)]
 pub struct Array {
-    items: *mut Object,
-    size: usize,
-    capacity: usize,
+    pub(super) items: *mut Object,
+    pub(super) size: usize,
+    pub(super) capacity: usize,
 }
 
 impl Array {
@@ -33,7 +33,7 @@ impl Array {
             addr_of_mut!((*ptr).capacity).write(vec.capacity());
         }
 
-        let new_items =  vec.as_mut_ptr() ;
+        let new_items = vec.as_mut_ptr();
 
         unsafe {
             // Initializing the `list` field
@@ -74,29 +74,29 @@ impl Array {
     }
 }
 
-impl IntoIterator for Array {
-    type Item = Object;
-    type IntoIter = IntoIter;
+// impl IntoIterator for Array {
+//     type Item = Object;
+//     type IntoIter = IntoIter;
 
-    #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        unsafe {
-            let me = ManuallyDrop::new(self);
-            let alloc = ptr::read(me.items);
-            let begin = me.items;
-            let end: *const Object = begin.add(me.len());
-            let cap = me.capacity();
-            IntoIter {
-                buf: begin,
-                phantom: PhantomData,
-                cap,
-                alloc,
-                ptr: begin,
-                end,
-            }
-        }
-    }
-}
+//     #[inline]
+//     fn into_iter(self) -> Self::IntoIter {
+//         unsafe {
+//             let me = ManuallyDrop::new(self);
+//             let alloc = ptr::read(me.items);
+//             let begin = me.items;
+//             let end: *const Object = begin.add(me.len());
+//             let cap = me.capacity();
+//             IntoIter {
+//                 buf: begin,
+//                 phantom: PhantomData,
+//                 cap,
+//                 alloc,
+//                 ptr: begin,
+//                 end,
+//             }
+//         }
+//     }
+// }
 
 impl Clone for Array {
     fn clone(&self) -> Self {
@@ -112,7 +112,17 @@ impl fmt::Debug for Array {
 
 impl Drop for Array {
     fn drop(&mut self) {
-        unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
+        let _v = unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
+        // let v = unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
+        // for object in v {
+        //     eprintln!("Dropping object...{:?}", &object);
+        //     match object.object_type() {
+        //         ObjectType::kObjectTypeString => drop(object.into_string_unchecked()),
+        //         ObjectType::kObjectTypeArray => drop(object.into_array_unchecked()),
+        //         ObjectType::kObjectTypeDictionary => drop(object.into_dictionary_unchecked()),
+        //         _ => (),
+        //     }
+        // }
     }
 }
 
@@ -362,25 +372,25 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_into_iter() {
-        let array = Array::new([
-            Object::from(true),
-            Object::from(42),
-            Object::from(LuaString::new("blah").unwrap()),
-        ]);
+    // #[test]
+    // fn test_into_iter() {
+    //     let array = Array::new([
+    //         Object::from(true),
+    //         Object::from(42),
+    //         Object::from(LuaString::new("blah").unwrap()),
+    //     ]);
 
-        let mut iter = array.into_iter();
-        let boolean = iter.next().unwrap();
-        assert!(boolean.try_as_boolean().unwrap());
+    //     let mut iter = array.into_iter();
+    //     let boolean = iter.next().unwrap();
+    //     assert!(boolean.try_as_boolean().unwrap());
 
-        let integer = iter.next().unwrap();
-        assert_eq!(integer.try_as_integer().unwrap(), 42);
+    //     let integer = iter.next().unwrap();
+    //     assert_eq!(integer.try_as_integer().unwrap(), 42);
 
-        let string = iter.next().unwrap();
-        assert_eq!(
-            string.try_as_string().unwrap(),
-            &LuaString::new("blah").unwrap()
-        );
-    }
+    //     let string = iter.next().unwrap();
+    //     assert_eq!(
+    //         string.try_as_string().unwrap(),
+    //         &LuaString::new("blah").unwrap()
+    //     );
+    // }
 }
