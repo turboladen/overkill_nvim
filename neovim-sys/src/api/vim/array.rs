@@ -5,7 +5,6 @@ use super::{Object, ObjectType};
 use std::{
     convert::TryFrom,
     fmt,
-    marker::PhantomData,
     mem::{self, ManuallyDrop, MaybeUninit},
     ptr::{self, addr_of_mut},
     slice,
