@@ -514,7 +514,7 @@ impl PartialEq for Object {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
-#[repr(usize)]
+#[repr(C)]
 pub enum ObjectType {
     kObjectTypeNil = 0,
     kObjectTypeBoolean,
