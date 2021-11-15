@@ -1,6 +1,6 @@
 use super::Error;
 use neovim_sys::api::vim::{Dictionary, LuaString};
-use std::{borrow::Borrow, convert::TryFrom};
+use std::{convert::TryFrom};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -113,9 +113,7 @@ impl TryFrom<Dictionary> for CurrentMode {
                 mode: Mode::from(mode.as_string_unchecked()),
                 blocking: blocking.as_boolean_unchecked(),
             }),
-            _ => {
-                Err(Error::Blargh("meow".into()))
-            }
+            _ => Err(Error::Blargh("meow".into())),
         }
     }
 }

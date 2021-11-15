@@ -21,7 +21,9 @@ impl From<Object> for RustObject {
     fn from(api_object: Object) -> Self {
         match api_object.object_type() {
             ObjectType::kObjectTypeNil => Self::Nil,
-            ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.into_boolean_unchecked()),
+            ObjectType::kObjectTypeBoolean => {
+                Self::Boolean(api_object.into_boolean_unchecked())
+            }
             ObjectType::kObjectTypeInteger => Self::Integer(api_object.into_integer_unchecked()),
             ObjectType::kObjectTypeFloat => Self::Float(api_object.into_float_unchecked()),
             ObjectType::kObjectTypeString => Self::String(api_object.into_string_unchecked()),

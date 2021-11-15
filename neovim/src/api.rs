@@ -155,7 +155,7 @@ pub fn nvim_feedkeys(keys: &str, mode: Mode, escape_csi: bool) -> Result<(), Err
                 Err(Error::VErrMsg(LuaString::new("Uhohhhh").unwrap()))
             }
         },
-        Err(e) => Ok(()),
+        Err(_) => Ok(()),
     }
 }
 

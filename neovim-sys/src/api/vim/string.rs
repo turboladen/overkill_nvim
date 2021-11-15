@@ -11,6 +11,7 @@ use std::{
 #[derive(Debug)]
 #[repr(C)]
 pub struct String {
+    // This must not contain the nul byte.
     pub(super) data: *mut c_char,
     pub(super) size: usize,
 }
@@ -22,7 +23,7 @@ impl String {
     ///
     pub fn new<T: Into<Vec<u8>>>(s: T) -> Result<Self, NulError> {
         let cstring = CString::new(s)?;
-        let mut vec = cstring.into_bytes_with_nul();
+        let mut vec = cstring.into_bytes();
 
         let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
         let ptr = uninit.as_mut_ptr();
@@ -166,23 +167,23 @@ mod tests {
         let cstring = CString::new("tacos").unwrap();
         let lua_string = String::try_from(cstring.clone()).unwrap();
 
-        assert_eq!(lua_string.size, 6);
+        assert_eq!(lua_string.size, 5);
         assert_eq!(cstring.as_c_str().to_bytes().len(), 5);
-        assert_eq!(lua_string.size, cstring.as_c_str().to_bytes().len() + 1);
+        assert_eq!(lua_string.size, cstring.as_c_str().to_bytes().len());
         assert_eq!(lua_string.as_c_str(), cstring.as_c_str());
     }
 
     #[test]
     fn test_cstring_try_from() {
         let lua_string = String::new("burritos").unwrap();
-        assert_eq!(lua_string.size, 9);
+        assert_eq!(lua_string.size, 8);
 
         let string_size = lua_string.size;
         let lossy = lua_string.as_c_str().to_string_lossy().to_string();
 
         let cstring = CString::try_from(lua_string).unwrap();
 
-        assert_eq!(cstring.as_c_str().to_bytes().len(), string_size - 1);
+        assert_eq!(cstring.as_c_str().to_bytes().len(), string_size);
         assert_eq!(cstring.as_c_str().to_string_lossy(), lossy);
     }
 
@@ -193,7 +194,7 @@ mod tests {
         assert_eq!(clone.as_c_str(), lua_string.as_c_str());
 
         // read after copy
-        assert_eq!(lua_string.size, 9);
+        assert_eq!(lua_string.size, 8);
         let cstring = CString::try_from(lua_string).unwrap();
         assert_eq!(&cstring.into_string().unwrap(), "burritos");
     }

@@ -7,10 +7,9 @@ use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 pub extern "C" fn test_nvim_set_var() -> Boolean {
     let mut result = true;
 
-    let var = "nvim_rs_set_get_var";
-
     // nil
     {
+        let var = "nvim_set_var_test_nil";
         let value = Object::new_nil();
 
         if let Err(e) = self::api::nvim_set_var(var, value) {
@@ -30,33 +29,37 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         }
     }
 
-    // // bool
+    // bool
     {
+        let var = "nvim_set_var_test_bool";
         let value = Object::from(true);
 
-        if let Err(e) = self::api::nvim_set_var(var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
-
-        match self::api::nvim_get_var(var).map(RustObject::from) {
-            Ok(RustObject::Boolean(b)) => {
-                if !b {
+        match self::api::nvim_set_var(var, value) {
+            Err(e) => {
+                eprintln!("Error setting var: {}", e);
+                result = false;
+            }
+            Ok(()) => match self::api::nvim_get_var(var).map(RustObject::from) {
+                Ok(RustObject::Boolean(b)) => {
+                    if !b {
+                        result = false;
+                    }
+                }
+                Ok(t) => {
+                    eprintln!("Got unexpected value type: {:?}", t);
                     result = false;
                 }
-            }
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
+                Err(e) => {
+                    eprintln!("Got error during test: {}", e);
+                    result = false;
+                }
+            },
         }
     }
 
     // Integer
     {
+        let var = "nvim_set_var_test_integer";
         let value = Object::from(42);
 
         if let Err(e) = self::api::nvim_set_var(var, value) {
@@ -82,6 +85,7 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
 
     // Float
     {
+        let var = "nvim_set_var_test_float";
         let value = Object::from(123.456);
 
         if let Err(e) = self::api::nvim_set_var(var, value) {
@@ -107,6 +111,7 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
 
     // String
     {
+        let var = "nvim_set_var_test_string";
         let string = LuaString::new("this is a test").unwrap();
         let value = Object::from(string);
 
@@ -143,6 +148,7 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
             Array::new([o])
         }
         let value = Object::from(make_subject());
+        let var = "nvim_set_var_test_array";
 
         if let Err(e) = self::api::nvim_set_var(var, value) {
             eprintln!("Error setting var: {}", e);
@@ -175,6 +181,7 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
             Dictionary::new([KeyValuePair::new(key, value)])
         }
         let value = Object::from(make_subject());
+        let var = "nvim_set_var_test_dictionary";
 
         if let Err(e) = self::api::nvim_set_var(var, value) {
             eprintln!("Error setting var: {}", e);
