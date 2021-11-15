@@ -1,19 +1,23 @@
+#![allow(clippy::missing_panics_doc)]
+
 use super::api;
-use crate::api::{Boolean, LuaString, Mode, Object, RustObject};
-use approx::ulps_ne;
+use crate::api::{LuaString, Mode, Object, RustObject};
 use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 
-fn _test_nvim_setget_var(var: &str, value: Object) -> bool {
+fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) -> bool {
     if let Err(e) = self::api::nvim_set_var(var, value) {
         eprintln!("Error setting var: {}", e);
         return false;
     }
 
     match self::api::nvim_get_var(var).map(RustObject::from) {
-        Ok(RustObject::Nil) => true,
-        Ok(t) => {
-            eprintln!("Got unexpected value type: {:?}", t);
-            false
+        Ok(ref t) => {
+            if t == expected_object_variant {
+                true
+            } else {
+                eprintln!("Got unexpected value type: {:?}", t);
+                false
+            }
         }
         Err(e) => {
             eprintln!("Got error during test: {}", e);
@@ -23,15 +27,15 @@ fn _test_nvim_setget_var(var: &str, value: Object) -> bool {
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_set_var() -> Boolean {
-    let mut result = true;
-
+pub extern "C" fn test_nvim_set_var() -> bool {
     // nil
     {
         let var = "nvim_set_var_test_nil";
         let value = Object::new_nil();
 
-        result = _test_nvim_setget_var(var, value);
+        if !_test_nvim_setget_var(var, value, &RustObject::Nil) {
+            return false;
+        }
     }
 
     // bool
@@ -39,26 +43,8 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         let var = "nvim_set_var_test_bool";
         let value = Object::from(true);
 
-        match self::api::nvim_set_var(var, value) {
-            Err(e) => {
-                eprintln!("Error setting var: {}", e);
-                result = false;
-            }
-            Ok(()) => match self::api::nvim_get_var(var).map(RustObject::from) {
-                Ok(RustObject::Boolean(b)) => {
-                    if !b {
-                        result = false;
-                    }
-                }
-                Ok(t) => {
-                    eprintln!("Got unexpected value type: {:?}", t);
-                    result = false;
-                }
-                Err(e) => {
-                    eprintln!("Got error during test: {}", e);
-                    result = false;
-                }
-            },
+        if !_test_nvim_setget_var(var, value, &RustObject::Boolean(true)) {
+            return false;
         }
     }
 
@@ -67,24 +53,8 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         let var = "nvim_set_var_test_integer";
         let value = Object::from(42);
 
-        if let Err(e) = self::api::nvim_set_var(var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
-
-        match self::api::nvim_get_var(var).map(RustObject::from) {
-            Ok(RustObject::Integer(i)) => {
-                if i != 42 {
-                    result = false;
-                }
-            }
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
+        if !_test_nvim_setget_var(var, value, &RustObject::Integer(42)) {
+            return false;
         }
     }
 
@@ -93,24 +63,8 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         let var = "nvim_set_var_test_float";
         let value = Object::from(123.456);
 
-        if let Err(e) = self::api::nvim_set_var(var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
-
-        match self::api::nvim_get_var(var).map(RustObject::from) {
-            Ok(RustObject::Float(f)) => {
-                if ulps_ne!(f, 123.456) {
-                    result = false;
-                }
-            }
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
+        if !_test_nvim_setget_var(var, value, &RustObject::Float(123.456)) {
+            return false;
         }
     }
 
@@ -120,29 +74,12 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         let string = LuaString::new("this is a test").unwrap();
         let value = Object::from(string);
 
-        if let Err(e) = self::api::nvim_set_var(var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
-
-        match self::api::nvim_get_var(var) {
-            Ok(object) if object.object_type() == ObjectType::kObjectTypeString => {
-                let string = object.as_string_unchecked();
-                if string != &LuaString::new("this is a test").unwrap() {
-                    eprintln!(
-                        "FAIL! Expected 'this is a test', got '{}'",
-                        string.as_c_str().to_string_lossy()
-                    );
-                    result = false;
-                }
-            }
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
+        if !_test_nvim_setget_var(
+            var,
+            value,
+            &RustObject::String(LuaString::new("this is a test").unwrap()),
+        ) {
+            return false;
         }
     }
 
@@ -155,26 +92,8 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         let value = Object::from(make_subject());
         let var = "nvim_set_var_test_array";
 
-        if let Err(e) = self::api::nvim_set_var(var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
-
-        match self::api::nvim_get_var(var) {
-            Ok(object) if object.object_type() == ObjectType::kObjectTypeArray => {
-                let array = object.as_array_unchecked();
-                if array != &make_subject() {
-                    eprintln!("FAIL! Expected 'this is a test', got '{:?}'", array);
-                    result = false;
-                }
-            }
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
+        if !_test_nvim_setget_var(var, value, &RustObject::Array(make_subject())) {
+            return false;
         }
     }
 
@@ -188,38 +107,17 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         let value = Object::from(make_subject());
         let var = "nvim_set_var_test_dictionary";
 
-        if let Err(e) = self::api::nvim_set_var(var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
-
-        match self::api::nvim_get_var(var) {
-            Ok(object) if object.object_type() == ObjectType::kObjectTypeDictionary => {
-                let dict = object.as_dictionary_unchecked();
-                if dict != &make_subject() {
-                    eprintln!("FAIL! Expected 'this is a test', got '{:?}'", dict);
-                    result = false;
-                }
-            }
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
+        if !_test_nvim_setget_var(var, value, &RustObject::Dictionary(make_subject())) {
+            return false;
         }
     }
 
-    result
+    true
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_set_vvar() -> Boolean {
-    let mut result = true;
-
+pub extern "C" fn test_nvim_set_vvar() -> bool {
     let vvar = "warningmsg";
-
     let string = LuaString::new("meow").unwrap();
     let value = Object::from(string);
 
@@ -236,24 +134,24 @@ pub extern "C" fn test_nvim_set_vvar() -> Boolean {
                     "FAIL! Expected 'meow', got '{}'",
                     string.as_c_str().to_string_lossy()
                 );
-                result = false;
+                return false;
             }
         }
         Ok(t) => {
             eprintln!("Got unexpected value type: {:?}", t);
-            result = false;
+            return false;
         }
         Err(e) => {
             eprintln!("Got error during test: {}", e);
-            result = false;
+            return false;
         }
     }
 
-    result
+    true
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_buf_set_var() -> Boolean {
+pub extern "C" fn test_nvim_buf_set_var() -> bool {
     let mut result = true;
 
     let var = "nvim_rs_buf_set_get_var";
@@ -293,12 +191,12 @@ pub extern "C" fn test_nvim_buf_set_var() -> Boolean {
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_get_current_buf() -> Boolean {
+pub extern "C" fn test_nvim_get_current_buf() -> bool {
     self::api::nvim_get_current_buf() == 1
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_feedkeys() -> Boolean {
+pub extern "C" fn test_nvim_feedkeys() -> bool {
     match self::api::nvim_feedkeys("j", Mode::Normal, false) {
         Ok(()) => true,
         Err(e) => {
@@ -309,7 +207,7 @@ pub extern "C" fn test_nvim_feedkeys() -> Boolean {
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_get_mode() -> Boolean {
+pub extern "C" fn test_nvim_get_mode() -> bool {
     match self::api::nvim_get_mode() {
         Ok(current_mode) => match current_mode.mode() {
             Mode::Normal => true,
@@ -326,7 +224,7 @@ pub extern "C" fn test_nvim_get_mode() -> Boolean {
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_get_option() -> Boolean {
+pub extern "C" fn test_nvim_get_option() -> bool {
     match self::api::nvim_get_mode() {
         Ok(current_mode) => match current_mode.mode() {
             Mode::Normal => true,
