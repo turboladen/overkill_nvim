@@ -255,6 +255,36 @@ impl Object {
         std::mem::forget(self);
         d
     }
+
+    #[must_use]
+    pub fn is_nil(&self) -> bool {
+        self.object_type == ObjectType::kObjectTypeNil
+    }
+
+    #[must_use]
+    pub fn is_boolean(&self) -> bool {
+        self.object_type == ObjectType::kObjectTypeBoolean
+    }
+
+    #[must_use]
+    pub fn is_integer(&self) -> bool {
+        self.object_type == ObjectType::kObjectTypeInteger
+    }
+
+    #[must_use]
+    pub fn is_string(&self) -> bool {
+        self.object_type == ObjectType::kObjectTypeString
+    }
+
+    #[must_use]
+    pub fn is_array(&self) -> bool {
+        self.object_type == ObjectType::kObjectTypeArray
+    }
+
+    #[must_use]
+    pub fn is_dictionary(&self) -> bool {
+        self.object_type == ObjectType::kObjectTypeDictionary
+    }
 }
 
 impl Default for Object {
