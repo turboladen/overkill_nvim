@@ -48,7 +48,7 @@ pub struct TypvalT {
 }
 
 #[derive(PartialEq, Eq)]
-#[repr(u32)]
+#[repr(C)]
 pub enum VarType {
     Unknown = 0,
     Number,
@@ -63,7 +63,7 @@ pub enum VarType {
     Blob,
 }
 
-#[repr(u32)]
+#[repr(C)]
 pub enum VarLockStatus {
     Unlocked = 0,
     Locked = 1,
@@ -87,14 +87,14 @@ pub type FloatT = f64;
 pub type PartialT = PartialS;
 
 #[derive(Clone, Copy)]
-#[repr(u8)]
+#[repr(C)]
 pub enum BoolVarValue {
     BoolVarFalse = 0, // v:false
     BoolVarTrue,      // v:true
 }
 
 #[derive(Clone, Copy)]
-#[repr(u8)]
+#[repr(C)]
 pub enum SpecialVarValue {
     SpecialVarNull = 0, // v:null
 }
