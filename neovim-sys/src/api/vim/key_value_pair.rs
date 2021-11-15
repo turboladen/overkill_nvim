@@ -1,6 +1,7 @@
 use super::{LuaString, Object};
+use std::fmt;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 #[repr(C)]
 pub struct KeyValuePair {
     key: LuaString,
@@ -23,5 +24,14 @@ impl KeyValuePair {
     #[must_use]
     pub const fn value(&self) -> &Object {
         &self.value
+    }
+}
+
+impl fmt::Debug for KeyValuePair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KeyValuePair")
+            .field("key", &self.key.to_string_lossy())
+            .field("value", &self.value)
+            .finish()
     }
 }
