@@ -6,7 +6,7 @@ pub enum Error {
     #[error("Error from neovim: {}", .0)]
     NvimError(#[from] vim::NvimError),
 
-    #[error("Error from neovim: {}", .0)]
+    #[error("neovim Object error: {}", .0)]
     ObjectError(#[from] vim::object::Error),
 
     #[error(transparent)]
