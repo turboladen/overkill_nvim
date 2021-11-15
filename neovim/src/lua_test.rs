@@ -3,6 +3,25 @@ use crate::api::{Boolean, LuaString, Mode, Object, RustObject};
 use approx::ulps_ne;
 use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 
+fn _test_nvim_setget_var(var: &str, value: Object) -> bool {
+    if let Err(e) = self::api::nvim_set_var(var, value) {
+        eprintln!("Error setting var: {}", e);
+        return false;
+    }
+
+    match self::api::nvim_get_var(var).map(RustObject::from) {
+        Ok(RustObject::Nil) => true,
+        Ok(t) => {
+            eprintln!("Got unexpected value type: {:?}", t);
+            false
+        }
+        Err(e) => {
+            eprintln!("Got error during test: {}", e);
+            false
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn test_nvim_set_var() -> Boolean {
     let mut result = true;
@@ -12,21 +31,7 @@ pub extern "C" fn test_nvim_set_var() -> Boolean {
         let var = "nvim_set_var_test_nil";
         let value = Object::new_nil();
 
-        if let Err(e) = self::api::nvim_set_var(var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
-
-        match self::api::nvim_get_var(var).map(RustObject::from) {
-            Ok(RustObject::Nil) => (),
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
-        }
+        result = _test_nvim_setget_var(var, value);
     }
 
     // bool
