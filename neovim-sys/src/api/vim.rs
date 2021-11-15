@@ -1,4 +1,5 @@
 pub mod array;
+pub mod collection;
 pub mod dictionary;
 pub mod key_value_pair;
 pub mod nvim_error;

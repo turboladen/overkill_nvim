@@ -1,77 +1,14 @@
 // pub mod into_iter;
 
 // use self::into_iter::IntoIter;
-use super::{Object, ObjectType};
+use super::{collection::Collection, Object, ObjectType};
 use std::{
     convert::TryFrom,
-    fmt,
-    mem::{self, ManuallyDrop, MaybeUninit},
-    ptr::{self, addr_of_mut},
-    slice,
+    mem::{self, ManuallyDrop},
+    ptr,
 };
 
-#[repr(C)]
-pub struct Array {
-    pub(super) items: *mut Object,
-    pub(super) size: usize,
-    pub(super) capacity: usize,
-}
-
-impl Array {
-    pub fn new<T: Into<Vec<Object>>>(vec: T) -> Self {
-        let mut vec: Vec<Object> = vec.into();
-
-        let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
-        let ptr = uninit.as_mut_ptr();
-
-        // Initializing the `size` field
-        // Using `write` instead of assignment via `=` to not call `drop` on the
-        // old, uninitialized value.
-        unsafe {
-            addr_of_mut!((*ptr).size).write(vec.len());
-            addr_of_mut!((*ptr).capacity).write(vec.capacity());
-        }
-
-        let new_items = vec.as_mut_ptr();
-
-        unsafe {
-            // Initializing the `list` field
-            // If there is a panic here, then the `String` in the `name` field leaks.
-            addr_of_mut!((*ptr).items).write(new_items);
-        }
-
-        mem::forget(vec);
-
-        unsafe { uninit.assume_init() }
-    }
-
-    #[must_use]
-    pub fn as_slice(&self) -> &[Object] {
-        unsafe { slice::from_raw_parts(self.items, self.size) }
-    }
-
-    /// Get a reference to the array's size.
-    #[must_use]
-    pub const fn len(&self) -> usize {
-        self.size
-    }
-
-    #[must_use]
-    pub const fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// Get a reference to the array's capacity.
-    #[must_use]
-    pub const fn capacity(&self) -> usize {
-        self.capacity
-    }
-
-    #[must_use]
-    pub fn iter(&self) -> slice::Iter<'_, Object> {
-        self.as_slice().iter()
-    }
-}
+pub type Array = Collection<Object>;
 
 // impl IntoIterator for Array {
 //     type Item = Object;
@@ -96,62 +33,6 @@ impl Array {
 //         }
 //     }
 // }
-
-impl Clone for Array {
-    fn clone(&self) -> Self {
-        Self::new(self.as_slice())
-    }
-}
-
-impl fmt::Debug for Array {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self.iter()).finish()
-    }
-}
-
-impl Drop for Array {
-    fn drop(&mut self) {
-        let _v = unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
-        // let v = unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
-        // for object in v {
-        //     eprintln!("Dropping object...{:?}", &object);
-        //     match object.object_type() {
-        //         ObjectType::kObjectTypeString => drop(object.into_string_unchecked()),
-        //         ObjectType::kObjectTypeArray => drop(object.into_array_unchecked()),
-        //         ObjectType::kObjectTypeDictionary => drop(object.into_dictionary_unchecked()),
-        //         _ => (),
-        //     }
-        // }
-    }
-}
-
-// impl From<Vec<Object>> for Array {
-//     fn from(vec: Vec<Object>) -> Self {
-//         let mut vec = ManuallyDrop::new(vec);
-//         vec.shrink_to_fit();
-
-//         Self {
-//             items: NonNull::new(vec.as_mut_ptr()).unwrap(),
-//             size: vec.len(),
-//             capacity: vec.len(),
-//         }
-//     }
-// }
-
-impl From<Array> for Vec<Object> {
-    fn from(array: Array) -> Self {
-        let v = unsafe { Self::from_raw_parts(array.items, array.size, array.capacity) };
-        std::mem::forget(array);
-
-        v
-    }
-}
-
-impl<'a> From<&'a Array> for &'a [Object] {
-    fn from(array: &'a Array) -> Self {
-        array.as_slice()
-    }
-}
 
 impl TryFrom<Object> for Array {
     type Error = ();
@@ -183,12 +64,6 @@ impl TryFrom<Object> for Array {
             }
             _ => Err(()),
         }
-    }
-}
-
-impl PartialEq for Array {
-    fn eq(&self, other: &Self) -> bool {
-        self.as_slice().eq(other.as_slice())
     }
 }
 
