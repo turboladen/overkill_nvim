@@ -199,7 +199,7 @@ impl PartialEq for Dictionary {
 
 #[cfg(test)]
 mod tests {
-    use super::{Dictionary, KeyValuePair, Object, };
+    use super::{Dictionary, KeyValuePair, Object};
     use crate::api::vim::LuaString;
     use approx::assert_ulps_eq;
     use log::debug;
@@ -365,5 +365,17 @@ mod tests {
                 &LuaString::new("the value").unwrap(),
             );
         }
+    }
+
+    #[test]
+    fn get_existing_key_test() {
+        let original_dict = Dictionary::new([KeyValuePair::new(
+            LuaString::new("the key").unwrap(),
+            Object::from(LuaString::new("the value").unwrap()),
+        )]);
+
+        let value = original_dict.get("the key").unwrap();
+        let string = value.as_string_unchecked();
+        assert_eq!(string.to_string_lossy(), "the value");
     }
 }
