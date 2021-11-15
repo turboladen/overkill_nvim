@@ -30,7 +30,7 @@ impl<T> Collection<T> {
         let new_items = vec.as_mut_ptr();
 
         unsafe {
-            // Initializing the `list` field
+            // Initializing the `items` field
             // If there is a panic here, then the `String` in the `name` field leaks.
             addr_of_mut!((*ptr).items).write(new_items);
         }
