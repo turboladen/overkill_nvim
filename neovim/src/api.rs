@@ -143,16 +143,19 @@ pub fn nvim_feedkeys(keys: &str, mode: Mode, escape_csi: bool) -> Result<(), Err
         vim::nvim_feedkeys(api_keys, api_mode, escape_csi);
     }
 
-    let errmsg = nvim_get_vvar("errmsg")?;
-
-    match errmsg.object_type() {
-        ObjectType::kObjectTypeNil => Ok(()),
-        ObjectType::kObjectTypeString if errmsg.as_string_unchecked().is_empty() => Ok(()),
-        ObjectType::kObjectTypeString => Err(Error::VErrMsg(errmsg.as_string_unchecked().clone())),
-        _ => {
-            eprintln!("Got unexpected v:errmsg object: {:?}", errmsg);
-            Err(Error::VErrMsg(LuaString::new("Uhohhhh").unwrap()))
-        }
+    match nvim_get_vvar("errmsg") {
+        Ok(errmsg) => match errmsg.object_type() {
+            ObjectType::kObjectTypeNil => Ok(()),
+            ObjectType::kObjectTypeString if errmsg.as_string_unchecked().is_empty() => Ok(()),
+            ObjectType::kObjectTypeString => {
+                Err(Error::VErrMsg(errmsg.as_string_unchecked().clone()))
+            }
+            _ => {
+                eprintln!("Got unexpected v:errmsg object: {:?}", errmsg);
+                Err(Error::VErrMsg(LuaString::new("Uhohhhh").unwrap()))
+            }
+        },
+        Err(e) => Ok(()),
     }
 }
 
