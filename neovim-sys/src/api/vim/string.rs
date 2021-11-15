@@ -1,5 +1,5 @@
 use std::{
-    borrow::Borrow,
+    borrow::{Borrow, Cow},
     convert::TryFrom,
     ffi::{CStr, CString, NulError},
     fmt,
@@ -49,6 +49,11 @@ impl String {
     #[must_use]
     pub fn as_c_str(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.data) }
+    }
+
+    #[must_use]
+    pub fn to_string_lossy(&self) -> Cow<'_, str> {
+        self.as_c_str().to_string_lossy()
     }
 
     /// Does not contain the trailing nul byte.
