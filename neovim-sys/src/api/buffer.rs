@@ -1,4 +1,4 @@
-use super::vim::{NvimError, Object, LuaString};
+use super::vim::{LuaString, NvimError, Object};
 
 extern "C" {
     pub fn nvim_buf_get_var(buffer: Buffer, name: LuaString, err: *mut NvimError) -> Object;

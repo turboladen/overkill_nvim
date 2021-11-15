@@ -35,7 +35,12 @@ extern "C" {
 
     pub fn nvim_exec(src: LuaString, output: Boolean, err: *mut NvimError) -> LuaString;
 
-    pub fn nvim_set_hl(namespace_id: Integer, name: LuaString, val: Dictionary, err: *mut NvimError);
+    pub fn nvim_set_hl(
+        namespace_id: Integer,
+        name: LuaString,
+        val: Dictionary,
+        err: *mut NvimError,
+    );
     pub fn nvim_get_namespaces() -> Dictionary;
     pub fn nvim_create_namespace(name: LuaString) -> Integer;
 }

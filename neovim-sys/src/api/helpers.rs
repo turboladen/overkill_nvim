@@ -1,4 +1,4 @@
-use super::vim::{Array, Dictionary, Object, LuaString};
+use super::vim::{Array, Dictionary, LuaString, Object};
 use std::os::raw::c_char;
 
 extern "C" {

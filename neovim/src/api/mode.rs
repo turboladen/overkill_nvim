@@ -1,6 +1,6 @@
 use super::Error;
 use neovim_sys::api::vim::{Dictionary, LuaString};
-use std::{convert::TryFrom};
+use std::convert::TryFrom;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
