@@ -1,8 +1,8 @@
 use super::Error;
 use neovim_sys::api::vim::{Dictionary, LuaString};
-use std::convert::TryFrom;
+use std::{borrow::Borrow, convert::TryFrom};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
     Normal,
     Insert,
@@ -109,11 +109,32 @@ impl TryFrom<Dictionary> for CurrentMode {
 
     fn try_from(dict: Dictionary) -> Result<Self, Self::Error> {
         match (dict.get("mode"), dict.get("blocking")) {
-            (Some(mode), Some(blocking)) => Ok(Self {
-                blocking: blocking.try_as_boolean()?,
-                mode: mode.try_as_string().map(Mode::from)?,
+            (Some(mode), Some(blocking)) if mode.is_string() && blocking.is_boolean() => Ok(Self {
+                mode: Mode::from(mode.as_string_unchecked()),
+                blocking: blocking.as_boolean_unchecked(),
             }),
-            _ => Err(Error::Blargh("meow".into())),
+            _ => {
+                Err(Error::Blargh("meow".into()))
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use neovim_sys::api::vim::{KeyValuePair, Object};
+
+    #[test]
+    fn try_from_dictionary_test() {
+        let dict = Dictionary::new([
+            KeyValuePair::new(
+                LuaString::new("mode").unwrap(),
+                Object::from(LuaString::new("n").unwrap()),
+            ),
+            KeyValuePair::new(LuaString::new("blocking").unwrap(), Object::from(false)),
+        ]);
+        let current_mode = CurrentMode::try_from(dict).unwrap();
+        assert_eq!(current_mode.mode(), Mode::Normal);
     }
 }
