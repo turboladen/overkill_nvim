@@ -504,10 +504,9 @@ impl PartialEq for Object {
                 unsafe { lhs.array.eq(&rhs.array) }
             }
             ObjectType::kObjectTypeDictionary => {
-                let _lhs = &self.data;
-                let _rhs = &self.data;
-                todo!()
-                // unsafe { lhs.dictionary.eq(&rhs.dictionary) }
+                let lhs = &self.data;
+                let rhs = &self.data;
+                unsafe { lhs.dictionary.eq(&rhs.dictionary) }
             }
         }
     }
