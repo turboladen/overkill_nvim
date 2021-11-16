@@ -9,7 +9,7 @@ pub enum Error {
     /// `Error`.
     ///
     #[error("Error from neovim: {}", .0)]
-    NvimError(#[from] vim::NvimError),
+    LuaError(#[from] vim::LuaError),
 
     /// This class of errors only happens when dealing with `neovim_sys::vim::Object`s, when the
     /// type of object isn't what was expected.

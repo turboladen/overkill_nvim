@@ -4,14 +4,14 @@
 pub mod array;
 pub mod collection;
 pub mod dictionary;
-pub mod nvim_error;
+pub mod error;
 pub mod object;
 pub mod string;
 
 pub use self::{
     array::Array,
     dictionary::{KeyValuePair, Dictionary},
-    nvim_error::{ErrorType, NvimError},
+    error::{ErrorType, Error as LuaError},
     object::{Object, ObjectType},
     string::String as LuaString,
 };
@@ -37,19 +37,19 @@ pub type LuaRef = isize;
 extern "C" {
     /// Gets a global (g:) variable.
     ///
-    pub fn nvim_get_var(name: LuaString, err: *mut NvimError) -> Object;
+    pub fn nvim_get_var(name: LuaString, err: *mut LuaError) -> Object;
 
     /// Sets a global (g:) variable.
     ///
-    pub fn nvim_set_var(name: LuaString, value: Object, err: *mut NvimError);
+    pub fn nvim_set_var(name: LuaString, value: Object, err: *mut LuaError);
 
     /// Gets a v: variable.
     ///
-    pub fn nvim_get_vvar(name: LuaString, err: *mut NvimError) -> Object;
+    pub fn nvim_get_vvar(name: LuaString, err: *mut LuaError) -> Object;
 
     /// Sets a v: variable.
     ///
-    pub fn nvim_set_vvar(name: LuaString, value: Object, err: *mut NvimError);
+    pub fn nvim_set_vvar(name: LuaString, value: Object, err: *mut LuaError);
 
     /// Sends input-keys to Nvim.
     ///
@@ -74,7 +74,7 @@ extern "C" {
 
     /// Executes `Vimscript`.
     ///
-    pub fn nvim_exec(src: LuaString, output: Boolean, err: *mut NvimError) -> LuaString;
+    pub fn nvim_exec(src: LuaString, output: Boolean, err: *mut LuaError) -> LuaString;
 
     /// Sets a highlight group.
     ///
@@ -82,7 +82,7 @@ extern "C" {
         namespace_id: Integer,
         name: LuaString,
         val: Dictionary,
-        err: *mut NvimError,
+        err: *mut LuaError,
     );
 
     /// Gets existing, non-anonymous namespaces.

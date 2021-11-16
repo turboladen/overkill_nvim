@@ -7,12 +7,12 @@ use std::{ffi::CStr, fmt, os::raw::c_char};
 ///
 #[derive(thiserror::Error, Clone, Copy)]
 #[repr(C)]
-pub struct NvimError {
+pub struct Error {
     error_type: ErrorType,
     msg: *mut c_char,
 }
 
-impl NvimError {
+impl Error {
     /// Since an "error" can also be `None`, this is a convenience method to check if the `self` is
     /// actually an error.
     ///
@@ -38,7 +38,7 @@ impl NvimError {
     }
 }
 
-impl Default for NvimError {
+impl Default for Error {
     fn default() -> Self {
         Self {
             error_type: ErrorType::kErrorTypeNone,
@@ -47,7 +47,7 @@ impl Default for NvimError {
     }
 }
 
-/// Used by `NvimError` to communicate which type of `Error` it is.
+/// Used by `Error` to communicate which type of `Error` it is.
 ///
 #[derive(Debug, Clone, Copy)]
 #[allow(non_camel_case_types)]
@@ -66,7 +66,7 @@ pub enum ErrorType {
     kErrorTypeValidation,
 }
 
-impl fmt::Display for NvimError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let type_string = match self.error_type {
             ErrorType::kErrorTypeNone => return Ok(()),
@@ -83,11 +83,11 @@ impl fmt::Display for NvimError {
     }
 }
 
-impl fmt::Debug for NvimError {
+impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = unsafe { CStr::from_ptr(self.msg) }.to_string_lossy();
 
-        f.debug_struct("NvimError")
+        f.debug_struct("Error")
             .field("error_type", &self.error_type)
             .field("msg", &msg)
             .finish()

@@ -5,7 +5,7 @@
 use super::{Buffer, Error};
 use neovim_sys::api::{
     self,
-    vim::{LuaString, NvimError, Object},
+    vim::{LuaError, LuaString, Object},
 };
 
 /// # Errors
@@ -14,7 +14,7 @@ use neovim_sys::api::{
 /// * If nvim set an error on the call.
 ///
 pub fn nvim_buf_get_var(buffer: Buffer, name: &str) -> Result<Object, Error> {
-    let mut out_err = NvimError::default();
+    let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;
 
     let object = unsafe { api::buffer::nvim_buf_get_var(buffer, api_name, &mut out_err) };
@@ -32,7 +32,7 @@ pub fn nvim_buf_get_var(buffer: Buffer, name: &str) -> Result<Object, Error> {
 /// * If nvim set an error on the call.
 ///
 pub fn nvim_buf_set_var(buffer: Buffer, name: &str, value: Object) -> Result<(), Error> {
-    let mut out_err = NvimError::default();
+    let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;
 
     unsafe {
@@ -53,7 +53,7 @@ pub fn nvim_buf_set_var(buffer: Buffer, name: &str, value: Object) -> Result<(),
 ///
 pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Result<Object, Error> {
     let api_name = LuaString::new(name)?;
-    let mut out_err = NvimError::default();
+    let mut out_err = LuaError::default();
 
     let object = unsafe { api::buffer::nvim_buf_get_option(buffer, api_name, &mut out_err) };
 

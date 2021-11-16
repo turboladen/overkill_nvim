@@ -4,7 +4,7 @@
 //!
 use super::mode;
 use super::{Buffer, Error, Mode};
-use neovim_sys::api::vim::{self, LuaString, NvimError, ObjectType};
+use neovim_sys::api::vim::{self, LuaError, LuaString, ObjectType};
 use std::convert::TryFrom;
 
 /// # Errors
@@ -36,9 +36,9 @@ pub fn nvim_get_vvar(name: &str) -> Result<vim::Object, Error> {
 ///
 fn _get_var<F>(name: &str, getter: F) -> Result<vim::Object, Error>
 where
-    F: Fn(LuaString, &mut NvimError) -> vim::Object,
+    F: Fn(LuaString, &mut LuaError) -> vim::Object,
 {
-    let mut out_err = NvimError::default();
+    let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;
 
     let object = getter(api_name, &mut out_err);
@@ -56,7 +56,7 @@ where
 /// * If nvim set an error on the call.
 ///
 pub fn nvim_set_var(name: &str, value: vim::Object) -> Result<(), Error> {
-    let mut out_err = NvimError::default();
+    let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;
 
     unsafe {
@@ -83,9 +83,9 @@ pub fn nvim_set_vvar(name: &str, value: vim::Object) -> Result<(), Error> {
 
 fn _set_var<F>(name: &str, value: vim::Object, setter: F) -> Result<(), Error>
 where
-    F: Fn(LuaString, vim::Object, &mut NvimError),
+    F: Fn(LuaString, vim::Object, &mut LuaError),
 {
-    let mut out_err = NvimError::default();
+    let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;
 
     setter(api_name, value, &mut out_err);
