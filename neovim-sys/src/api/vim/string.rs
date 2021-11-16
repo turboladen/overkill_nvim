@@ -118,6 +118,8 @@ impl fmt::Display for String {
 impl Drop for String {
     fn drop(&mut self) {
         if !self.data.is_null() {
+            // Added the +1 because miri was reporting an error when deallocating a string that was
+            // allocated by neovim (well, the key in a dictionary, to be exact).
             let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size + 1) };
         }
     }
