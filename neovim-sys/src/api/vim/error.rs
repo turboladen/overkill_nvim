@@ -50,7 +50,7 @@ impl Default for Error {
 /// Used by `Error` to communicate which type of `Error` it is.
 ///
 #[derive(Debug, Clone, Copy)]
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, clippy::module_name_repetitions)]
 #[repr(C)]
 pub enum ErrorType {
     /// Not an error!
