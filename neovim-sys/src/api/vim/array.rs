@@ -42,7 +42,7 @@ pub type Array = Collection<Object>;
 // }
 
 impl TryFrom<Object> for Array {
-    type Error = ();
+    type Error = super::object::Error;
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type() {
@@ -57,9 +57,6 @@ impl TryFrom<Object> for Array {
                 }
 
                 let ptr = dst.as_mut_ptr();
-                if ptr.is_null() {
-                    return Err(());
-                }
 
                 let a = Self {
                     items: ptr,
@@ -69,7 +66,10 @@ impl TryFrom<Object> for Array {
                 mem::forget(value);
                 Ok(a)
             }
-            _ => Err(()),
+            t => Err(Self::Error::TypeError {
+                expected: ObjectType::kObjectTypeArray,
+                actual: t,
+            }),
         }
     }
 }
