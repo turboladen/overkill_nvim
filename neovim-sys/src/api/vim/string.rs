@@ -118,7 +118,7 @@ impl fmt::Display for String {
 impl Drop for String {
     fn drop(&mut self) {
         if !self.data.is_null() {
-            let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
+            let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size + 1) };
         }
     }
 }
