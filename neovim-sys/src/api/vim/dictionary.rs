@@ -3,8 +3,7 @@
 //!
 
 use super::{collection::Collection, LuaString, Object};
-use std::borrow::Borrow;
-use std::fmt;
+use std::{borrow::Borrow, fmt};
 
 /// Wrapper for neovim's `Dictionary` type.
 ///

@@ -13,4 +13,3 @@ pub use neovim_sys::api::{
     buffer::Buffer,
     vim::{Boolean, Float, Integer, LuaRef, LuaString, Object},
 };
-

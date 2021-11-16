@@ -2,8 +2,7 @@
 //! This module contains function wrappers for neovim functions defined in
 //! `neovim/src/nvim/api/vim.c`.
 //!
-use super::mode;
-use super::{Buffer, Error, Mode};
+use super::{mode, Buffer, Error, Mode};
 use neovim_sys::api::vim::{self, LuaError, LuaString, ObjectType};
 use std::convert::TryFrom;
 

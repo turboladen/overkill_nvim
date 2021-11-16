@@ -10,8 +10,8 @@ pub mod string;
 
 pub use self::{
     array::Array,
-    dictionary::{KeyValuePair, Dictionary},
-    error::{ErrorType, Error as LuaError},
+    dictionary::{Dictionary, KeyValuePair},
+    error::{Error as LuaError, ErrorType},
     object::{Object, ObjectType},
     string::String as LuaString,
 };
@@ -78,12 +78,7 @@ extern "C" {
 
     /// Sets a highlight group.
     ///
-    pub fn nvim_set_hl(
-        namespace_id: Integer,
-        name: LuaString,
-        val: Dictionary,
-        err: *mut LuaError,
-    );
+    pub fn nvim_set_hl(namespace_id: Integer, name: LuaString, val: Dictionary, err: *mut LuaError);
 
     /// Gets existing, non-anonymous namespaces.
     ///
