@@ -1,19 +1,52 @@
-use super::Error;
 use neovim_sys::api::vim::{Dictionary, LuaString};
 use std::convert::TryFrom;
 
+/// Represents any possible neovim "mode".
+///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
+    /// Normal mode; maps to "n".
+    ///
     Normal,
+
+    /// Insert mode; maps to "i".
+    ///
     Insert,
+
+    /// Replace mode; maps to "R".
+    ///
     Replace,
+
+    /// Visual mode; maps to "v".
+    ///
     Visual,
+
+    /// Visual-line mode; maps to "V".
+    ///
     VisualLine,
+
+    /// Visual-block mode; maps to "C-v".
+    ///
     VisualBlock,
+
+    /// Command mode; maps to "c".
+    ///
     Command,
+
+    /// Select mode; maps to "s".
+    ///
     Select,
+
+    /// Select-line mode; maps to "S.
+    ///
     SelectLine,
+
+    /// Select-block mode; maps to "C-s".
+    ///
     SelectBlock,
+
+    /// Terminal mode; maps to "t".
+    ///
     Terminal,
 }
 
@@ -105,7 +138,7 @@ impl CurrentMode {
 }
 
 impl TryFrom<Dictionary> for CurrentMode {
-    type Error = Error;
+    type Error = CurrentModeError;
 
     fn try_from(dict: Dictionary) -> Result<Self, Self::Error> {
         match (dict.get("mode"), dict.get("blocking")) {
@@ -113,9 +146,28 @@ impl TryFrom<Dictionary> for CurrentMode {
                 mode: Mode::from(mode.as_string_unchecked()),
                 blocking: blocking.as_boolean_unchecked(),
             }),
-            _ => Err(Error::Blargh("meow".into())),
+            (None, Some(_)) => Err(CurrentModeError::Mode),
+            (Some(_), None) => Err(CurrentModeError::Blocking),
+            _ => Err(CurrentModeError::ModeAndBlocking),
         }
     }
+}
+
+/// Error type for instantiating a `CurrentMode` from the `Dictionary` returned by neovim on
+/// related calls.
+///
+#[derive(Debug, Clone, Copy, thiserror::Error)]
+pub enum CurrentModeError {
+    #[error("Underlying neovim dictionary did not have the `mode` key/value pair set")]
+    Mode,
+
+    #[error("Underlying neovim dictionary did not have the `blocking` key/value pair set")]
+    Blocking,
+
+    #[error(
+        "Underlying neovim dictionary did not have the `mode` or `blocking` key/value pairs set"
+    )]
+    ModeAndBlocking,
 }
 
 #[cfg(test)]

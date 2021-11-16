@@ -1,3 +1,9 @@
+//!
+//! # neovim
+//!
+//! This crate provides a Rust abstraction over `neovim-sys`, giving native (not msgpack) access to
+//! neovim types and functions.
+//!
 #![deny(unused_extern_crates)]
 #![warn(
     box_pointers,
@@ -6,7 +12,7 @@
     clippy::pedantic,
     future_incompatible,
     missing_copy_implementations,
-    // missing_docs,
+    missing_docs,
     nonstandard_style,
     rust_2018_idioms,
     trivial_casts,
@@ -16,9 +22,6 @@
 )]
 
 pub mod api;
-// pub mod eval;
-// pub mod option_defs;
-// pub mod typval;
 
 pub use neovim_sys as sys;
 

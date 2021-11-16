@@ -1,3 +1,6 @@
+//!
+//! This module contains functionality that's common to both `Array` and `Dictionary`.
+//!
 use std::{
     fmt,
     mem::{self, MaybeUninit},
@@ -5,6 +8,9 @@ use std::{
     slice,
 };
 
+/// Base type for `Array` and `Dictionary`. Since the behavior of those types are quite similar,
+/// the bulk of it is defined here.
+///
 #[repr(C)]
 pub struct Collection<T> {
     pub(super) items: *mut T,
@@ -13,6 +19,8 @@ pub struct Collection<T> {
 }
 
 impl<T> Collection<T> {
+    /// Instantiates a new `Self` using any pararmeter that can be converted into a `Vec<T>`.
+    ///
     pub fn new<U: Into<Vec<T>>>(vec: U) -> Self {
         let mut vec: Vec<T> = vec.into();
 
@@ -40,47 +48,41 @@ impl<T> Collection<T> {
         unsafe { uninit.assume_init() }
     }
 
+    /// Builds a slice of all internal items.
+    ///
     #[must_use]
     pub fn as_slice(&self) -> &[T] {
         unsafe { std::slice::from_raw_parts(self.items, self.size) }
     }
 
-    /// Get a reference to the array's size.
+    /// The number of items in the collection.
+    ///
     #[must_use]
     pub const fn len(&self) -> usize {
         self.size
     }
 
+    /// Is this an empty collection?
+    ///
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Get a reference to the array's capacity.
+    /// The capacity of items in the collection. This will only differ form `len()` if the
+    /// `Collection` was instantiated as such.
+    ///
     #[must_use]
     pub const fn capacity(&self) -> usize {
         self.capacity
     }
 
+    /// Returns an iterator over `&T`.
+    ///
     #[must_use]
     pub fn iter(&self) -> slice::Iter<'_, T> {
         self.as_slice().iter()
     }
-
-    // #[inline]
-    // pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&Object>
-    // where
-    //     LuaString: Borrow<Q>,
-    //     Q: PartialEq<LuaString>,
-    // {
-    //     self.iter().find_map(|kv| {
-    //         if k == kv.key() {
-    //             Some(kv.value())
-    //         } else {
-    //             None
-    //         }
-    //     })
-    // }
 }
 
 impl<T: Clone> Clone for Collection<T> {

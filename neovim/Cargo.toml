@@ -8,14 +8,10 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# mlua = { version = "0.6", optional = true, features = ["lua51"] }
-# hlua = { version = "0.4", optional = true }
 approx = { version = "0.5", optional = true }
 neovim-sys = { path = "../neovim-sys" }
 thiserror = "1.0"
 
 [features]
 default = []
-# lua_test = ["mlua"]
-# lua_test = ["hlua"]
 lua_test = ["approx"]

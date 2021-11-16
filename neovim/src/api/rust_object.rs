@@ -2,14 +2,44 @@ use neovim_sys::api::vim::{
     Array, Boolean, Dictionary, Float, Integer, LuaString, Object, ObjectType,
 };
 
+/// While the internal object, `neovim_sys::vim::Object` is just fine to work with, this type
+/// provides a Rust-ier interface to that object.
+///
 #[derive(Debug, Clone, PartialEq)]
 pub enum RustObject {
+    /// Nil! Represents a `neovim_sys::vim::Object` where its `object_type()` is
+    /// `ObjectType::kObjectTypeNil`.
+    ///
     Nil,
+
+    /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
+    /// `ObjectType::kObjectTypeBoolean`.
+    ///
     Boolean(Boolean),
+
+    /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
+    /// `ObjectType::kObjectTypeInteger`.
+    ///
     Integer(Integer),
+
+    /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
+    /// `ObjectType::kObjectTypeFloat`.
+    ///
     Float(Float),
+
+    /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
+    /// `ObjectType::kObjectTypeString`.
+    ///
     String(LuaString),
+
+    /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
+    /// `ObjectType::kObjectTypeArray`.
+    ///
     Array(Array),
+
+    /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
+    /// `ObjectType::kObjectTypeDictionary`.
+    ///
     Dictionary(Dictionary),
     // LuaRef(LuaRef),
     // Buffer,
@@ -32,23 +62,3 @@ impl From<Object> for RustObject {
         }
     }
 }
-
-// impl<'a> From<&'a vim::Object> for RustObject {
-//     fn from(api_object: &'a vim::Object) -> Self {
-//         unsafe {
-//             match api_object.object_type {
-//                 ObjectType::kObjectTypeNil => Self::Nil,
-//                 ObjectType::kObjectTypeBoolean => Self::Boolean(api_object.data.boolean),
-//                 ObjectType::kObjectTypeInteger => Self::Integer(api_object.data.integer),
-//                 ObjectType::kObjectTypeFloat => Self::Float(api_object.data.floating),
-//                 ObjectType::kObjectTypeString => {
-//                     Self::String(CString::from_raw(api_object.data.string.data))
-//                 }
-//                 ObjectType::kObjectTypeArray => Self::Array(Array::from(api_object.data.array)),
-//                 ObjectType::kObjectTypeDictionary => {
-//                     Self::Dictionary(Dictionary::from(api_object.data.dictionary))
-//                 }
-//             }
-//         }
-//     }
-// }

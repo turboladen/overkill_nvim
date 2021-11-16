@@ -1,16 +1,16 @@
-#![allow(clippy::missing_panics_doc)]
+#![allow(missing_docs, clippy::missing_panics_doc)]
 
 use super::api;
 use crate::api::{LuaString, Mode, Object, RustObject};
 use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
 
 fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) -> bool {
-    if let Err(e) = self::api::nvim_set_var(var, value) {
+    if let Err(e) = self::api::vim::nvim_set_var(var, value) {
         eprintln!("Error setting var: {}", e);
         return false;
     }
 
-    match self::api::nvim_get_var(var).map(RustObject::from) {
+    match self::api::vim::nvim_get_var(var).map(RustObject::from) {
         Ok(ref t) => {
             if t == expected_object_variant {
                 true
@@ -121,11 +121,11 @@ pub extern "C" fn test_nvim_set_vvar() -> bool {
     let string = LuaString::new("meow").unwrap();
     let value = Object::from(string);
 
-    if let Err(e) = self::api::nvim_set_vvar(vvar, value) {
+    if let Err(e) = self::api::vim::nvim_set_vvar(vvar, value) {
         eprintln!("Error setting vvar: {}", e);
     }
 
-    match self::api::nvim_get_vvar(vvar) {
+    match self::api::vim::nvim_get_vvar(vvar) {
         Ok(object) if object.object_type() == ObjectType::kObjectTypeString => {
             let string = object.as_string_unchecked();
 
@@ -165,11 +165,11 @@ pub extern "C" fn test_nvim_buf_set_var() -> bool {
         }
         let value = Object::from(make_subject());
 
-        if let Err(e) = self::api::nvim_buf_set_var(0, var, value) {
+        if let Err(e) = self::api::buffer::nvim_buf_set_var(0, var, value) {
             eprintln!("Error setting var: {}", e);
         }
 
-        match self::api::nvim_buf_get_var(0, var) {
+        match self::api::buffer::nvim_buf_get_var(0, var) {
             Ok(object) if object.object_type() == ObjectType::kObjectTypeDictionary => {
                 let dict = object.as_dictionary_unchecked();
                 if dict != &make_subject() {
@@ -192,12 +192,12 @@ pub extern "C" fn test_nvim_buf_set_var() -> bool {
 
 #[no_mangle]
 pub extern "C" fn test_nvim_get_current_buf() -> bool {
-    self::api::nvim_get_current_buf() == 1
+    self::api::vim::nvim_get_current_buf() == 1
 }
 
 #[no_mangle]
 pub extern "C" fn test_nvim_feedkeys() -> bool {
-    match self::api::nvim_feedkeys("j", Mode::Normal, false) {
+    match self::api::vim::nvim_feedkeys("j", Mode::Normal, false) {
         Ok(()) => true,
         Err(e) => {
             eprintln!("Got error during test: {}", e);
@@ -208,7 +208,7 @@ pub extern "C" fn test_nvim_feedkeys() -> bool {
 
 #[no_mangle]
 pub extern "C" fn test_nvim_get_mode() -> bool {
-    match self::api::nvim_get_mode() {
+    match self::api::vim::nvim_get_mode() {
         Ok(current_mode) => match current_mode.mode() {
             Mode::Normal => true,
             m => {
@@ -225,7 +225,7 @@ pub extern "C" fn test_nvim_get_mode() -> bool {
 
 #[no_mangle]
 pub extern "C" fn test_nvim_get_option() -> bool {
-    match self::api::nvim_get_mode() {
+    match self::api::vim::nvim_get_mode() {
         Ok(current_mode) => match current_mode.mode() {
             Mode::Normal => true,
             m => {

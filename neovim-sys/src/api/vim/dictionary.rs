@@ -1,9 +1,19 @@
-use super::{collection::Collection, KeyValuePair, LuaString, Object};
-use std::borrow::Borrow;
+//!
+//! This module contains functionality for dealing with neovim's Lua `Dictionary` type.
+//!
 
+use super::{collection::Collection, LuaString, Object};
+use std::borrow::Borrow;
+use std::fmt;
+
+/// Wrapper for neovim's `Dictionary` type.
+///
 pub type Dictionary = Collection<KeyValuePair>;
 
 impl Dictionary {
+    /// Similar to Rust's `HashMap`/`BTreeMap::get()`, this tries to get the value that's related
+    /// to `k`.
+    ///
     #[inline]
     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&Object>
     where
@@ -17,6 +27,47 @@ impl Dictionary {
                 None
             }
         })
+    }
+}
+
+/// Elements of a `Dictionary`.
+///
+#[derive(Clone, PartialEq)]
+#[repr(C)]
+pub struct KeyValuePair {
+    key: LuaString,
+    value: Object,
+}
+
+impl KeyValuePair {
+    /// Basic constructor.
+    ///
+    #[must_use]
+    pub const fn new(key: LuaString, value: Object) -> Self {
+        Self { key, value }
+    }
+
+    /// A reference to the key.
+    ///
+    #[must_use]
+    pub const fn key(&self) -> &LuaString {
+        &self.key
+    }
+
+    /// A reference to the value.
+    ///
+    #[must_use]
+    pub const fn value(&self) -> &Object {
+        &self.value
+    }
+}
+
+impl fmt::Debug for KeyValuePair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KeyValuePair")
+            .field("key", &self.key.to_string_lossy())
+            .field("value", &self.value)
+            .finish()
     }
 }
 

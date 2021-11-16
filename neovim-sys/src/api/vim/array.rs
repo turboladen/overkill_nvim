@@ -1,3 +1,7 @@
+//!
+//! This module contains functionality for dealing with neovim's Lua `Array` type.
+//!
+
 // pub mod into_iter;
 
 // use self::into_iter::IntoIter;
@@ -8,6 +12,9 @@ use std::{
     ptr,
 };
 
+///
+/// An `Array` is a wrapper for neovim's Lua `Array`, where each element is an `Object`.
+///
 pub type Array = Collection<Object>;
 
 // impl IntoIterator for Array {
@@ -41,11 +48,11 @@ impl TryFrom<Object> for Array {
         match value.object_type() {
             ObjectType::kObjectTypeArray => {
                 let data = value.data();
-                let size = unsafe { &data.array }.size;
+                let size = data.array().size;
                 let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
 
                 unsafe {
-                    ptr::copy(data.array.items, dst.as_mut_ptr(), size);
+                    ptr::copy(data.array().items, dst.as_mut_ptr(), size);
                     dst.set_len(size);
                 }
 

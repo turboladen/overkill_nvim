@@ -1,18 +1,43 @@
+//!
+//! This module contains types and functions for working with neovim Lua `Object`s.
+//!
 use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, LuaString};
 use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
 
+/// An error that can only happen when dealing wit `Object`s.
+///
 #[derive(Debug, Clone, Copy, thiserror::Error)]
 pub enum Error {
+    /// Captures errors where an `Object`'s internal `data` doesn't match its `object_type`. This
+    /// really shouldn't happen.
+    ///
     #[error("Unexpected value as Object")]
     Value,
 
+    /// Captures cases where one `ObjectType` was expected on an `Object`, but another was found.
+    ///
     #[error("Object expected to be '{expected:?}', but was '{actual:?}'")]
     TypeError {
+        /// The expected `ObjectType`.
+        ///
         expected: ObjectType,
+
+        /// The actual `ObjectType`.
+        ///
         actual: ObjectType,
     },
 }
 
+/// Wrapper for neovim's Lua `Object`, which can be a:
+///
+/// - `nil`
+/// - `boolean` (same as Rust's `bool`)
+/// - `integer` (same as Rust's `i64`)
+/// - `float` (same as Rust's `f64`)
+/// - `string` (similar to Rust's `CString`; wrapped by this crate's `LuaString`)
+/// - `array` (wrapped by this crate's `Array`)
+/// - `dictionary` (wrapped by this crate's `Dictionary`)
+///
 #[repr(C)]
 pub struct Object {
     object_type: ObjectType,
@@ -70,11 +95,8 @@ macro_rules! try_as_ref_type {
 }
 
 impl Object {
-    #[must_use]
-    pub const fn new(object_type: ObjectType, data: ObjectData) -> Self {
-        Self { object_type, data }
-    }
-
+    /// Convenience constructor for a `nil` `Object`.
+    ///
     #[must_use]
     pub fn new_nil() -> Self {
         Self {
@@ -83,6 +105,8 @@ impl Object {
         }
     }
 
+    /// Accessor to the internal `ObjectType`.
+    ///
     #[must_use]
     pub const fn object_type(&self) -> ObjectType {
         self.object_type
@@ -90,7 +114,7 @@ impl Object {
 
     /// Get a reference to the object's data.
     #[must_use]
-    pub const fn data(&self) -> &ObjectData {
+    pub(crate) const fn data(&self) -> &ObjectData {
         &self.data
     }
 
@@ -179,51 +203,97 @@ impl Object {
         try_as_ref_type!(self, kObjectTypeDictionary, dictionary)
     }
 
+    /// Counterpart to `try_as_boolean()`, but does not check `self`'s `object_type`, thus calling
+    /// this if `self`'s internal data represents another type will give unexpected results.
+    ///
     #[must_use]
     pub fn as_boolean_unchecked(&self) -> Boolean {
         unsafe { self.data.boolean }
     }
 
+    /// Counterpart to `try_as_integer()`, but does not check `self`'s `object_type`, thus calling
+    /// this if `self`'s internal data represents another type will give unexpected results.
+    ///
     #[must_use]
     pub fn as_integer_unchecked(&self) -> Integer {
         unsafe { self.data.integer }
     }
 
+    /// Counterpart to `try_as_float()`, but does not check `self`'s `object_type`, thus calling
+    /// this if `self`'s internal data represents another type will give unexpected results.
+    ///
     #[must_use]
     pub fn as_float_unchecked(&self) -> Float {
         unsafe { self.data.floating }
     }
 
+    /// Counterpart to `try_as_string()`, but does not check `self`'s `object_type`, thus calling
+    /// this if `self`'s internal data represents another type will give unexpected results.
+    ///
     #[must_use]
     pub fn as_string_unchecked(&self) -> &LuaString {
         unsafe { &self.data.string }
     }
 
+    /// Counterpart to `try_as_array()`, but does not check `self`'s `object_type`, thus calling
+    /// this if `self`'s internal data represents another type will give unexpected results.
+    ///
     #[must_use]
     pub fn as_array_unchecked(&self) -> &Array {
         unsafe { &self.data.array }
     }
 
+    /// Counterpart to `try_as_dictionary()`, but does not check `self`'s `object_type`, thus calling
+    /// this if `self`'s internal data represents another type will give unexpected results.
+    ///
     #[must_use]
     pub fn as_dictionary_unchecked(&self) -> &Dictionary {
         unsafe { &self.data.dictionary }
     }
 
+    /// Similar to `as_boolean_unchecked()`, where it does not check `self`'s `object_type` (thus
+    /// calling this if `self`'s internal data represents another type will give unexpected
+    /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
+    /// value as a `Boolean`.
+    ///
+    /// This is useful for when you only care about the inner type/value of the `Object`.
+    ///
     #[must_use]
     pub fn into_boolean_unchecked(self) -> Boolean {
         unsafe { self.data.boolean }
     }
 
+    /// Similar to `as_integer_unchecked()`, where it does not check `self`'s `object_type` (thus
+    /// calling this if `self`'s internal data represents another type will give unexpected
+    /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
+    /// value as a `Integer`.
+    ///
+    /// This is useful for when you only care about the inner type/value of the `Object`.
+    ///
     #[must_use]
     pub fn into_integer_unchecked(self) -> Integer {
         unsafe { self.data.integer }
     }
 
+    /// Similar to `as_float_unchecked()`, where it does not check `self`'s `object_type` (thus
+    /// calling this if `self`'s internal data represents another type will give unexpected
+    /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
+    /// value as a `Float`.
+    ///
+    /// This is useful for when you only care about the inner type/value of the `Object`.
+    ///
     #[must_use]
     pub fn into_float_unchecked(self) -> Float {
         unsafe { self.data.floating }
     }
 
+    /// Similar to `as_string_unchecked()`, where it does not check `self`'s `object_type` (thus
+    /// calling this if `self`'s internal data represents another type will give unexpected
+    /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
+    /// value as a `LuaString`.
+    ///
+    /// This is useful for when you only care about the inner type/value of the `Object`.
+    ///
     #[must_use]
     pub fn into_string_unchecked(self) -> LuaString {
         let s = LuaString {
@@ -234,6 +304,13 @@ impl Object {
         s
     }
 
+    /// Similar to `as_array_unchecked()`, where it does not check `self`'s `object_type` (thus
+    /// calling this if `self`'s internal data represents another type will give unexpected
+    /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
+    /// value as a `Array`.
+    ///
+    /// This is useful for when you only care about the inner type/value of the `Object`.
+    ///
     #[must_use]
     pub fn into_array_unchecked(self) -> Array {
         let a = Array {
@@ -245,6 +322,13 @@ impl Object {
         a
     }
 
+    /// Similar to `as_dictionary_unchecked()`, where it does not check `self`'s `object_type` (thus
+    /// calling this if `self`'s internal data represents another type will give unexpected
+    /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
+    /// value as a `Dictionary`.
+    ///
+    /// This is useful for when you only care about the inner type/value of the `Object`.
+    ///
     #[must_use]
     pub fn into_dictionary_unchecked(self) -> Dictionary {
         let d = Dictionary {
@@ -256,31 +340,43 @@ impl Object {
         d
     }
 
+    /// Convenience method for checking if `self` has `ObjectType::kObjectTypeNil`.
+    ///
     #[must_use]
     pub fn is_nil(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeNil
     }
 
+    /// Convenience method for checking if `self` has `ObjectType::kObjectTypeBoolean`.
+    ///
     #[must_use]
     pub fn is_boolean(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeBoolean
     }
 
+    /// Convenience method for checking if `self` has `ObjectType::kObjectTypeInteger`.
+    ///
     #[must_use]
     pub fn is_integer(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeInteger
     }
 
+    /// Convenience method for checking if `self` has `ObjectType::kObjectTypeString`.
+    ///
     #[must_use]
     pub fn is_string(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeString
     }
 
+    /// Convenience method for checking if `self` has `ObjectType::kObjectTypeArray`.
+    ///
     #[must_use]
     pub fn is_array(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeArray
     }
 
+    /// Convenience method for checking if `self` has `ObjectType::kObjectTypeDictionary`.
+    ///
     #[must_use]
     pub fn is_dictionary(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeDictionary
@@ -512,16 +608,37 @@ impl PartialEq for Object {
     }
 }
 
+/// Used by `Object` to communicate which type of `Object` it is.
+///
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, clippy::module_name_repetitions)]
 #[repr(C)]
 pub enum ObjectType {
+    /// Nil!
+    ///
     kObjectTypeNil = 0,
+
+    /// Boolean
+    ///
     kObjectTypeBoolean,
+
+    /// Integer, the same as an `i64`.
+    ///
     kObjectTypeInteger,
+
+    /// Float, the same as a `f64`.
+    ///
     kObjectTypeFloat,
+
+    /// String, wrapped by `LuaString`.
+    ///
     kObjectTypeString,
+
+    /// Array
+    ///
     kObjectTypeArray,
+
+    /// Dictionary
     kObjectTypeDictionary,
     // kObjectTypeLuaRef,
     // EXT types, cannot be split or reordered, see #EXT_OBJECT_TYPE_SHIFT
@@ -530,15 +647,34 @@ pub enum ObjectType {
     // kObjectTypeTabpage,
 }
 
+/// Holds the data for an `Object`.
+///
+#[allow(clippy::module_name_repetitions)]
 #[repr(C)]
-pub union ObjectData {
-    pub boolean: Boolean,
-    pub integer: Integer,
-    pub floating: Float,
-    pub string: ManuallyDrop<LuaString>,
-    pub array: ManuallyDrop<Array>,
-    pub dictionary: ManuallyDrop<Dictionary>,
-    pub luaref: LuaRef,
+pub(crate) union ObjectData {
+    boolean: Boolean,
+    integer: Integer,
+    floating: Float,
+    string: ManuallyDrop<LuaString>,
+    array: ManuallyDrop<Array>,
+    dictionary: ManuallyDrop<Dictionary>,
+    luaref: LuaRef,
+}
+
+impl ObjectData {
+    #[allow(dead_code)]
+    pub(crate) fn string(&self) -> &LuaString {
+        unsafe { &self.string }
+    }
+
+    pub(crate) fn array(&self) -> &Array {
+        unsafe { &self.array }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn dictionary(&self) -> &Dictionary {
+        unsafe { &self.dictionary }
+    }
 }
 
 #[cfg(test)]

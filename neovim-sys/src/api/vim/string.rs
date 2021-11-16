@@ -1,3 +1,6 @@
+//!
+//! This module contains types and functions for working with neovim Lua `String`s.
+//!
 use std::{
     borrow::{Borrow, Cow},
     convert::TryFrom,
@@ -8,6 +11,10 @@ use std::{
     ptr::addr_of_mut,
 };
 
+/// Very similar to Rust's `CString`, this type represents a `String` in neovim's Lua interface.
+/// Named `String` here, but is exported as `LuaString`, just to save on confusion with Rust's
+/// `String`.
+///
 #[derive(Debug)]
 #[repr(C)]
 pub struct String {
@@ -47,11 +54,17 @@ impl String {
         Ok(unsafe { uninit.assume_init() })
     }
 
+    /// Just like, `CStr`, this wraps the underlying raw C-string with a safe wrapper.
+    ///
     #[must_use]
     pub fn as_c_str(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.data) }
     }
 
+    /// Just like `CStr`, if the underlying data is valid UTF-8, it'll return a borrowed `Cow<'_,
+    /// str>`; if not, it replaces the non-UTF-8 bytes with a replacement character and returns an
+    /// owned `Cow<'_, str>`.
+    ///
     #[must_use]
     pub fn to_string_lossy(&self) -> Cow<'_, str> {
         self.as_c_str().to_string_lossy()
@@ -64,11 +77,15 @@ impl String {
         self.as_c_str().to_bytes()
     }
 
+    /// The number of bytes the string contains.
+    ///
     #[must_use]
     pub const fn len(&self) -> usize {
         self.size
     }
 
+    /// Is this a 0-length string?
+    ///
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len() == 0

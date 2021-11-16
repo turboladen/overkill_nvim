@@ -1,5 +1,10 @@
+//!
+//! This module contains the wrapper and related functions for neovim's Lua `Error`.
+//!
 use std::{ffi::CStr, fmt, os::raw::c_char};
 
+/// Wrapper for neovim's Lua `Error`.
+///
 #[derive(thiserror::Error, Clone, Copy)]
 #[repr(C)]
 pub struct NvimError {
@@ -8,18 +13,23 @@ pub struct NvimError {
 }
 
 impl NvimError {
+    /// Since an "error" can also be `None`, this is a convenience method to check if the `self` is
+    /// actually an error.
+    ///
     #[must_use]
     pub const fn is_err(&self) -> bool {
         !matches!(self.error_type, ErrorType::kErrorTypeNone)
     }
 
     /// Get a reference to the nvim error's msg.
+    ///
     #[must_use]
     pub fn msg(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.msg) }
     }
 
     /// Get a reference to the nvim error's error type.
+    ///
     #[must_use]
     pub const fn error_type(&self) -> ErrorType {
         self.error_type
@@ -35,12 +45,22 @@ impl Default for NvimError {
     }
 }
 
+/// Used by `NvimError` to communicate which type of `Error` it is.
+///
 #[derive(Debug, Clone, Copy)]
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub enum ErrorType {
+    /// Not an error!
+    ///
     kErrorTypeNone = -1,
+
+    /// An exception.
+    ///
     kErrorTypeException,
+
+    /// Validation error.
+    ///
     kErrorTypeValidation,
 }
 
