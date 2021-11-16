@@ -32,11 +32,16 @@ jobs:
       # before the plugin, as it uses the current rustc version as its cache key
       - uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
           toolchain: nightly
-          components: miri
+          components: rust-src, miri
 
       - uses: Swatinem/rust-cache@v1
+
+      - name: Install xargo
+        uses: actions-rs/install@v0.1
+        with:
+          crate: xargo
+          version: latest
 
       - name: Run miri test
         uses: actions-rs/cargo@v1
