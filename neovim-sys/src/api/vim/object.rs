@@ -67,10 +67,7 @@ macro_rules! new_clone_type {
 macro_rules! try_as_type {
     ($_self:expr, $object_type_variant:ident, $field_name:ident) => {
         match $_self.object_type {
-            ObjectType::$object_type_variant => {
-                let data = &$_self.data;
-                Ok(unsafe { data.$field_name })
-            }
+            ObjectType::$object_type_variant => Ok($_self.data.$field_name()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::$object_type_variant,
                 actual: $_self.object_type,
@@ -82,10 +79,7 @@ macro_rules! try_as_type {
 macro_rules! try_as_ref_type {
     ($_self:expr, $object_type_variant:ident, $field_name:ident) => {
         match $_self.object_type {
-            ObjectType::$object_type_variant => {
-                let data = &$_self.data;
-                Ok(unsafe { &data.$field_name })
-            }
+            ObjectType::$object_type_variant => Ok($_self.data.$field_name()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::$object_type_variant,
                 actual: $_self.object_type,
@@ -129,10 +123,8 @@ impl Object {
     pub fn try_as_nil(&self) -> Result<(), Error> {
         match self.object_type {
             ObjectType::kObjectTypeNil => {
-                let data = &self.data;
-
                 // Nils have the data union set to 0.
-                if unsafe { data.integer } == 0 {
+                if self.data.integer() == 0 {
                     Ok(())
                 } else {
                     Err(Error::Value)
@@ -172,7 +164,7 @@ impl Object {
     /// If the wrapped type is not a `Float`.
     ///
     pub fn try_as_float(&self) -> Result<Float, Error> {
-        try_as_type!(self, kObjectTypeFloat, floating)
+        try_as_type!(self, kObjectTypeFloat, float)
     }
 
     /// Tries to extract a reference to the inner `LuaString`.
@@ -211,7 +203,7 @@ impl Object {
     #[must_use]
     #[inline]
     pub fn as_boolean_unchecked(&self) -> Boolean {
-        unsafe { self.data.boolean }
+        self.data.boolean()
     }
 
     /// Counterpart to `try_as_integer()`, but does not check `self`'s `object_type`, thus calling
@@ -220,7 +212,7 @@ impl Object {
     #[must_use]
     #[inline]
     pub fn as_integer_unchecked(&self) -> Integer {
-        unsafe { self.data.integer }
+        self.data.integer()
     }
 
     /// Counterpart to `try_as_float()`, but does not check `self`'s `object_type`, thus calling
@@ -229,7 +221,7 @@ impl Object {
     #[must_use]
     #[inline]
     pub fn as_float_unchecked(&self) -> Float {
-        unsafe { self.data.floating }
+        self.data.float()
     }
 
     /// Counterpart to `try_as_string()`, but does not check `self`'s `object_type`, thus calling
@@ -238,7 +230,7 @@ impl Object {
     #[must_use]
     #[inline]
     pub fn as_string_unchecked(&self) -> &LuaString {
-        unsafe { &self.data.string }
+        self.data.string()
     }
 
     /// Counterpart to `try_as_array()`, but does not check `self`'s `object_type`, thus calling
@@ -247,7 +239,7 @@ impl Object {
     #[must_use]
     #[inline]
     pub fn as_array_unchecked(&self) -> &Array {
-        unsafe { &self.data.array }
+        self.data.array()
     }
 
     /// Counterpart to `try_as_dictionary()`, but does not check `self`'s `object_type`, thus calling
@@ -256,7 +248,7 @@ impl Object {
     #[must_use]
     #[inline]
     pub fn as_dictionary_unchecked(&self) -> &Dictionary {
-        unsafe { &self.data.dictionary }
+        self.data.dictionary()
     }
 
     /// Similar to `as_boolean_unchecked()`, where it does not check `self`'s `object_type` (thus
@@ -269,7 +261,7 @@ impl Object {
     #[inline]
     #[must_use]
     pub fn into_boolean_unchecked(self) -> Boolean {
-        unsafe { self.data.boolean }
+        self.data.boolean()
     }
 
     /// Similar to `as_integer_unchecked()`, where it does not check `self`'s `object_type` (thus
@@ -282,7 +274,7 @@ impl Object {
     #[inline]
     #[must_use]
     pub fn into_integer_unchecked(self) -> Integer {
-        unsafe { self.data.integer }
+        self.data.integer()
     }
 
     /// Similar to `as_float_unchecked()`, where it does not check `self`'s `object_type` (thus
@@ -295,7 +287,7 @@ impl Object {
     #[inline]
     #[must_use]
     pub fn into_float_unchecked(self) -> Float {
-        unsafe { self.data.floating }
+        self.data.float()
     }
 
     /// Similar to `as_string_unchecked()`, where it does not check `self`'s `object_type` (thus
@@ -421,9 +413,9 @@ impl From<Integer> for Object {
 }
 
 impl From<Float> for Object {
-    fn from(floating: Float) -> Self {
-        new_copy_type!(kObjectTypeFloat, floating)
     #[inline]
+    fn from(float: Float) -> Self {
+        new_copy_type!(kObjectTypeFloat, float)
     }
 }
 
@@ -447,27 +439,23 @@ impl From<Dictionary> for Object {
 
 macro_rules! copy_inner_for_clone {
     ($_self:expr, $field_name:ident) => {{
-        let data = &$_self.data;
-        let value = unsafe { &data.$field_name };
+        let value = $_self.data.$field_name();
 
         Self {
             object_type: $_self.object_type,
-            data: ObjectData {
-                $field_name: *value,
-            },
+            data: ObjectData { $field_name: value },
         }
     }};
 }
 
 macro_rules! clone_inner_for_clone {
     ($_self:expr, $field_name:ident) => {{
-        let data = &$_self.data;
-        let value = unsafe { &data.$field_name };
+        let value = $_self.data.$field_name();
 
         Self {
             object_type: $_self.object_type,
             data: ObjectData {
-                $field_name: value.clone(),
+                $field_name: ManuallyDrop::new(value.clone()),
             },
         }
     }};
@@ -479,7 +467,7 @@ impl Clone for Object {
             ObjectType::kObjectTypeNil => Self::new_nil(),
             ObjectType::kObjectTypeBoolean => copy_inner_for_clone!(self, boolean),
             ObjectType::kObjectTypeInteger => copy_inner_for_clone!(self, integer),
-            ObjectType::kObjectTypeFloat => copy_inner_for_clone!(self, floating),
+            ObjectType::kObjectTypeFloat => copy_inner_for_clone!(self, float),
             ObjectType::kObjectTypeString => clone_inner_for_clone!(self, string),
             ObjectType::kObjectTypeArray => clone_inner_for_clone!(self, array),
             ObjectType::kObjectTypeDictionary => clone_inner_for_clone!(self, dictionary),
@@ -517,30 +505,12 @@ impl Debug for Object {
 
         match self.object_type {
             ObjectType::kObjectTypeNil => d.field("data", &"nil"),
-            ObjectType::kObjectTypeBoolean => {
-                let data = &self.data;
-                d.field("data", unsafe { &data.boolean })
-            }
-            ObjectType::kObjectTypeInteger => {
-                let data = &self.data;
-                d.field("data", unsafe { &data.integer })
-            }
-            ObjectType::kObjectTypeFloat => {
-                let data = &self.data;
-                d.field("data", unsafe { &data.floating })
-            }
-            ObjectType::kObjectTypeString => {
-                let data = &self.data;
-                d.field("data", unsafe { &data.string })
-            }
-            ObjectType::kObjectTypeArray => {
-                let data = &self.data;
-                d.field("data", unsafe { &data.array })
-            }
-            ObjectType::kObjectTypeDictionary => {
-                let data = &self.data;
-                d.field("data", unsafe { &data.dictionary })
-            }
+            ObjectType::kObjectTypeBoolean => d.field("data", &self.data.boolean()),
+            ObjectType::kObjectTypeInteger => d.field("data", &self.data.integer()),
+            ObjectType::kObjectTypeFloat => d.field("data", &self.data.float()),
+            ObjectType::kObjectTypeString => d.field("data", self.data.string()),
+            ObjectType::kObjectTypeArray => d.field("data", self.data.array()),
+            ObjectType::kObjectTypeDictionary => d.field("data", self.data.dictionary()),
         };
 
         d.finish()
@@ -552,10 +522,7 @@ impl TryFrom<Object> for Boolean {
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type {
-            ObjectType::kObjectTypeBoolean => {
-                let data = &value.data;
-                Ok(unsafe { data.boolean })
-            }
+            ObjectType::kObjectTypeBoolean => Ok(value.data.boolean()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::kObjectTypeBoolean,
                 actual: value.object_type,
@@ -569,10 +536,7 @@ impl TryFrom<Object> for Integer {
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type {
-            ObjectType::kObjectTypeInteger => {
-                let data = &value.data;
-                Ok(unsafe { data.integer })
-            }
+            ObjectType::kObjectTypeInteger => Ok(value.data.integer()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::kObjectTypeInteger,
                 actual: value.object_type,
@@ -586,10 +550,7 @@ impl TryFrom<Object> for Float {
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         match value.object_type {
-            ObjectType::kObjectTypeFloat => {
-                let data = &value.data;
-                Ok(unsafe { data.floating })
-            }
+            ObjectType::kObjectTypeFloat => Ok(value.data.float()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::kObjectTypeFloat,
                 actual: value.object_type,
@@ -606,24 +567,12 @@ impl PartialEq for Object {
 
         match self.object_type {
             ObjectType::kObjectTypeNil => true,
-            ObjectType::kObjectTypeBoolean => unsafe { self.data.boolean == other.data.boolean },
-            ObjectType::kObjectTypeInteger => unsafe { self.data.integer == other.data.integer },
-            ObjectType::kObjectTypeFloat => unsafe { self.data.floating == other.data.floating },
-            ObjectType::kObjectTypeString => {
-                let lhs = &self.data;
-                let rhs = &self.data;
-                unsafe { lhs.string.eq(&rhs.string) }
-            }
-            ObjectType::kObjectTypeArray => {
-                let lhs = &self.data;
-                let rhs = &self.data;
-                unsafe { lhs.array.eq(&rhs.array) }
-            }
-            ObjectType::kObjectTypeDictionary => {
-                let lhs = &self.data;
-                let rhs = &self.data;
-                unsafe { lhs.dictionary.eq(&rhs.dictionary) }
-            }
+            ObjectType::kObjectTypeBoolean => self.data.boolean() == other.data.boolean(),
+            ObjectType::kObjectTypeInteger => self.data.integer() == other.data.integer(),
+            ObjectType::kObjectTypeFloat => self.data.float() == other.data.float(),
+            ObjectType::kObjectTypeString => self.data.string() == other.data.string(),
+            ObjectType::kObjectTypeArray => self.data.array() == other.data.array(),
+            ObjectType::kObjectTypeDictionary => self.data.dictionary() == other.data.dictionary(),
         }
     }
 }
@@ -674,7 +623,7 @@ pub enum ObjectType {
 pub(crate) union ObjectData {
     boolean: Boolean,
     integer: Integer,
-    floating: Float,
+    float: Float,
     string: ManuallyDrop<LuaString>,
     array: ManuallyDrop<Array>,
     dictionary: ManuallyDrop<Dictionary>,
@@ -682,7 +631,18 @@ pub(crate) union ObjectData {
 }
 
 impl ObjectData {
-    #[allow(dead_code)]
+    pub(crate) fn boolean(&self) -> Boolean {
+        unsafe { self.boolean }
+    }
+
+    pub(crate) fn integer(&self) -> Integer {
+        unsafe { self.integer }
+    }
+
+    pub(crate) fn float(&self) -> Float {
+        unsafe { self.float }
+    }
+
     pub(crate) fn string(&self) -> &LuaString {
         unsafe { &self.string }
     }
@@ -691,7 +651,6 @@ impl ObjectData {
         unsafe { &self.array }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn dictionary(&self) -> &Dictionary {
         unsafe { &self.dictionary }
     }
