@@ -1,0 +1,97 @@
+name: Testing
+
+on: [push]
+
+jobs:
+  test-stable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # selecting a toolchain either by action or manual `rustup` calls should happen
+      # before the plugin, as it uses the current rustc version as its cache key
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v1
+
+      - name: Run Rust tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --workspace
+
+  test-miri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # selecting a toolchain either by action or manual `rustup` calls should happen
+      # before the plugin, as it uses the current rustc version as its cache key
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: rust-src, miri
+
+      - uses: Swatinem/rust-cache@v1
+
+      - name: Install xargo
+        uses: actions-rs/install@v0.1
+        with:
+          crate: xargo
+          version: latest
+
+      - name: Run miri test
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly
+          command: miri
+          args: test --all-features --workspace
+
+  test-lua:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v2
+
+      # selecting a toolchain either by action or manual `rustup` calls should happen
+      # before the plugin, as it uses the current rustc version as its cache key
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Install neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: v0.5.1
+
+      - name: Install plenary.nvim
+        uses: actions/checkout@v2
+        with:
+          repository: "nvim-lua/plenary.nvim"
+          path: "nvim_plugins/plenary.nvim"
+
+      - name: Link plenary to nvim pack dir
+        run: |
+          mkdir -p ~/.local/share/nvim/site/pack/packer/start \
+            && mv nvim_plugins/plenary.nvim ~/.local/share/nvim/site/pack/packer/start
+
+      - uses: Swatinem/rust-cache@v1
+
+      - name: Build with lua_test
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package neovim --features lua_test
+
+      - name: View files in target/
+        run: ls -R target/
+
+      - name: Run plenary tests
+        run: |
+          nvim --headless \
+            -c "PlenaryBustedDirectory tests/plenary {minimal_init = 'tests/minimal_init.vim'}"
