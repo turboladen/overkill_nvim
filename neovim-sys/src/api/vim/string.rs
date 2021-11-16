@@ -42,7 +42,7 @@ impl String {
             addr_of_mut!((*ptr).size).write(vec.len());
         }
 
-        let new_data = vec.as_mut_ptr().cast::<i8>();
+        let new_data = vec.as_mut_ptr().cast::<c_char>();
 
         unsafe {
             // Initializing the `list` field
@@ -117,10 +117,7 @@ impl fmt::Display for String {
 
 impl Drop for String {
     fn drop(&mut self) {
-        // let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
         if !self.data.is_null() {
-            // unsafe { CString::from_raw(self.data) };
-            // let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
             let _v = unsafe { Vec::from_raw_parts(self.data, self.size, self.size) };
         }
     }
