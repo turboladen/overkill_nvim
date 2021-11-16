@@ -2,9 +2,6 @@
 //! This module contains functionality for dealing with neovim's Lua `Array` type.
 //!
 
-// pub mod into_iter;
-
-// use self::into_iter::IntoIter;
 use super::{collection::Collection, Object, ObjectType};
 use std::{
     convert::TryFrom,
@@ -16,30 +13,6 @@ use std::{
 /// An `Array` is a wrapper for neovim's Lua `Array`, where each element is an `Object`.
 ///
 pub type Array = Collection<Object>;
-
-// impl IntoIterator for Array {
-//     type Item = Object;
-//     type IntoIter = IntoIter;
-
-//     #[inline]
-//     fn into_iter(self) -> Self::IntoIter {
-//         unsafe {
-//             let me = ManuallyDrop::new(self);
-//             let alloc = ptr::read(me.items);
-//             let begin = me.items;
-//             let end: *const Object = begin.add(me.len());
-//             let cap = me.capacity();
-//             IntoIter {
-//                 buf: begin,
-//                 phantom: PhantomData,
-//                 cap,
-//                 alloc,
-//                 ptr: begin,
-//                 end,
-//             }
-//         }
-//     }
-// }
 
 impl TryFrom<Object> for Array {
     type Error = super::object::Error;
