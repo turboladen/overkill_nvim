@@ -13,10 +13,35 @@ use std::convert::TryFrom;
 /// * If nvim set an error on the call.
 ///
 pub fn nvim_get_var(name: &str) -> Result<vim::Object, Error> {
+    _get_var(name, |api_name, out_err| unsafe {
+        vim::nvim_get_var(api_name, out_err)
+    })
+}
+
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
+pub fn nvim_get_vvar(name: &str) -> Result<vim::Object, Error> {
+    _get_var(name, |api_name, out_err| unsafe {
+        vim::nvim_get_vvar(api_name, out_err)
+    })
+}
+
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
+fn _get_var<F>(name: &str, getter: F) -> Result<vim::Object, Error>
+where
+    F: Fn(LuaString, &mut NvimError) -> vim::Object,
+{
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
 
-    let object = unsafe { vim::nvim_get_var(api_name, &mut out_err) };
+    let object = getter(api_name, &mut out_err);
 
     if out_err.is_err() {
         Err(Error::from(out_err))
@@ -50,31 +75,20 @@ pub fn nvim_set_var(name: &str, value: vim::Object) -> Result<(), Error> {
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-pub fn nvim_get_vvar(name: &str) -> Result<vim::Object, Error> {
-    let mut out_err = NvimError::default();
-    let api_name = LuaString::new(name)?;
-
-    let object = unsafe { vim::nvim_get_vvar(api_name, &mut out_err) };
-
-    if out_err.is_err() {
-        Err(Error::from(out_err))
-    } else {
-        Ok(object)
-    }
+pub fn nvim_set_vvar(name: &str, value: vim::Object) -> Result<(), Error> {
+    _set_var(name, value, |api_name, value, out_err| unsafe {
+        vim::nvim_set_vvar(api_name, value, out_err);
+    })
 }
 
-/// # Errors
-///
-/// * If `name` can't be converted to a `LuaString`.
-/// * If nvim set an error on the call.
-///
-pub fn nvim_set_vvar(name: &str, value: vim::Object) -> Result<(), Error> {
+fn _set_var<F>(name: &str, value: vim::Object, setter: F) -> Result<(), Error>
+where
+    F: Fn(LuaString, vim::Object, &mut NvimError),
+{
     let mut out_err = NvimError::default();
     let api_name = LuaString::new(name)?;
 
-    unsafe {
-        vim::nvim_set_vvar(api_name, value, &mut out_err);
-    }
+    setter(api_name, value, &mut out_err);
 
     if out_err.is_err() {
         Err(Error::from(out_err))
@@ -105,9 +119,9 @@ pub fn nvim_feedkeys(keys: &str, mode: Mode, escape_csi: bool) -> Result<(), Err
             }
             t => {
                 eprintln!("Got unexpected v:errmsg object: {:?}", errmsg);
-                Err(Error::ObjectError(vim::object::Error::TypeError { 
+                Err(Error::ObjectError(vim::object::Error::TypeError {
                     expected: ObjectType::kObjectTypeString,
-                    actual: t
+                    actual: t,
                 }))
             }
         },
