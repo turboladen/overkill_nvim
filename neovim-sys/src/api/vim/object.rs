@@ -98,6 +98,7 @@ impl Object {
     /// Convenience constructor for a `nil` `Object`.
     ///
     #[must_use]
+    #[inline]
     pub fn new_nil() -> Self {
         Self {
             object_type: ObjectType::kObjectTypeNil,
@@ -108,6 +109,7 @@ impl Object {
     /// Accessor to the internal `ObjectType`.
     ///
     #[must_use]
+    #[inline]
     pub const fn object_type(&self) -> ObjectType {
         self.object_type
     }
@@ -207,6 +209,7 @@ impl Object {
     /// this if `self`'s internal data represents another type will give unexpected results.
     ///
     #[must_use]
+    #[inline]
     pub fn as_boolean_unchecked(&self) -> Boolean {
         unsafe { self.data.boolean }
     }
@@ -215,6 +218,7 @@ impl Object {
     /// this if `self`'s internal data represents another type will give unexpected results.
     ///
     #[must_use]
+    #[inline]
     pub fn as_integer_unchecked(&self) -> Integer {
         unsafe { self.data.integer }
     }
@@ -223,6 +227,7 @@ impl Object {
     /// this if `self`'s internal data represents another type will give unexpected results.
     ///
     #[must_use]
+    #[inline]
     pub fn as_float_unchecked(&self) -> Float {
         unsafe { self.data.floating }
     }
@@ -231,6 +236,7 @@ impl Object {
     /// this if `self`'s internal data represents another type will give unexpected results.
     ///
     #[must_use]
+    #[inline]
     pub fn as_string_unchecked(&self) -> &LuaString {
         unsafe { &self.data.string }
     }
@@ -239,6 +245,7 @@ impl Object {
     /// this if `self`'s internal data represents another type will give unexpected results.
     ///
     #[must_use]
+    #[inline]
     pub fn as_array_unchecked(&self) -> &Array {
         unsafe { &self.data.array }
     }
@@ -247,6 +254,7 @@ impl Object {
     /// this if `self`'s internal data represents another type will give unexpected results.
     ///
     #[must_use]
+    #[inline]
     pub fn as_dictionary_unchecked(&self) -> &Dictionary {
         unsafe { &self.data.dictionary }
     }
@@ -258,6 +266,7 @@ impl Object {
     ///
     /// This is useful for when you only care about the inner type/value of the `Object`.
     ///
+    #[inline]
     #[must_use]
     pub fn into_boolean_unchecked(self) -> Boolean {
         unsafe { self.data.boolean }
@@ -270,6 +279,7 @@ impl Object {
     ///
     /// This is useful for when you only care about the inner type/value of the `Object`.
     ///
+    #[inline]
     #[must_use]
     pub fn into_integer_unchecked(self) -> Integer {
         unsafe { self.data.integer }
@@ -282,6 +292,7 @@ impl Object {
     ///
     /// This is useful for when you only care about the inner type/value of the `Object`.
     ///
+    #[inline]
     #[must_use]
     pub fn into_float_unchecked(self) -> Float {
         unsafe { self.data.floating }
@@ -342,6 +353,7 @@ impl Object {
 
     /// Convenience method for checking if `self` has `ObjectType::kObjectTypeNil`.
     ///
+    #[inline]
     #[must_use]
     pub fn is_nil(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeNil
@@ -349,6 +361,7 @@ impl Object {
 
     /// Convenience method for checking if `self` has `ObjectType::kObjectTypeBoolean`.
     ///
+    #[inline]
     #[must_use]
     pub fn is_boolean(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeBoolean
@@ -356,6 +369,7 @@ impl Object {
 
     /// Convenience method for checking if `self` has `ObjectType::kObjectTypeInteger`.
     ///
+    #[inline]
     #[must_use]
     pub fn is_integer(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeInteger
@@ -363,6 +377,7 @@ impl Object {
 
     /// Convenience method for checking if `self` has `ObjectType::kObjectTypeString`.
     ///
+    #[inline]
     #[must_use]
     pub fn is_string(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeString
@@ -370,6 +385,7 @@ impl Object {
 
     /// Convenience method for checking if `self` has `ObjectType::kObjectTypeArray`.
     ///
+    #[inline]
     #[must_use]
     pub fn is_array(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeArray
@@ -377,6 +393,7 @@ impl Object {
 
     /// Convenience method for checking if `self` has `ObjectType::kObjectTypeDictionary`.
     ///
+    #[inline]
     #[must_use]
     pub fn is_dictionary(&self) -> bool {
         self.object_type == ObjectType::kObjectTypeDictionary
@@ -390,12 +407,14 @@ impl Default for Object {
 }
 
 impl From<Boolean> for Object {
+    #[inline]
     fn from(boolean: Boolean) -> Self {
         new_copy_type!(kObjectTypeBoolean, boolean)
     }
 }
 
 impl From<Integer> for Object {
+    #[inline]
     fn from(integer: Integer) -> Self {
         new_copy_type!(kObjectTypeInteger, integer)
     }
@@ -404,6 +423,7 @@ impl From<Integer> for Object {
 impl From<Float> for Object {
     fn from(floating: Float) -> Self {
         new_copy_type!(kObjectTypeFloat, floating)
+    #[inline]
     }
 }
 

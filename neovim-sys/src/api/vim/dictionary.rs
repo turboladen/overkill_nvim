@@ -49,6 +49,7 @@ impl KeyValuePair {
 
     /// A reference to the key.
     ///
+    #[inline]
     #[must_use]
     pub const fn key(&self) -> &LuaString {
         &self.key
@@ -56,6 +57,7 @@ impl KeyValuePair {
 
     /// A reference to the value.
     ///
+    #[inline]
     #[must_use]
     pub const fn value(&self) -> &Object {
         &self.value

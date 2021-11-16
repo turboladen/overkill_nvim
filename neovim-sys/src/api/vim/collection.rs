@@ -51,12 +51,14 @@ impl<T> Collection<T> {
     /// Builds a slice of all internal items.
     ///
     #[must_use]
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         unsafe { std::slice::from_raw_parts(self.items, self.size) }
     }
 
     /// The number of items in the collection.
     ///
+    #[inline]
     #[must_use]
     pub const fn len(&self) -> usize {
         self.size
@@ -64,6 +66,7 @@ impl<T> Collection<T> {
 
     /// Is this an empty collection?
     ///
+    #[inline]
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len() == 0
@@ -72,6 +75,7 @@ impl<T> Collection<T> {
     /// The capacity of items in the collection. This will only differ form `len()` if the
     /// `Collection` was instantiated as such.
     ///
+    #[inline]
     #[must_use]
     pub const fn capacity(&self) -> usize {
         self.capacity
@@ -79,6 +83,7 @@ impl<T> Collection<T> {
 
     /// Returns an iterator over `&T`.
     ///
+    #[inline]
     #[must_use]
     pub fn iter(&self) -> slice::Iter<'_, T> {
         self.as_slice().iter()
@@ -86,6 +91,7 @@ impl<T> Collection<T> {
 }
 
 impl<T: Clone> Clone for Collection<T> {
+    #[inline]
     fn clone(&self) -> Self {
         Self::new(self.as_slice().to_vec())
     }
@@ -123,6 +129,7 @@ impl<T> PartialEq for Collection<T>
 where
     T: PartialEq,
 {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(self.as_slice(), other.as_slice())
     }

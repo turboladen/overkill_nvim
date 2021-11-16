@@ -23,6 +23,7 @@ impl NvimError {
 
     /// Get a reference to the nvim error's msg.
     ///
+    #[inline]
     #[must_use]
     pub fn msg(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.msg) }
@@ -31,6 +32,7 @@ impl NvimError {
     /// Get a reference to the nvim error's error type.
     ///
     #[must_use]
+    #[inline]
     pub const fn error_type(&self) -> ErrorType {
         self.error_type
     }

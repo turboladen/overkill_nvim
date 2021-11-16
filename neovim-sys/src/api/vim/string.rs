@@ -57,6 +57,7 @@ impl String {
     /// Just like, `CStr`, this wraps the underlying raw C-string with a safe wrapper.
     ///
     #[must_use]
+    #[inline]
     pub fn as_c_str(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.data) }
     }
@@ -66,6 +67,7 @@ impl String {
     /// owned `Cow<'_, str>`.
     ///
     #[must_use]
+    #[inline]
     pub fn to_string_lossy(&self) -> Cow<'_, str> {
         self.as_c_str().to_string_lossy()
     }
@@ -73,6 +75,7 @@ impl String {
     /// Does not contain the trailing nul byte.
     ///
     #[must_use]
+    #[inline]
     pub fn to_bytes(&self) -> &[u8] {
         self.as_c_str().to_bytes()
     }
@@ -80,6 +83,7 @@ impl String {
     /// The number of bytes the string contains.
     ///
     #[must_use]
+    #[inline]
     pub const fn len(&self) -> usize {
         self.size
     }
@@ -87,6 +91,7 @@ impl String {
     /// Is this a 0-length string?
     ///
     #[must_use]
+    #[inline]
     pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -124,6 +129,7 @@ impl Drop for String {
 impl TryFrom<CString> for String {
     type Error = NulError;
 
+    #[inline]
     fn try_from(cstring: CString) -> Result<Self, Self::Error> {
         Self::new(cstring.into_bytes())
     }
@@ -132,12 +138,14 @@ impl TryFrom<CString> for String {
 impl TryFrom<String> for CString {
     type Error = NulError;
 
+    #[inline]
     fn try_from(string: String) -> Result<Self, Self::Error> {
         Self::new(string.to_bytes())
     }
 }
 
 impl PartialEq for String {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.to_bytes().eq(other.to_bytes())
     }
@@ -146,12 +154,14 @@ impl PartialEq for String {
 impl Eq for String {}
 
 impl PartialEq<String> for str {
+    #[inline]
     fn eq(&self, other: &String) -> bool {
         self.as_bytes().eq(other.to_bytes())
     }
 }
 
 impl Borrow<str> for String {
+    #[inline]
     fn borrow(&self) -> &str {
         std::str::from_utf8(self.to_bytes()).unwrap()
     }
