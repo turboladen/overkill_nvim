@@ -225,26 +225,4 @@ mod tests {
             );
         }
     }
-
-    // #[test]
-    // fn test_into_iter() {
-    //     let array = Array::new([
-    //         Object::from(true),
-    //         Object::from(42),
-    //         Object::from(LuaString::new("blah").unwrap()),
-    //     ]);
-
-    //     let mut iter = array.into_iter();
-    //     let boolean = iter.next().unwrap();
-    //     assert!(boolean.try_as_boolean().unwrap());
-
-    //     let integer = iter.next().unwrap();
-    //     assert_eq!(integer.try_as_integer().unwrap(), 42);
-
-    //     let string = iter.next().unwrap();
-    //     assert_eq!(
-    //         string.try_as_string().unwrap(),
-    //         &LuaString::new("blah").unwrap()
-    //     );
-    // }
 }
