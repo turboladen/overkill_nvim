@@ -15,6 +15,15 @@ extern "C" {
     /// Gets a buffer option value.
     ///
     pub fn nvim_buf_get_option(buffer: Buffer, name: LuaString, err: *mut LuaError) -> Object;
+    
+    /// `channel_id` should be `LUA_INTERNAL_CALL`.
+    pub fn nvim_buf_set_option(
+        channel_id: u64,
+        buffer: Buffer,
+        name: LuaString,
+        value: Object,
+        err: *mut LuaError,
+    );
 }
 
 /// The buffer number.
