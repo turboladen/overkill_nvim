@@ -7,10 +7,11 @@ ffi.cdef [[
     bool test_nvim_get_current_buf();
     bool test_nvim_feedkeys();
     bool test_nvim_get_mode();
+    bool test_nvim_set_global_option();
   ]]
 
 local suffix = ffi.os == "OSX" and ".dylib" or ".so"
-local lib = ffi.load("./target/debug/libneovim" .. suffix)
+local lib = ffi.load("./target/debug/libnvim_api" .. suffix)
 
 describe(
     "api",
@@ -51,6 +52,12 @@ describe(
             "tests nvim_get_mode()",
             function()
                 assert.True(lib.test_nvim_get_mode())
+            end
+        )
+        it(
+            "tests nvim_set_global_option()",
+            function()
+                assert.True(lib.test_nvim_set_global_option())
             end
         )
     end

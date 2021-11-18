@@ -2,7 +2,7 @@
 //! # neovim-sys
 //!
 //! This crate provides type-wrappers and functions to allow for directly (as in "not going through
-//! the msgpack API) calling neovim functions.
+//! the msgpack API") calling neovim functions.
 //!
 #![deny(unused_extern_crates)]
 #![warn(
@@ -23,6 +23,8 @@
 #![allow(non_camel_case_types)]
 
 pub mod api;
+pub mod globals;
+pub mod option;
 pub mod types;
 
 #[cfg(test)]
@@ -30,7 +32,6 @@ pub mod types;
 pub(crate) fn init_logger() {
     simple_logger::SimpleLogger::new()
         .with_colors(true)
-        .with_timestamps(true)
         .init()
         .ok();
 }

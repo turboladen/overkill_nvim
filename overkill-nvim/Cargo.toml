@@ -1,0 +1,18 @@
+[package]
+name = "overkill-nvim"
+version = "0.1.0"
+authors = ["Steve Loveless <steve.loveless@gmail.com>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nvim-api = { path = "../nvim-api/" }
+thiserror = "1.0"
+
+[features]
+default = []
+lua_test = []

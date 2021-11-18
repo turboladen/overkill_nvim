@@ -50,7 +50,7 @@ impl TryFrom<Object> for Array {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::vim::LuaString;
+    use crate::api::nvim::NvimString;
     use approx::assert_ulps_eq;
 
     #[test]
@@ -113,8 +113,8 @@ mod tests {
     #[test]
     fn test_vec_strings() {
         let array = Array::new([
-            Object::from(LuaString::new("first one").unwrap()),
-            Object::from(LuaString::new("second one").unwrap()),
+            Object::from(NvimString::new_unchecked("first one")),
+            Object::from(NvimString::new_unchecked("second one")),
         ]);
         assert_eq!(array.len(), 2);
         assert_eq!(array.capacity(), 2);
@@ -125,11 +125,11 @@ mod tests {
 
         assert_eq!(
             out_vec[0].try_as_string().unwrap(),
-            &LuaString::new("first one").unwrap()
+            &NvimString::new_unchecked("first one")
         );
         assert_eq!(
             out_vec[1].try_as_string().unwrap(),
-            &LuaString::new("second one").unwrap()
+            &NvimString::new_unchecked("second one")
         );
     }
 
@@ -138,7 +138,7 @@ mod tests {
         let inner1_array = Array::new([Object::from(42), Object::from(42.42)]);
 
         let inner2_array = Array::new([
-            Object::from(LuaString::new("first one").unwrap()),
+            Object::from(NvimString::new_unchecked("first one")),
             Object::from(true),
         ]);
 
@@ -167,7 +167,7 @@ mod tests {
 
             assert_eq!(
                 out_vec_inner2[0].try_as_string().unwrap(),
-                &LuaString::new("first one").unwrap()
+                &NvimString::new_unchecked("first one")
             );
             assert!(out_vec_inner2[1].try_as_boolean().unwrap());
         }
@@ -177,8 +177,8 @@ mod tests {
     fn test_clone() {
         let original_array = {
             Array::new([
-                Object::from(LuaString::new("first one").unwrap()),
-                Object::from(LuaString::new("second one").unwrap()),
+                Object::from(NvimString::new_unchecked("first one")),
+                Object::from(NvimString::new_unchecked("second one")),
             ])
         };
 
@@ -195,12 +195,12 @@ mod tests {
             let first_element = cloned_vec.remove(0);
 
             let actual = first_element.try_as_string().unwrap();
-            assert_eq!(actual, &LuaString::new("first one").unwrap());
+            assert_eq!(actual, &NvimString::new_unchecked("first one"));
 
             let second_element = cloned_vec.remove(0);
             assert_eq!(
                 second_element.try_as_string().unwrap(),
-                &LuaString::new("second one").unwrap(),
+                &NvimString::new_unchecked("second one"),
             );
         }
 
@@ -214,14 +214,14 @@ mod tests {
 
             assert_eq!(
                 first_element.try_as_string().unwrap(),
-                &LuaString::new("first one").unwrap()
+                &NvimString::new_unchecked("first one")
             );
 
             let second_element = original_vec.remove(0);
 
             assert_eq!(
                 second_element.try_as_string().unwrap(),
-                &LuaString::new("second one").unwrap()
+                &NvimString::new_unchecked("second one")
             );
         }
     }

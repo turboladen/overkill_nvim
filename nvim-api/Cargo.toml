@@ -1,5 +1,5 @@
 [package]
-name = "neovim"
+name = "nvim-api"
 version = "0.1.0"
 authors = ["Steve Loveless <steve.loveless@gmail.com>"]
 edition = "2021"

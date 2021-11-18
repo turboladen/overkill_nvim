@@ -11,8 +11,10 @@ use std::{
     ptr::addr_of_mut,
 };
 
+use super::{object::Error, Object, ObjectType};
+
 /// Very similar to Rust's `CString`, this type represents a `String` in neovim's Lua interface.
-/// Named `String` here, but is exported as `LuaString`, just to save on confusion with Rust's
+/// Named `String` here, but is exported as `NvimString`, just to save on confusion with Rust's
 /// `String`.
 ///
 #[derive(Debug)]
@@ -30,28 +32,24 @@ impl String {
     ///
     pub fn new<T: Into<Vec<u8>>>(s: T) -> Result<Self, NulError> {
         let cstring = CString::new(s)?;
-        let mut vec = cstring.into_bytes();
 
-        let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
-        let ptr = uninit.as_mut_ptr();
+        Ok(new(cstring))
+    }
 
-        // Initializing the `size` field
-        // Using `write` instead of assignment via `=` to not call `drop` on the
-        // old, uninitialized value.
-        unsafe {
-            addr_of_mut!((*ptr).size).write(vec.len());
-        }
+    /// Skips checking `s` for nul bytes and instantiates a new `NvimString`.
+    ///
+    pub fn new_unchecked<T: Into<Vec<u8>>>(s: T) -> Self {
+        let cstring = unsafe { CString::from_vec_unchecked(s.into()) };
 
-        let new_data = vec.as_mut_ptr().cast::<c_char>();
+        new(cstring)
+    }
 
-        unsafe {
-            // Initializing the `list` field
-            // If there is a panic here, then the `String` in the `name` field leaks.
-            addr_of_mut!((*ptr).data).write(new_data);
-        }
-        mem::forget(vec);
-
-        Ok(unsafe { uninit.assume_init() })
+    /// The raw pointer that represents this string. This should not be mutated.
+    ///
+    #[must_use]
+    #[inline]
+    pub const fn as_ptr(&self) -> *const c_char {
+        self.data.cast()
     }
 
     /// Just like, `CStr`, this wraps the underlying raw C-string with a safe wrapper.
@@ -97,6 +95,37 @@ impl String {
     }
 }
 
+fn new(cstring: CString) -> String {
+    let mut vec = cstring.into_bytes();
+
+    let mut uninit: MaybeUninit<String> = MaybeUninit::uninit();
+    let ptr = uninit.as_mut_ptr();
+
+    // Initializing the `size` field
+    // Using `write` instead of assignment via `=` to not call `drop` on the
+    // old, uninitialized value.
+    unsafe {
+        addr_of_mut!((*ptr).size).write(vec.len());
+    }
+
+    let new_data = vec.as_mut_ptr().cast::<c_char>();
+
+    unsafe {
+        // Initializing the `list` field
+        // If there is a panic here, then the `String` in the `name` field leaks.
+        addr_of_mut!((*ptr).data).write(new_data);
+    }
+    mem::forget(vec);
+
+    unsafe { uninit.assume_init() }
+}
+
+impl Default for String {
+    fn default() -> Self {
+        Self::new_unchecked("")
+    }
+}
+
 impl Clone for String {
     fn clone(&self) -> Self {
         let dst = CString::new(self.to_bytes()).unwrap();
@@ -125,6 +154,13 @@ impl Drop for String {
     }
 }
 
+impl From<String> for std::string::String {
+    #[inline]
+    fn from(string: String) -> Self {
+        string.to_string_lossy().to_string()
+    }
+}
+
 impl TryFrom<CString> for String {
     type Error = NulError;
 
@@ -140,6 +176,39 @@ impl TryFrom<String> for CString {
     #[inline]
     fn try_from(string: String) -> Result<Self, Self::Error> {
         Self::new(string.to_bytes())
+    }
+}
+
+impl<'a> TryFrom<&'a str> for String {
+    type Error = NulError;
+
+    #[inline]
+    fn try_from(string: &'a str) -> Result<Self, Self::Error> {
+        Self::new(string.as_bytes())
+    }
+}
+
+impl<'a> TryFrom<Cow<'a, str>> for String {
+    type Error = NulError;
+
+    #[inline]
+    fn try_from(string: Cow<'a, str>) -> Result<Self, Self::Error> {
+        Self::new(string.as_bytes())
+    }
+}
+
+impl<'a> TryFrom<Object> for String {
+    type Error = Error;
+
+    #[inline]
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.object_type() {
+            ObjectType::kObjectTypeString => Ok(value.into_string_unchecked()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeString,
+                actual: value.object_type(),
+            }),
+        }
     }
 }
 
