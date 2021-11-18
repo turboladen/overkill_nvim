@@ -3,7 +3,7 @@
 //! `neovim/src/nvim/api/vim.c`.
 //!
 use super::{mode, Buffer, Error, Mode};
-use neovim_sys::api::vim::{self, LuaError, LuaString, ObjectType};
+use neovim_sys::api::{vim, LuaError, LuaString, Object, ObjectType};
 use std::convert::TryFrom;
 
 /// # Errors
@@ -11,7 +11,45 @@ use std::convert::TryFrom;
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-pub fn nvim_get_var(name: &str) -> Result<vim::Object, Error> {
+pub fn nvim_get_option(name: &str) -> Result<Object, Error> {
+    let api_name = LuaString::new(name)?;
+    let mut out_err = LuaError::default();
+
+    let option = unsafe { vim::nvim_get_option(api_name, &mut out_err) };
+
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(option)
+    }
+}
+
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
+pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
+    let mut out_err = LuaError::default();
+    let api_name = LuaString::new(name)?;
+
+    unsafe {
+        vim::nvim_set_option(vim::LUA_INTERNAL_CALL, api_name, value, &mut out_err);
+    }
+
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(())
+    }
+}
+
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
+pub fn nvim_get_var(name: &str) -> Result<Object, Error> {
     _get_var(name, |api_name, out_err| unsafe {
         vim::nvim_get_var(api_name, out_err)
     })
@@ -22,7 +60,7 @@ pub fn nvim_get_var(name: &str) -> Result<vim::Object, Error> {
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-pub fn nvim_get_vvar(name: &str) -> Result<vim::Object, Error> {
+pub fn nvim_get_vvar(name: &str) -> Result<Object, Error> {
     _get_var(name, |api_name, out_err| unsafe {
         vim::nvim_get_vvar(api_name, out_err)
     })
@@ -33,9 +71,9 @@ pub fn nvim_get_vvar(name: &str) -> Result<vim::Object, Error> {
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-fn _get_var<F>(name: &str, getter: F) -> Result<vim::Object, Error>
+fn _get_var<F>(name: &str, getter: F) -> Result<Object, Error>
 where
-    F: Fn(LuaString, &mut LuaError) -> vim::Object,
+    F: Fn(LuaString, &mut LuaError) -> Object,
 {
     let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;
@@ -54,7 +92,7 @@ where
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-pub fn nvim_set_var(name: &str, value: vim::Object) -> Result<(), Error> {
+pub fn nvim_set_var(name: &str, value: Object) -> Result<(), Error> {
     let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;
 
@@ -74,15 +112,15 @@ pub fn nvim_set_var(name: &str, value: vim::Object) -> Result<(), Error> {
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-pub fn nvim_set_vvar(name: &str, value: vim::Object) -> Result<(), Error> {
+pub fn nvim_set_vvar(name: &str, value: Object) -> Result<(), Error> {
     _set_var(name, value, |api_name, value, out_err| unsafe {
         vim::nvim_set_vvar(api_name, value, out_err);
     })
 }
 
-fn _set_var<F>(name: &str, value: vim::Object, setter: F) -> Result<(), Error>
+fn _set_var<F>(name: &str, value: Object, setter: F) -> Result<(), Error>
 where
-    F: Fn(LuaString, vim::Object, &mut LuaError),
+    F: Fn(LuaString, Object, &mut LuaError),
 {
     let mut out_err = LuaError::default();
     let api_name = LuaString::new(name)?;

@@ -1,8 +1,7 @@
 #![allow(missing_docs, clippy::missing_panics_doc)]
 
-use super::api;
-use crate::api::{LuaString, Mode, Object, RustObject};
-use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, ObjectType};
+use crate::api::{self, Mode, Object, RustObject};
+use neovim_sys::api::{Array, Dictionary, KeyValuePair, LuaString, ObjectType};
 
 fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) -> bool {
     if let Err(e) = self::api::vim::nvim_set_var(var, value) {

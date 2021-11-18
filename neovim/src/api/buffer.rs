@@ -3,10 +3,7 @@
 //! `neovim/src/nvim/api/buffer.c`.
 //!
 use super::{Buffer, Error};
-use neovim_sys::api::{
-    self,
-    vim::{LuaError, LuaString, Object},
-};
+use neovim_sys::api::{self, vim::{LuaError, LuaString, Object}};
 
 /// # Errors
 ///
@@ -61,5 +58,26 @@ pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Result<Object, Error> 
         Err(Error::from(out_err))
     } else {
         Ok(object)
+    }
+}
+
+pub fn nvim_buf_set_option(buffer: Buffer, name: &str, value: Object) -> Result<(), Error> {
+    let api_name = LuaString::new(name)?;
+    let mut out_err = LuaError::default();
+
+    unsafe {
+        api::buffer::nvim_buf_set_option(
+            neovim_sys::api::vim::LUA_INTERNAL_CALL,
+            buffer,
+            api_name,
+            value,
+            &mut out_err,
+        )
+    };
+
+    if out_err.is_err() {
+        Err(Error::from(out_err))
+    } else {
+        Ok(())
     }
 }
