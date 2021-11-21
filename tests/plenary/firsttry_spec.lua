@@ -11,7 +11,7 @@ ffi.cdef [[
   ]]
 
 local suffix = ffi.os == "OSX" and ".dylib" or ".so"
-local lib = ffi.load("./target/debug/libneovim" .. suffix)
+local lib = ffi.load("./target/debug/libnvim_api_rust" .. suffix)
 
 describe(
     "api",

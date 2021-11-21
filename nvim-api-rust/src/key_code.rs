@@ -322,7 +322,22 @@ impl TryFrom<Object> for KeyCode {
                     (Some("M"), Some(c)) => Self::Meta(c),
                     (Some("A"), Some(c)) => Self::Alt(c),
                     (Some("D"), Some(c)) => Self::Super(c),
-                    _ => todo!(),
+                    (Some(l), Some(c)) => {
+                        eprintln!("Got lhs '{}', rhs '{}'", l, c);
+                        return Err(Error::Raw("poop".to_string()));
+                    }
+                    (Some(l), None) => {
+                        eprintln!("Got lhs '{}', but no rhs", l);
+                        return Err(Error::Raw("poop".to_string()));
+                    }
+                    (None, Some(c)) => {
+                        eprintln!("Got rhs '{}', but no lhs", c);
+                        return Err(Error::Raw("poop".to_string()));
+                    }
+                    (None, None) => {
+                        eprintln!("Got NOTHING");
+                        return Err(Error::Raw("poop".to_string()));
+                    }
                 }
             }
         };
@@ -444,6 +459,6 @@ impl From<KeyCode> for Object {
             }
         };
 
-        Object::from(LuaString::new(s).unwrap())
+        Self::from(LuaString::new(s).unwrap())
     }
 }

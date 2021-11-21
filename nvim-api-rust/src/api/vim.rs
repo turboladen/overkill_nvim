@@ -67,7 +67,22 @@ pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
                 std::ptr::null()
             }
         }
-        _ => todo!(),
+        ObjectType::kObjectTypeArray => {
+            eprintln!("Got an array");
+            std::ptr::null()
+        }
+        ObjectType::kObjectTypeDictionary => {
+            eprintln!("Got a dict");
+            std::ptr::null()
+        }
+        ObjectType::kObjectTypeFloat => {
+            eprintln!("Got a float");
+            std::ptr::null()
+        }
+        ObjectType::kObjectTypeNil => {
+            eprintln!("Got nil");
+            std::ptr::null()
+        }
     };
 
     if maybe_err.is_null() {
