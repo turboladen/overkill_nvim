@@ -1,16 +1,13 @@
+use super::VimOption;
 use crate::api::Error;
-use neovim_sys::api::{buffer::Buffer, Object};
+use neovim_sys::api::vim::Object;
 
-pub trait GlobalOption
+pub trait Global: VimOption
 where
-    Object: TryFrom<<Self as GlobalOption>::Value>,
+    Object: From<Self::Value>,
+    Error: From<<Self::Value as TryFrom<Object>>::Error>,
 {
-    type Value;
-
-    const SHORT_NAME: &'static str;
-    const LONG_NAME: &'static str;
-
-    /// Calls `nvim_buf_get_var()`.
+    /// Calls `nvim_get_option()`.
     ///
     /// # Errors
     ///
@@ -27,9 +24,11 @@ where
     ///
     /// Errors if nvim errors on the call.
     ///
-    fn get_as_value() -> Result<Self::Value, Error>;
+    fn get_as_value() -> Result<Self::Value, Error> {
+        Self::get().and_then(|object| Self::Value::try_from(object).map_err(Error::from))
+    }
 
-    /// Calls `nvim_set_var()`.
+    /// Calls `nvim_set_option()`.
     ///
     /// # Errors
     ///
@@ -39,12 +38,16 @@ where
         crate::api::vim::nvim_set_option(Self::SHORT_NAME, value)
     }
 
-    /// Calls `nvim_buf_set_var()`, but handles converting the `value` param from a `Self::Value`
+    /// Calls `nvim_set_option()`, but handles converting the `value` param from a `Self::Value`
     /// type to a nvim `Object`.
     ///
     /// # Errors
     ///
     /// Errors if nvim errors on the call.
     ///
-    fn set_as_value(buffer: Buffer, value: Self::Value) -> Result<(), Error>;
+    fn set_as_value(value: Self::Value) -> Result<(), Error> {
+        Self::set(Object::from(value))
+    }
 }
+
+impl Global for super::PasteToggle {}

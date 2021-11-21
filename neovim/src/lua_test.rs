@@ -1,7 +1,15 @@
 #![allow(missing_docs, clippy::missing_panics_doc)]
 
 use crate::api::{self, Mode, Object, RustObject};
-use neovim_sys::api::{Array, Dictionary, KeyValuePair, LuaString, ObjectType};
+use neovim_sys::api::vim::{Array, Dictionary, KeyValuePair, LuaString, ObjectType};
+use std::borrow::Borrow;
+
+macro_rules! print_error_return_false {
+    ($e:expr) => {{
+        eprintln!("Got error during test: {}", $e);
+        return false;
+    }};
+}
 
 fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) -> bool {
     if let Err(e) = self::api::vim::nvim_set_var(var, value) {
@@ -18,10 +26,7 @@ fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &Rus
                 false
             }
         }
-        Err(e) => {
-            eprintln!("Got error during test: {}", e);
-            false
-        }
+        Err(e) => print_error_return_false!(e),
     }
 }
 
@@ -140,10 +145,7 @@ pub extern "C" fn test_nvim_set_vvar() -> bool {
             eprintln!("Got unexpected value type: {:?}", t);
             return false;
         }
-        Err(e) => {
-            eprintln!("Got error during test: {}", e);
-            return false;
-        }
+        Err(e) => print_error_return_false!(e),
     }
 
     true
@@ -180,10 +182,7 @@ pub extern "C" fn test_nvim_buf_set_var() -> bool {
                 eprintln!("Got unexpected value type: {:?}", t);
                 result = false;
             }
-            Err(e) => {
-                eprintln!("Got error during test: {}", e);
-                result = false;
-            }
+            Err(e) => print_error_return_false!(e),
         }
     }
     result
@@ -198,10 +197,7 @@ pub extern "C" fn test_nvim_get_current_buf() -> bool {
 pub extern "C" fn test_nvim_feedkeys() -> bool {
     match self::api::vim::nvim_feedkeys("j", Mode::Normal, false) {
         Ok(()) => true,
-        Err(e) => {
-            eprintln!("Got error during test: {}", e);
-            false
-        }
+        Err(e) => print_error_return_false!(e),
     }
 }
 
@@ -215,26 +211,149 @@ pub extern "C" fn test_nvim_get_mode() -> bool {
                 false
             }
         },
-        Err(e) => {
-            eprintln!("Got error during test: {}", e);
-            false
-        }
+        Err(e) => print_error_return_false!(e),
     }
 }
 
 #[no_mangle]
-pub extern "C" fn test_nvim_get_option() -> bool {
-    match self::api::vim::nvim_get_mode() {
-        Ok(current_mode) => match current_mode.mode() {
-            Mode::Normal => true,
-            m => {
-                eprintln!("FAIL! Expected 'n', got '{:?}'", m);
-                false
+pub extern "C" fn test_nvim_set_option() -> bool {
+    // Boolean option
+    {
+        let option_name = "autoread";
+
+        match self::api::vim::nvim_get_option(option_name) {
+            Ok(value) => {
+                if !value.as_boolean_unchecked() {
+                    eprintln!(
+                        "FAIL! Expected `true`, got: {}",
+                        value.as_boolean_unchecked()
+                    );
+                    return false;
+                }
             }
-        },
-        Err(e) => {
-            eprintln!("Got error during test: {}", e);
-            false
+            Err(e) => print_error_return_false!(e),
+        }
+
+        match self::api::vim::nvim_set_option(option_name, false.into()) {
+            Ok(_) => match self::api::vim::nvim_get_option(option_name) {
+                Ok(value) => {
+                    if !value.as_boolean_unchecked() {
+                        eprintln!(
+                            "FAIL! Expected `false`, got: {}",
+                            value.as_boolean_unchecked()
+                        );
+                        return false;
+                    }
+                }
+                Err(e) => print_error_return_false!(e),
+            },
+            Err(e) => print_error_return_false!(e),
         }
     }
+
+    // Integer option
+    {
+        let option_name = "aleph";
+
+        match self::api::vim::nvim_get_option(option_name) {
+            Ok(value) => {
+                if !value.as_integer_unchecked() == 224 {
+                    eprintln!("FAIL! Expected 224, got: {}", value.as_integer_unchecked());
+                    return false;
+                }
+            }
+            Err(e) => print_error_return_false!(e),
+        }
+
+        match self::api::vim::nvim_set_option(option_name, 225.into()) {
+            Ok(_) => match self::api::vim::nvim_get_option(option_name) {
+                Ok(value) => {
+                    if !value.as_integer_unchecked() == 225 {
+                        eprintln!("FAIL! Expected 225, got: {}", value.as_integer_unchecked());
+                        return false;
+                    }
+                }
+                Err(e) => print_error_return_false!(e),
+            },
+            Err(e) => print_error_return_false!(e),
+        }
+    }
+
+    // String option
+    {
+        let option_name = "pastetoggle";
+
+        match self::api::vim::nvim_get_option(option_name) {
+            Ok(value) => {
+                let expected = "";
+
+                if Borrow::<str>::borrow(value.as_string_unchecked()) != expected {
+                    eprintln!(
+                        "FAIL! Expected `\"{}\"`, got: `\"{}\"`",
+                        expected,
+                        value.as_string_unchecked()
+                    );
+                    return false;
+                }
+            }
+            Err(e) => print_error_return_false!(e),
+        }
+
+        let expected_in = LuaString::new("<F8>").unwrap();
+        let expected = LuaString::new("<F8>").unwrap();
+
+        match self::api::vim::nvim_set_option(option_name, expected_in.into()) {
+            Ok(_) => match self::api::vim::nvim_get_option(option_name) {
+                Ok(value) => {
+                    if value.as_string_unchecked() != &expected {
+                        eprintln!(
+                            "FAIL! Expected `\"{}\"`, got: `\"{}\"`",
+                            expected,
+                            value.as_string_unchecked()
+                        );
+                        return false;
+                    }
+                }
+                Err(e) => print_error_return_false!(e),
+            },
+            Err(e) => print_error_return_false!(e),
+        }
+    }
+
+    // Using high-level API
+    {
+        use crate::{
+            key_code::KeyCode,
+            option::{Global, PasteToggle},
+        };
+
+        match PasteToggle::get_as_value() {
+            Ok(value) => match value {
+                KeyCode::F8 => (),
+                v => {
+                    eprintln!("FAIL! Expected `\"{}\"`, got: `\"{}\"`", KeyCode::F8, v);
+                    return false;
+                }
+            },
+            Err(e) => print_error_return_false!(e),
+        }
+
+        let new_value = KeyCode::F9;
+
+        match PasteToggle::set_as_value(new_value) {
+            Ok(_) => match PasteToggle::get_as_value() {
+                Ok(value) => match value {
+                    KeyCode::F9 => (),
+                    v => {
+                        eprintln!("FAIL! Expected `\"{}\"`, got: `\"{}\"`", new_value, v);
+                        return false;
+                    }
+                },
+                Err(e) => print_error_return_false!(e),
+            },
+            Err(e) => print_error_return_false!(e),
+        }
+    }
+
+    true
 }

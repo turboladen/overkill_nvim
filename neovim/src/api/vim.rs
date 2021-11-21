@@ -3,8 +3,11 @@
 //! `neovim/src/nvim/api/vim.c`.
 //!
 use super::{mode, Buffer, Error, Mode};
-use neovim_sys::api::{vim, LuaError, LuaString, Object, ObjectType};
-use std::convert::TryFrom;
+use neovim_sys::{
+    api::vim::{self, LuaError, LuaString, Object, ObjectType},
+    option::{self, OptionFlags},
+};
+use std::{convert::TryFrom, ffi::CStr, os::raw::c_char};
 
 /// # Errors
 ///
@@ -30,17 +33,48 @@ pub fn nvim_get_option(name: &str) -> Result<Object, Error> {
 /// * If nvim set an error on the call.
 ///
 pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
-    let mut out_err = LuaError::default();
-    let api_name = LuaString::new(name)?;
+    let name_ptr = name.as_ptr().cast::<c_char>();
+    let api_name = unsafe { CStr::from_ptr(name_ptr) };
 
-    unsafe {
-        vim::nvim_set_option(vim::LUA_INTERNAL_CALL, api_name, value, &mut out_err);
-    }
+    let maybe_err = match value.object_type() {
+        ObjectType::kObjectTypeBoolean => unsafe {
+            option::set_option_value(
+                api_name.as_ptr(),
+                if value.as_boolean_unchecked() { 1 } else { 0 },
+                std::ptr::null(),
+                OptionFlags::OptGlobal as i32,
+            )
+        },
+        ObjectType::kObjectTypeInteger => unsafe {
+            option::set_option_value(
+                api_name.as_ptr(),
+                value.as_integer_unchecked(),
+                std::ptr::null(),
+                OptionFlags::OptGlobal as i32,
+            )
+        },
+        ObjectType::kObjectTypeString => {
+            let s = value.as_string_unchecked();
 
-    if out_err.is_err() {
-        Err(Error::from(out_err))
-    } else {
+            unsafe {
+                option::set_string_option_direct(
+                    api_name.as_ptr(),
+                    -1, // <- -1 means use the name to look up the value
+                    s.to_string_lossy().as_ref().as_ptr(),
+                    OptionFlags::OptGlobal as i32,
+                    0,
+                );
+                std::ptr::null()
+            }
+        }
+        _ => todo!(),
+    };
+
+    if maybe_err.is_null() {
         Ok(())
+    } else {
+        let e = unsafe { CStr::from_ptr(maybe_err) };
+        Err(Error::Raw(e.to_string_lossy().into()))
     }
 }
 

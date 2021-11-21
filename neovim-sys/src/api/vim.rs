@@ -37,16 +37,6 @@ pub type LuaRef = isize;
 extern "C" {
     pub fn nvim_get_option(name: LuaString, err: *mut LuaError) -> Object;
 
-    /// Neovim defines a type `LuaRef`, which is the same as a Rust `isize`.
-    ///
-    /// `channel_id` should be `LUA_INTERNAL_CALL`.
-    pub fn nvim_set_option(
-        channel_id: u64,
-        name: LuaString,
-        value: Object,
-        err: *mut LuaError,
-    ) -> Object;
-
     /// Gets a global (g:) variable.
     ///
     pub fn nvim_get_var(name: LuaString, err: *mut LuaError) -> Object;

@@ -54,6 +54,12 @@ impl String {
         Ok(unsafe { uninit.assume_init() })
     }
 
+    #[must_use]
+    #[inline]
+    pub const fn as_ptr(&self) -> *const c_char {
+        self.data.cast()
+    }
+
     /// Just like, `CStr`, this wraps the underlying raw C-string with a safe wrapper.
     ///
     #[must_use]

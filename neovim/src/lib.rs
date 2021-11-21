@@ -22,7 +22,8 @@
 )]
 
 pub mod api;
-pub mod option_defs;
+pub mod option;
+pub mod key_code;
 
 pub use neovim_sys as sys;
 

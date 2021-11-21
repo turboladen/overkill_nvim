@@ -1,4 +1,4 @@
-use crate::option_defs::VimOptionError;
+use crate::option::VimOptionError;
 use neovim_sys::api::vim::{self, LuaError, LuaString};
 use std::ffi::NulError;
 
@@ -32,4 +32,7 @@ pub enum Error {
 
     #[error(transparent)]
     Option(#[from] VimOptionError),
+
+    #[error("Error from vim: {}", _0)]
+    Raw(String),
 }

@@ -23,6 +23,7 @@
 #![allow(non_camel_case_types)]
 
 pub mod api;
+pub mod option;
 pub mod types;
 
 #[cfg(test)]

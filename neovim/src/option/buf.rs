@@ -1,14 +1,14 @@
 use super::VimOption;
 use crate::api::error::Error;
-use neovim_sys::api::{buffer::Buffer, Object};
+use neovim_sys::api::{buffer::Buffer, vim::Object};
 use std::convert::TryFrom;
 
-pub trait BufOption: VimOption
+pub trait Buf: VimOption
 where
     Object: From<Self::Value>,
-    Error: From<<<Self as VimOption>::Value as TryFrom<Object>>::Error>,
+    Error: From<<Self::Value as TryFrom<Object>>::Error>,
 {
-    /// Calls `nvim_buf_get_var()`.
+    /// Calls `nvim_buf_get_option()`.
     ///
     /// # Errors
     ///
@@ -18,7 +18,7 @@ where
         crate::api::buffer::nvim_buf_get_option(buffer, Self::SHORT_NAME)
     }
 
-    /// Calls `nvim_buf_get_var()`, but handles converting the resulting nvim Object into
+    /// Calls `nvim_buf_get_option()`, but handles converting the resulting nvim Object into
     /// `Self::Value` type.
     ///
     /// # Errors
@@ -39,7 +39,7 @@ where
         crate::api::buffer::nvim_buf_set_option(buffer, Self::SHORT_NAME, value)
     }
 
-    /// Calls `nvim_buf_set_var()`, but handles converting the `value` param from a `Self::Value`
+    /// Calls `nvim_buf_set_option()`, but handles converting the `value` param from a `Self::Value`
     /// type to a nvim `Object`.
     ///
     /// # Errors
@@ -51,23 +51,6 @@ where
     }
 }
 
-impl BufOption for super::Aleph {
-    type Value = i64;
-
-    const SHORT_NAME: &'static str = "al";
-    const LONG_NAME: &'static str = "aleph";
-}
-
-impl BufOption for super::AllowRevIns {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "ari";
-    const LONG_NAME: &'static str = "allowrevins";
-}
-
-impl BufOption for super::AmbiWidth {
-    type Value = super::AmbiWidthOption;
-
-    const SHORT_NAME: &'static str = "ambw";
-    const LONG_NAME: &'static str = "ambiwidth";
-}
+impl Buf for super::Aleph {}
+impl Buf for super::AllowRevIns {}
+impl Buf for super::AmbiWidth {}
