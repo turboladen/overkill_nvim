@@ -392,6 +392,16 @@ impl VimOption for SmartCase {
     const LONG_NAME: &'static str = "smartcase";
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct SynMaxCol;
+
+impl VimOption for SynMaxCol {
+    type Value = u32;
+
+    const SHORT_NAME: &'static str = "smc";
+    const LONG_NAME: &'static str = "synmaxcol";
+}
+
 // #[derive(Debug, Clone, Copy)]
 // pub enum Background {
 //     Light,

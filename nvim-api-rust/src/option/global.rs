@@ -42,3 +42,4 @@ impl Global for super::PasteToggle {}
 impl Global for super::ScrollOff {}
 impl Global for super::ShowTabline {}
 impl Global for super::SmartCase {}
+impl Global for super::SynMaxCol {}
