@@ -98,6 +98,16 @@ impl VimOption for BreakIndent {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct List;
+
+impl VimOption for List {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "list";
+    const LONG_NAME: &'static str = "list";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Number;
 
 impl VimOption for Number {
