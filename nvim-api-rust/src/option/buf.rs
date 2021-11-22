@@ -50,7 +50,3 @@ where
         Self::set(buffer, Object::from(value))
     }
 }
-
-impl Buf for super::Aleph {}
-impl Buf for super::AllowRevIns {}
-impl Buf for super::AmbiWidth {}

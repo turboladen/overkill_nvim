@@ -30,64 +30,6 @@ pub enum VimOptionError {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Aleph;
-
-impl VimOption for Aleph {
-    type Value = i64;
-
-    const SHORT_NAME: &'static str = "al";
-    const LONG_NAME: &'static str = "aleph";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct AllowRevIns;
-
-impl VimOption for AllowRevIns {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "ari";
-    const LONG_NAME: &'static str = "allowrevins";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct AmbiWidth;
-
-impl VimOption for AmbiWidth {
-    type Value = AmbiWidthOption;
-
-    const SHORT_NAME: &'static str = "ambw";
-    const LONG_NAME: &'static str = "ambiwidth";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum AmbiWidthOption {
-    Single,
-    Double,
-}
-
-#[allow(clippy::fallible_impl_from)]
-impl From<AmbiWidthOption> for Object {
-    fn from(value: AmbiWidthOption) -> Self {
-        match value {
-            AmbiWidthOption::Single => Self::from(LuaString::new("single").unwrap()),
-            AmbiWidthOption::Double => (Self::from(LuaString::new("double").unwrap())),
-        }
-    }
-}
-
-impl TryFrom<Object> for AmbiWidthOption {
-    type Error = VimOptionError;
-
-    fn try_from(value: Object) -> Result<Self, Self::Error> {
-        match value.as_string_unchecked().to_string_lossy() {
-            Cow::Borrowed("single") => Ok(Self::Single),
-            Cow::Borrowed("double") => Ok(Self::Double),
-            _ => Err(VimOptionError::UnexpectedOptionValue(value)),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
 pub struct BreakIndent;
 
 impl VimOption for BreakIndent {
@@ -107,6 +49,48 @@ impl VimOption for CmdHeight {
     const LONG_NAME: &'static str = "cmdheight";
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ConcealLevel;
+
+impl VimOption for ConcealLevel {
+    type Value = ConcealLevelValue;
+
+    const SHORT_NAME: &'static str = "cole";
+    const LONG_NAME: &'static str = "conceallevel";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ConcealLevelValue {
+    NormalText,
+    OneCharReplacement,
+    HiddenUnlessCustomReplacement,
+    Hidden,
+}
+
+impl From<ConcealLevelValue> for Object {
+    fn from(value: ConcealLevelValue) -> Self {
+        match value {
+            ConcealLevelValue::NormalText => Self::from(0),
+            ConcealLevelValue::OneCharReplacement => Self::from(1),
+            ConcealLevelValue::HiddenUnlessCustomReplacement => Self::from(2),
+            ConcealLevelValue::Hidden => Self::from(3),
+        }
+    }
+}
+
+impl TryFrom<Object> for ConcealLevelValue {
+    type Error = VimOptionError;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.as_integer_unchecked() {
+            0 => Ok(Self::NormalText),
+            1 => Ok(Self::OneCharReplacement),
+            2 => Ok(Self::HiddenUnlessCustomReplacement),
+            3 => Ok(Self::Hidden),
+            _ => Err(VimOptionError::UnexpectedOptionValue(value)),
+        }
+    }
+}
 #[derive(Debug, Clone, Copy)]
 pub struct List;
 
