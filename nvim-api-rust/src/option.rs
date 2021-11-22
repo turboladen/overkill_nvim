@@ -136,6 +136,16 @@ impl TryFrom<Object> for IncCommandValue {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct LineBreak;
+
+impl VimOption for LineBreak {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "lbr";
+    const LONG_NAME: &'static str = "linebreak";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct ScrollOff;
 
 impl VimOption for ScrollOff {
