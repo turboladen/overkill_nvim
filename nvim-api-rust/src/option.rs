@@ -25,8 +25,8 @@ where
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum VimOptionError {
-    #[error("Unexpected option value: '{}'", _0)]
-    UnexpectedOptionValue(String),
+    #[error("Unexpected option value: '{:?}'", _0)]
+    UnexpectedOptionValue(Object),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -82,7 +82,7 @@ impl TryFrom<Object> for AmbiWidthOption {
         match value.as_string_unchecked().to_string_lossy() {
             Cow::Borrowed("single") => Ok(Self::Single),
             Cow::Borrowed("double") => Ok(Self::Double),
-            s => Err(VimOptionError::UnexpectedOptionValue(s.to_string())),
+            _ => Err(VimOptionError::UnexpectedOptionValue(value)),
         }
     }
 }
@@ -332,7 +332,7 @@ impl TryFrom<Object> for IncCommandValue {
         match value.as_string_unchecked().to_string_lossy() {
             Cow::Borrowed("nosplit") => Ok(Self::NoSplit),
             Cow::Borrowed("split") => Ok(Self::Split),
-            s => Err(VimOptionError::UnexpectedOptionValue(s.to_string())),
+            _ => Err(VimOptionError::UnexpectedOptionValue(value)),
         }
     }
 }
@@ -355,6 +355,47 @@ impl VimOption for ScrollOff {
 
     const SHORT_NAME: &'static str = "scs";
     const LONG_NAME: &'static str = "smartcase";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ShowTabline;
+
+impl VimOption for ShowTabline {
+    type Value = ShowTablineValue;
+
+    const SHORT_NAME: &'static str = "stal";
+    const LONG_NAME: &'static str = "showtabline";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ShowTablineValue {
+    Never,
+    OnlyIfTabPages,
+    Always,
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl From<ShowTablineValue> for Object {
+    fn from(value: ShowTablineValue) -> Self {
+        match value {
+            ShowTablineValue::Never => Self::from(0),
+            ShowTablineValue::OnlyIfTabPages => Self::from(1),
+            ShowTablineValue::Always => Self::from(2),
+        }
+    }
+}
+
+impl TryFrom<Object> for ShowTablineValue {
+    type Error = VimOptionError;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.as_integer_unchecked() {
+            0 => Ok(Self::Never),
+            1 => Ok(Self::OnlyIfTabPages),
+            2 => Ok(Self::Always),
+            _ => Err(VimOptionError::UnexpectedOptionValue(value)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

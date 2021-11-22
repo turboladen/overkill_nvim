@@ -40,4 +40,5 @@ impl Global for super::ListChars {}
 impl Global for super::Number {}
 impl Global for super::PasteToggle {}
 impl Global for super::ScrollOff {}
+impl Global for super::ShowTabline {}
 impl Global for super::SmartCase {}
