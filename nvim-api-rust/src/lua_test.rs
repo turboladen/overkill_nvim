@@ -326,7 +326,7 @@ pub extern "C" fn test_nvim_set_option() -> bool {
             option::{Global, PasteToggle},
         };
 
-        match PasteToggle::get_as_value() {
+        match PasteToggle::get_global() {
             Ok(value) => match value {
                 KeyCode::F8 => (),
                 v => {
@@ -339,8 +339,8 @@ pub extern "C" fn test_nvim_set_option() -> bool {
 
         let new_value = KeyCode::F9;
 
-        match PasteToggle::set_as_value(new_value) {
-            Ok(_) => match PasteToggle::get_as_value() {
+        match PasteToggle::set_global(new_value) {
+            Ok(_) => match PasteToggle::get_global() {
                 Ok(value) => match value {
                     KeyCode::F9 => (),
                     v => {
