@@ -35,6 +35,7 @@ impl Global for super::BreakIndent {}
 impl Global for super::IncCommand {}
 impl Global for super::LineBreak {}
 impl Global for super::List {}
+impl Global for super::ListChars {}
 impl Global for super::Number {}
 impl Global for super::PasteToggle {}
 impl Global for super::ScrollOff {}
