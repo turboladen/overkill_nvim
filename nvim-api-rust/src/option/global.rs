@@ -34,6 +34,7 @@ where
 impl Global for super::BreakIndent {}
 impl Global for super::IncCommand {}
 impl Global for super::LineBreak {}
+impl Global for super::Number {}
 impl Global for super::PasteToggle {}
 impl Global for super::ScrollOff {}
 impl Global for super::SmartCase {}

@@ -98,6 +98,16 @@ impl VimOption for BreakIndent {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct Number;
+
+impl VimOption for Number {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "nu";
+    const LONG_NAME: &'static str = "number";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct PasteToggle;
 
 impl VimOption for PasteToggle {
