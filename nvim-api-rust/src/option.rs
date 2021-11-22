@@ -136,6 +136,16 @@ impl TryFrom<Object> for IncCommandValue {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct ScrollOff;
+
+impl VimOption for ScrollOff {
+    type Value = u16;
+
+    const SHORT_NAME: &'static str = "scs";
+    const LONG_NAME: &'static str = "smartcase";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct SmartCase;
 
 impl VimOption for SmartCase {

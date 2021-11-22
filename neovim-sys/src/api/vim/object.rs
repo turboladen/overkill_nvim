@@ -2,7 +2,7 @@
 //! This module contains types and functions for working with neovim Lua `Object`s.
 //!
 use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, LuaString};
-use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
+use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop, num::NonZeroI64};
 
 /// An error that can only happen when dealing wit `Object`s.
 ///
@@ -26,6 +26,9 @@ pub enum Error {
         ///
         actual: ObjectType,
     },
+
+    #[error(transparent)]
+    TryFromIntError(#[from] std::num::TryFromIntError),
 }
 
 /// Wrapper for neovim's Lua `Object`, which can be a:
@@ -412,6 +415,48 @@ impl From<Integer> for Object {
     }
 }
 
+impl From<i8> for Object {
+    fn from(i: i8) -> Self {
+        Self::from(Integer::from(i))
+    }
+}
+
+impl From<u8> for Object {
+    fn from(i: u8) -> Self {
+        Self::from(Integer::from(i))
+    }
+}
+
+impl From<i16> for Object {
+    fn from(i: i16) -> Self {
+        Self::from(Integer::from(i))
+    }
+}
+
+impl From<u16> for Object {
+    fn from(i: u16) -> Self {
+        Self::from(Integer::from(i))
+    }
+}
+
+impl From<i32> for Object {
+    fn from(i: i32) -> Self {
+        Self::from(Integer::from(i))
+    }
+}
+
+impl From<u32> for Object {
+    fn from(i: u32) -> Self {
+        Self::from(Integer::from(i))
+    }
+}
+
+impl From<NonZeroI64> for Object {
+    fn from(i: NonZeroI64) -> Self {
+        Self::from(Integer::from(i))
+    }
+}
+
 impl From<Float> for Object {
     #[inline]
     fn from(float: Float) -> Self {
@@ -544,6 +589,37 @@ impl TryFrom<Object> for Integer {
         }
     }
 }
+
+macro_rules! impl_try_from_for_int {
+    ($int:ty) => {
+        impl TryFrom<Object> for $int {
+            type Error = Error;
+
+            fn try_from(value: Object) -> Result<Self, Self::Error> {
+                match value.object_type {
+                    ObjectType::kObjectTypeInteger => {
+                        Self::try_from(value.data.integer()).map_err(Error::from)
+                    }
+                    _ => Err(Error::TypeError {
+                        expected: ObjectType::kObjectTypeInteger,
+                        actual: value.object_type,
+                    }),
+                }
+            }
+        }
+    };
+}
+
+impl_try_from_for_int!(i8);
+impl_try_from_for_int!(u8);
+impl_try_from_for_int!(i16);
+impl_try_from_for_int!(u16);
+impl_try_from_for_int!(i32);
+impl_try_from_for_int!(u32);
+impl_try_from_for_int!(u64);
+impl_try_from_for_int!(u128);
+impl_try_from_for_int!(isize);
+impl_try_from_for_int!(usize);
 
 impl TryFrom<Object> for Float {
     type Error = Error;

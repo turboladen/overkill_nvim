@@ -15,7 +15,8 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn get_global() -> Result<Self::Value, Error> {
-        crate::api::vim::nvim_get_option(Self::SHORT_NAME).and_then(|object| Self::Value::try_from(object).map_err(Error::from))
+        crate::api::vim::nvim_get_option(Self::SHORT_NAME)
+            .and_then(|object| Self::Value::try_from(object).map_err(Error::from))
     }
 
     /// Calls `nvim_set_option()`, but handles converting the `value` param from a `Self::Value`
@@ -32,4 +33,5 @@ where
 
 impl Global for super::IncCommand {}
 impl Global for super::PasteToggle {}
+impl Global for super::ScrollOff {}
 impl Global for super::SmartCase {}
