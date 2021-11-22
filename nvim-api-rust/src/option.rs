@@ -88,6 +88,16 @@ impl TryFrom<Object> for AmbiWidthOption {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct BreakIndent;
+
+impl VimOption for BreakIndent {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "bri";
+    const LONG_NAME: &'static str = "breakindent";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct PasteToggle;
 
 impl VimOption for PasteToggle {

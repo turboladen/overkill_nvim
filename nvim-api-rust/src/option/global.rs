@@ -31,6 +31,7 @@ where
     }
 }
 
+impl Global for super::BreakIndent {}
 impl Global for super::IncCommand {}
 impl Global for super::LineBreak {}
 impl Global for super::PasteToggle {}
