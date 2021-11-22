@@ -7,7 +7,7 @@ use neovim_sys::{
     api::vim::{self, LuaError, LuaString, Object, ObjectType},
     option::{self, OptionFlags},
 };
-use std::{convert::TryFrom, ffi::CStr, os::raw::c_char};
+use std::{convert::TryFrom, ffi::CStr, };
 
 /// # Errors
 ///
@@ -33,13 +33,12 @@ pub fn nvim_get_option(name: &str) -> Result<Object, Error> {
 /// * If nvim set an error on the call.
 ///
 pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
-    let name_ptr = name.as_ptr().cast::<c_char>();
-    let api_name = unsafe { CStr::from_ptr(name_ptr) };
+    let name_ptr = LuaString::new(name).unwrap();
 
     let maybe_err = match value.object_type() {
         ObjectType::kObjectTypeBoolean => unsafe {
             option::set_option_value(
-                api_name.as_ptr(),
+                name_ptr.as_ptr(),
                 if value.as_boolean_unchecked() { 1 } else { 0 },
                 std::ptr::null(),
                 OptionFlags::OptGlobal as i32,
@@ -47,7 +46,7 @@ pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
         },
         ObjectType::kObjectTypeInteger => unsafe {
             option::set_option_value(
-                api_name.as_ptr(),
+                name_ptr.as_ptr(),
                 value.as_integer_unchecked(),
                 std::ptr::null(),
                 OptionFlags::OptGlobal as i32,
@@ -58,7 +57,7 @@ pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
 
             unsafe {
                 option::set_string_option_direct(
-                    api_name.as_ptr(),
+                    name_ptr.as_ptr(),
                     -1, // <- -1 means use the name to look up the value
                     s.to_string_lossy().as_ref().as_ptr(),
                     OptionFlags::OptGlobal as i32,
