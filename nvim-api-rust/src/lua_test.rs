@@ -237,11 +237,10 @@ pub extern "C" fn test_nvim_set_option() -> bool {
         match self::api::vim::nvim_set_option(option_name, false.into()) {
             Ok(_) => match self::api::vim::nvim_get_option(option_name) {
                 Ok(value) => {
-                    if !value.as_boolean_unchecked() {
-                        eprintln!(
-                            "FAIL! Expected `false`, got: {}",
-                            value.as_boolean_unchecked()
-                        );
+                    let v = value.as_boolean_unchecked();
+
+                    if v {
+                        eprintln!("FAIL! Expected `false`, got: {}", v);
                         return false;
                     }
                 }

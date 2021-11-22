@@ -346,6 +346,7 @@ impl TryFrom<Object> for KeyCode {
     }
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<KeyCode> for Object {
     fn from(key_code: KeyCode) -> Self {
         let s = match key_code {
@@ -443,19 +444,19 @@ impl From<KeyCode> for Object {
             KeyCode::Keypad8 => "<k8>",
             KeyCode::Keypad9 => "<k9>",
             KeyCode::Shift(char) => {
-                return Object::from(LuaString::new(format!("<S-{}>", char)).unwrap());
+                return Self::from(LuaString::new(format!("<S-{}>", char)).unwrap());
             }
             KeyCode::Control(char) => {
-                return Object::from(LuaString::new(format!("<C-{}>", char)).unwrap());
+                return Self::from(LuaString::new(format!("<C-{}>", char)).unwrap());
             }
             KeyCode::Meta(char) => {
-                return Object::from(LuaString::new(format!("<M-{}>", char)).unwrap());
+                return Self::from(LuaString::new(format!("<M-{}>", char)).unwrap());
             }
             KeyCode::Alt(char) => {
-                return Object::from(LuaString::new(format!("<A-{}>", char)).unwrap());
+                return Self::from(LuaString::new(format!("<A-{}>", char)).unwrap());
             }
             KeyCode::Super(char) => {
-                return Object::from(LuaString::new(format!("<D-{}>", char)).unwrap());
+                return Self::from(LuaString::new(format!("<D-{}>", char)).unwrap());
             }
         };
 
