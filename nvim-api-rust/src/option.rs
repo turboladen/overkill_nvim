@@ -97,6 +97,16 @@ impl VimOption for PasteToggle {
     const LONG_NAME: &'static str = "pastetoggle";
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct SmartCase;
+
+impl VimOption for SmartCase {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "scs";
+    const LONG_NAME: &'static str = "smartcase";
+}
+
 // #[derive(Debug, Clone, Copy)]
 // pub enum Background {
 //     Light,
