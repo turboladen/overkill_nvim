@@ -25,8 +25,8 @@ where
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum VimOptionError {
-    #[error("Unexpected key in dictionary option: '{}'", _0)]
-    UnexpectedDictionaryKey(String),
+    #[error("Unexpected option value: '{}'", _0)]
+    UnexpectedOptionValue(String),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -82,7 +82,7 @@ impl TryFrom<Object> for AmbiWidthOption {
         match value.as_string_unchecked().to_string_lossy() {
             Cow::Borrowed("single") => Ok(Self::Single),
             Cow::Borrowed("double") => Ok(Self::Double),
-            s => Err(VimOptionError::UnexpectedDictionaryKey(s.to_string())),
+            s => Err(VimOptionError::UnexpectedOptionValue(s.to_string())),
         }
     }
 }
@@ -95,6 +95,44 @@ impl VimOption for PasteToggle {
 
     const SHORT_NAME: &'static str = "pt";
     const LONG_NAME: &'static str = "pastetoggle";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct IncCommand;
+
+impl VimOption for IncCommand {
+    type Value = IncCommandValue;
+
+    const SHORT_NAME: &'static str = "icm";
+    const LONG_NAME: &'static str = "inccommand";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum IncCommandValue {
+    NoSplit,
+    Split,
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl From<IncCommandValue> for Object {
+    fn from(value: IncCommandValue) -> Self {
+        match value {
+            IncCommandValue::NoSplit => Self::from(LuaString::new("nosplit").unwrap()),
+            IncCommandValue::Split => (Self::from(LuaString::new("split").unwrap())),
+        }
+    }
+}
+
+impl TryFrom<Object> for IncCommandValue {
+    type Error = VimOptionError;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.as_string_unchecked().to_string_lossy() {
+            Cow::Borrowed("nosplit") => Ok(Self::NoSplit),
+            Cow::Borrowed("split") => Ok(Self::Split),
+            s => Err(VimOptionError::UnexpectedOptionValue(s.to_string())),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

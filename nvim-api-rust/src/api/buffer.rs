@@ -64,15 +64,16 @@ pub fn nvim_buf_get_option(buffer: Buffer, name: &str) -> Result<Object, Error> 
     }
 }
 
-pub fn nvim_buf_set_option(buffer: Buffer, name: &str, value: Object) -> Result<(), Error> {
-    let api_name = LuaString::new(name)?;
-    let mut out_err = LuaError::default();
+pub fn nvim_buf_set_option(_buffer: Buffer, _name: &str, _value: Object) -> Result<(), Error> {
+    todo!()
+    // let api_name = LuaString::new(name)?;
+    // let mut out_err = LuaError::default();
 
-        todo!();
+    //     todo!();
 
-    if out_err.is_err() {
-        Err(Error::from(out_err))
-    } else {
-        Ok(())
-    }
+    // if out_err.is_err() {
+    //     Err(Error::from(out_err))
+    // } else {
+    //     Ok(())
+    // }
 }

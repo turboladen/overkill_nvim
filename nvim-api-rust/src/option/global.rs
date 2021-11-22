@@ -50,5 +50,6 @@ where
     }
 }
 
+impl Global for super::IncCommand {}
 impl Global for super::PasteToggle {}
 impl Global for super::SmartCase {}
