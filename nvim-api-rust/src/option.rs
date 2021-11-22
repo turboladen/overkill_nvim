@@ -98,6 +98,16 @@ impl VimOption for BreakIndent {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct CmdHeight;
+
+impl VimOption for CmdHeight {
+    type Value = u8;
+
+    const SHORT_NAME: &'static str = "ch";
+    const LONG_NAME: &'static str = "cmdheight";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct List;
 
 impl VimOption for List {
