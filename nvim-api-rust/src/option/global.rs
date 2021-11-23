@@ -45,5 +45,6 @@ impl Global for super::ScrollOff {}
 impl Global for super::ShowTabline {}
 impl Global for super::SmartCase {}
 impl Global for super::Spell {}
+impl Global for super::SplitBelow {}
 impl Global for super::SynMaxCol {}
 impl Global for super::TermGuiColors {}

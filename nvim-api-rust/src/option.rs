@@ -504,6 +504,16 @@ impl VimOption for Spell {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct SplitBelow;
+
+impl VimOption for SplitBelow {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "sb";
+    const LONG_NAME: &'static str = "splitbelow";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct SynMaxCol;
 
 impl VimOption for SynMaxCol {
