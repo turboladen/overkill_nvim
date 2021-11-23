@@ -513,6 +513,16 @@ impl VimOption for SynMaxCol {
     const LONG_NAME: &'static str = "synmaxcol";
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct TermGuiColors;
+
+impl VimOption for TermGuiColors {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "tgc";
+    const LONG_NAME: &'static str = "termguicolors";
+}
+
 // #[derive(Debug, Clone, Copy)]
 // pub enum Background {
 //     Light,
