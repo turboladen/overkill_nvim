@@ -32,4 +32,5 @@ where
 }
 
 impl GlobalLocal for super::ColorColumn {}
+impl GlobalLocal for super::CursorLine {}
 impl GlobalLocal for super::Spell {}

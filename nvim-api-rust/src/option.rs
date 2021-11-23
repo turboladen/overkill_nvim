@@ -183,6 +183,16 @@ impl TryFrom<Object> for ConcealLevelValue {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct CursorLine;
+
+impl VimOption for CursorLine {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "cul";
+    const LONG_NAME: &'static str = "cursorline";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct List;
 
 impl VimOption for List {
