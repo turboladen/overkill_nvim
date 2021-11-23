@@ -5,25 +5,32 @@
 use super::{mode, Buffer, Error, Mode};
 use neovim_sys::{
     api::vim::{self, LuaError, LuaString, Object, ObjectType},
-    option::{self, OptionFlags},
+    option::{self, OptionFlag, SOpt, SReq},
 };
-use std::{convert::TryFrom, ffi::CStr};
+use std::{
+    convert::TryFrom,
+    ffi::{c_void, CStr},
+    mem::MaybeUninit,
+    os::raw::c_char,
+};
 
-/// # Errors
-///
-/// * If `name` can't be converted to a `LuaString`.
-/// * If nvim set an error on the call.
-///
-pub fn nvim_get_global_option(name: &str) -> Result<Object, Error> {
+pub fn nvim_get_global_local_option(name: &str) -> Result<Object, Error> {
     let api_name = LuaString::new(name)?;
     let mut out_err = LuaError::default();
 
-    let option = unsafe { vim::nvim_get_option(api_name, &mut out_err) };
+    let object = unsafe {
+        vim::get_option_from(
+            std::ptr::null(),
+            SReq::Global as i32,
+            api_name,
+            &mut out_err,
+        )
+    };
 
     if out_err.is_err() {
         Err(Error::from(out_err))
     } else {
-        Ok(option)
+        Ok(object)
     }
 }
 
@@ -32,8 +39,72 @@ pub fn nvim_get_global_option(name: &str) -> Result<Object, Error> {
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
+pub fn nvim_get_global_option(name: &str) -> Result<Object, Error> {
+    _get_option_strict(name, SReq::Global, std::ptr::null())
+}
+
+fn _get_option_strict(
+    name: &str,
+    option_type: SReq,
+    option_source: *const c_void,
+) -> Result<Object, Error> {
+    let api_name = LuaString::new(name)?;
+    let mut numval = MaybeUninit::<i64>::uninit();
+    let mut stringval = MaybeUninit::<*const c_char>::uninit();
+
+    let flags = unsafe {
+        option::get_option_value_strict(
+            api_name.as_ptr(),
+            numval.as_mut_ptr(),
+            stringval.as_mut_ptr(),
+            option_type as i32,
+            option_source,
+        )
+    };
+
+    if flags == 0 {
+        return Err(Error::Raw(format!("Unknown type for option '{}'", name)));
+    }
+
+    // If we have a number...
+    if !numval.as_ptr().is_null() {
+        let numval_init = unsafe { numval.assume_init() };
+
+        if (flags & SOpt::Bool as i32) != 0 {
+            return Ok(Object::from(numval_init == 1));
+        } else if (flags & SOpt::Num as i32) != 0 {
+            return Ok(Object::from(numval_init));
+        }
+    }
+
+    if !stringval.as_ptr().is_null() {
+        let stringval_init = unsafe { stringval.assume_init() };
+
+        if (flags & SOpt::String as i32) != 0 {
+            let cstring = unsafe { CStr::from_ptr(stringval_init) };
+
+            return Ok(Object::from(LuaString::new(cstring.to_bytes())?));
+        }
+    }
+
+    Err(Error::Raw(format!("Unknown type for option '{}'", name)))
+}
+
+/// # Errors
+///
+/// * If `name` can't be converted to a `LuaString`.
+/// * If nvim set an error on the call.
+///
 pub fn nvim_set_global_option(name: &str, value: Object) -> Result<(), Error> {
-    _set_option(name, OptionFlags::OptGlobal as i32, value)
+    _set_option(name, OptionFlag::OptGlobal as i32, value)
+}
+
+pub fn nvim_set_global_local_option(name: &str, value: Object) -> Result<(), Error> {
+    _set_option(
+        name,
+        OptionFlag::OptGlobal as i32 & OptionFlag::OptLocal as i32, // Should be 0
+        value,
+    )
 }
 
 fn _set_option(name: &str, scope: i32, value: Object) -> Result<(), Error> {

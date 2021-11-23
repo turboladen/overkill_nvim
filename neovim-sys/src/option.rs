@@ -1,10 +1,12 @@
 #![allow(clippy::module_name_repetitions)]
 
-use std::os::raw::{c_char, c_int, c_long};
+use std::{
+    ffi::c_void,
+    os::raw::{c_char, c_int, c_long},
+};
 
 #[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub enum OptionFlags {
+pub enum OptionFlag {
     OptFree = 1,
     OptGlobal = 2,
     OptLocal = 4,
@@ -14,6 +16,24 @@ pub enum OptionFlags {
     OptOneColumn = 64,
     OptNoRedraw = 128,
     OptSkipRtp = 256,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SOpt {
+    Bool = 0x01,
+    Num = 0x02,
+    String = 0x04,
+    Global = 0x08,
+    Win = 0x10,
+    Buf = 0x20,
+    Unset = 0x40,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SReq {
+    Global = 0,
+    Win = 1,
+    Buf = 2,
 }
 
 extern "C" {
@@ -33,4 +53,14 @@ extern "C" {
         opt_flags: c_int,
         set_sid: c_int,
     );
+
+    /// Returns flags. If 0, it's a hidden or unknown option.
+    ///
+    pub fn get_option_value_strict(
+        name: *const c_char,
+        numval: *mut i64,
+        stringval: *mut *const c_char,
+        opt_type: c_int,
+        from: *const c_void,
+    ) -> c_int;
 }

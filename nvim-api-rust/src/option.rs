@@ -1,7 +1,8 @@
 pub mod buf;
 pub mod global;
+pub mod global_local;
 
-pub use self::global::Global;
+pub use self::{global::Global, global_local::GlobalLocal};
 
 use crate::{api::Error, key_code::KeyCode};
 use neovim_sys::api::vim::{LuaString, Object};

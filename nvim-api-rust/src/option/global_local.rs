@@ -1,0 +1,35 @@
+use super::VimOption;
+use crate::api::Error;
+use neovim_sys::api::vim::Object;
+
+pub trait GlobalLocal: VimOption
+where
+    Object: From<Self::Value>,
+    Error: From<<Self::Value as TryFrom<Object>>::Error>,
+{
+    /// Calls `nvim_get_var()`, but handles converting the resulting nvim Object into
+    /// `Self::Value` type.
+    ///
+    /// # Errors
+    ///
+    /// Errors if nvim errors on the call.
+    ///
+    fn get() -> Result<Self::Value, Error> {
+        crate::api::vim::nvim_get_global_local_option(Self::SHORT_NAME)
+            .and_then(|object| Self::Value::try_from(object).map_err(Error::from))
+    }
+
+    /// Calls `nvim_set_option()`, but handles converting the `value` param from a `Self::Value`
+    /// type to a nvim `Object`.
+    ///
+    /// # Errors
+    ///
+    /// Errors if nvim errors on the call.
+    ///
+    fn set(value: Self::Value) -> Result<(), Error> {
+        crate::api::vim::nvim_set_global_local_option(Self::SHORT_NAME, Object::from(value))
+    }
+}
+
+impl GlobalLocal for super::ColorColumn {}
+impl GlobalLocal for super::Spell {}

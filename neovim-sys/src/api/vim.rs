@@ -8,6 +8,8 @@ pub mod error;
 pub mod object;
 pub mod string;
 
+use std::{ffi::c_void, os::raw::c_int};
+
 pub use self::{
     array::Array,
     dictionary::{Dictionary, KeyValuePair},
@@ -36,6 +38,13 @@ pub type LuaRef = isize;
 
 extern "C" {
     pub fn nvim_get_option(name: LuaString, err: *mut LuaError) -> Object;
+
+    pub fn get_option_from(
+        from: *const c_void,
+        opt_type: c_int,
+        name: LuaString,
+        error: *mut LuaError,
+    ) -> Object;
 
     /// Gets a global (g:) variable.
     ///
