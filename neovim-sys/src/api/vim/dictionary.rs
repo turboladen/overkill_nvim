@@ -82,8 +82,8 @@ mod tests {
     #[test]
     fn test_from_vec_of_bool_values() {
         let array = Dictionary::new([
-            KeyValuePair::new(LuaString::new("one").unwrap(), Object::from(true)),
-            KeyValuePair::new(LuaString::new("two").unwrap(), Object::from(false)),
+            KeyValuePair::new(LuaString::new_unchecked("one"), Object::from(true)),
+            KeyValuePair::new(LuaString::new_unchecked("two"), Object::from(false)),
         ]);
         assert_eq!(array.size, 2);
         assert_eq!(array.capacity, 2);
@@ -92,10 +92,10 @@ mod tests {
         assert_eq!(out_vec.len(), 2);
         assert_eq!(out_vec.capacity(), 2);
 
-        assert_eq!(out_vec[0].key(), &LuaString::new("one").unwrap());
+        assert_eq!(out_vec[0].key(), &LuaString::new_unchecked("one"));
         assert!(out_vec[0].value().try_as_boolean().unwrap());
 
-        assert_eq!(out_vec[1].key(), &LuaString::new("two").unwrap());
+        assert_eq!(out_vec[1].key(), &LuaString::new_unchecked("two"));
         assert!(!out_vec[1].value().try_as_boolean().unwrap());
     }
 
@@ -103,12 +103,12 @@ mod tests {
     fn test_from_vec_of_string_values() {
         let array = Dictionary::new([
             KeyValuePair::new(
-                LuaString::new("one").unwrap(),
-                Object::from(LuaString::new("first one").unwrap()),
+                LuaString::new_unchecked("one"),
+                Object::from(LuaString::new_unchecked("first one")),
             ),
             KeyValuePair::new(
-                LuaString::new("two").unwrap(),
-                Object::from(LuaString::new("second one").unwrap()),
+                LuaString::new_unchecked("two"),
+                Object::from(LuaString::new_unchecked("second one")),
             ),
         ]);
         assert_eq!(array.size, 2);
@@ -120,40 +120,40 @@ mod tests {
 
         assert_eq!(
             out_vec[0].value().try_as_string().unwrap(),
-            &LuaString::new("first one").unwrap()
+            &LuaString::new_unchecked("first one")
         );
 
         assert_eq!(
             out_vec[1].value().try_as_string().unwrap(),
-            &LuaString::new("second one").unwrap()
+            &LuaString::new_unchecked("second one")
         );
     }
 
     #[test]
     fn test_from_vec_of_vecs() {
         let inner1_dictionary = Dictionary::new([
-            KeyValuePair::new(LuaString::new("inner one one").unwrap(), Object::from(42)),
+            KeyValuePair::new(LuaString::new_unchecked("inner one one"), Object::from(42)),
             KeyValuePair::new(
-                LuaString::new("inner one two").unwrap(),
+                LuaString::new_unchecked("inner one two"),
                 Object::from(42.42),
             ),
         ]);
 
         let inner2_dictionary = Dictionary::new([
             KeyValuePair::new(
-                LuaString::new("inner two one").unwrap(),
-                Object::from(LuaString::new("first one").unwrap()),
+                LuaString::new_unchecked("inner two one"),
+                Object::from(LuaString::new_unchecked("first one")),
             ),
-            KeyValuePair::new(LuaString::new("inner two two").unwrap(), Object::from(true)),
+            KeyValuePair::new(LuaString::new_unchecked("inner two two"), Object::from(true)),
         ]);
 
         let dictionary = Dictionary::new([
             KeyValuePair::new(
-                LuaString::new("outer 1").unwrap(),
+                LuaString::new_unchecked("outer 1"),
                 Object::from(inner1_dictionary),
             ),
             KeyValuePair::new(
-                LuaString::new("outer 2").unwrap(),
+                LuaString::new_unchecked("outer 2"),
                 Object::from(inner2_dictionary),
             ),
         ]);
@@ -167,7 +167,7 @@ mod tests {
         // Validate the Dictionary value
         {
             let kvp1 = out_vec.remove(0);
-            assert_eq!(kvp1.key(), &LuaString::new("outer 1").unwrap());
+            assert_eq!(kvp1.key(), &LuaString::new_unchecked("outer 1"));
 
             // Validate the Dictionary value
             {
@@ -175,11 +175,11 @@ mod tests {
                 let mut inner_vec1 = Vec::from(inner_dict1.clone());
 
                 let inner_kvp1 = inner_vec1.remove(0);
-                assert_eq!(inner_kvp1.key(), &LuaString::new("inner one one").unwrap());
+                assert_eq!(inner_kvp1.key(), &LuaString::new_unchecked("inner one one"));
                 assert_eq!(inner_kvp1.value().try_as_integer().unwrap(), 42);
 
                 let inner_kvp2 = inner_vec1.remove(0);
-                assert_eq!(inner_kvp2.key(), &LuaString::new("inner one two").unwrap());
+                assert_eq!(inner_kvp2.key(), &LuaString::new_unchecked("inner one two"));
                 assert_ulps_eq!(inner_kvp2.value().try_as_float().unwrap(), 42.42);
             }
         }
@@ -187,7 +187,7 @@ mod tests {
         // Validate the Dictionary value
         {
             let kvp2 = out_vec.remove(0);
-            assert_eq!(kvp2.key(), &LuaString::new("outer 2").unwrap());
+            assert_eq!(kvp2.key(), &LuaString::new_unchecked("outer 2"));
 
             // Validate the Dictionary value
             {
@@ -195,14 +195,14 @@ mod tests {
                 let mut inner_vec2 = Vec::from(inner_dict2.clone());
 
                 let inner_kvp1 = inner_vec2.remove(0);
-                assert_eq!(inner_kvp1.key(), &LuaString::new("inner two one").unwrap());
+                assert_eq!(inner_kvp1.key(), &LuaString::new_unchecked("inner two one"));
                 assert_eq!(
                     inner_kvp1.value().try_as_string().unwrap(),
-                    &LuaString::new("first one").unwrap()
+                    &LuaString::new_unchecked("first one")
                 );
 
                 let inner_kvp2 = inner_vec2.remove(0);
-                assert_eq!(inner_kvp2.key(), &LuaString::new("inner two two").unwrap());
+                assert_eq!(inner_kvp2.key(), &LuaString::new_unchecked("inner two two"));
                 assert!(inner_kvp2.value().try_as_boolean().unwrap());
             }
         }
@@ -211,8 +211,8 @@ mod tests {
     #[test]
     fn test_clone() {
         let original_dict = Dictionary::new([KeyValuePair::new(
-            LuaString::new("the key").unwrap(),
-            Object::from(LuaString::new("the value").unwrap()),
+            LuaString::new_unchecked("the key"),
+            Object::from(LuaString::new_unchecked("the value")),
         )]);
 
         // Clone happens here
@@ -222,10 +222,10 @@ mod tests {
 
             let first_element = cloned_vec.remove(0);
             debug!("removed first element from dict vec");
-            assert_eq!(first_element.key(), &LuaString::new("the key").unwrap());
+            assert_eq!(first_element.key(), &LuaString::new_unchecked("the key"));
             assert_eq!(
                 first_element.value().try_as_string().unwrap(),
-                &LuaString::new("the value").unwrap()
+                &LuaString::new_unchecked("the value")
             );
         }
 
@@ -234,10 +234,10 @@ mod tests {
             let mut original_vec = Vec::from(original_dict);
 
             let first_element = original_vec.remove(0);
-            assert_eq!(first_element.key(), &LuaString::new("the key").unwrap(),);
+            assert_eq!(first_element.key(), &LuaString::new_unchecked("the key"));
             assert_eq!(
                 first_element.value().try_as_string().unwrap(),
-                &LuaString::new("the value").unwrap(),
+                &LuaString::new_unchecked("the value"),
             );
         }
     }
@@ -245,8 +245,8 @@ mod tests {
     #[test]
     fn get_existing_key_test() {
         let original_dict = Dictionary::new([KeyValuePair::new(
-            LuaString::new("the key").unwrap(),
-            Object::from(LuaString::new("the value").unwrap()),
+            LuaString::new_unchecked("the key"),
+            Object::from(LuaString::new_unchecked("the value")),
         )]);
 
         let value = original_dict.get("the key").unwrap();

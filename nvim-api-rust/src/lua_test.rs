@@ -75,13 +75,13 @@ pub extern "C" fn test_nvim_set_var() -> bool {
     // String
     {
         let var = "nvim_set_var_test_string";
-        let string = LuaString::new("this is a test").unwrap();
+        let string = LuaString::new_unchecked("this is a test");
         let value = Object::from(string);
 
         if !_test_nvim_setget_var(
             var,
             value,
-            &RustObject::String(LuaString::new("this is a test").unwrap()),
+            &RustObject::String(LuaString::new_unchecked("this is a test")),
         ) {
             return false;
         }
@@ -104,7 +104,7 @@ pub extern "C" fn test_nvim_set_var() -> bool {
     // Dictionary
     {
         fn make_subject() -> Dictionary {
-            let key = LuaString::new("meow").unwrap();
+            let key = LuaString::new_unchecked("meow");
             let value = Object::from(4242);
             Dictionary::new([KeyValuePair::new(key, value)])
         }
@@ -122,7 +122,7 @@ pub extern "C" fn test_nvim_set_var() -> bool {
 #[no_mangle]
 pub extern "C" fn test_nvim_set_vvar() -> bool {
     let vvar = "warningmsg";
-    let string = LuaString::new("meow").unwrap();
+    let string = LuaString::new_unchecked("meow");
     let value = Object::from(string);
 
     if let Err(e) = self::api::vim::nvim_set_vvar(vvar, value) {
@@ -133,7 +133,7 @@ pub extern "C" fn test_nvim_set_vvar() -> bool {
         Ok(object) if object.object_type() == ObjectType::kObjectTypeString => {
             let string = object.as_string_unchecked();
 
-            if string != &LuaString::new("meow").unwrap() {
+            if string != &LuaString::new_unchecked("meow") {
                 eprintln!(
                     "FAIL! Expected 'meow', got '{}'",
                     string.as_c_str().to_string_lossy()
@@ -160,7 +160,7 @@ pub extern "C" fn test_nvim_buf_set_var() -> bool {
     // Dictionary
     {
         fn make_subject() -> Dictionary {
-            let key = LuaString::new("meow").unwrap();
+            let key = LuaString::new_unchecked("meow");
             let value = Object::from(4242);
             Dictionary::new([KeyValuePair::new(key, value)])
         }
@@ -298,8 +298,8 @@ pub extern "C" fn test_nvim_set_option() -> bool {
             Err(e) => print_error_return_false!(e),
         }
 
-        let expected_in = LuaString::new("<F8>").unwrap();
-        let expected = LuaString::new("<F8>").unwrap();
+        let expected_in = LuaString::new_unchecked("<F8>");
+        let expected = LuaString::new_unchecked("<F8>");
 
         match self::api::vim::nvim_set_global_option(option_name, expected_in.into()) {
             Ok(_) => match self::api::vim::nvim_get_global_option(option_name) {

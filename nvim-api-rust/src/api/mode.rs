@@ -179,10 +179,10 @@ mod tests {
     fn try_from_dictionary_test() {
         let dict = Dictionary::new([
             KeyValuePair::new(
-                LuaString::new("mode").unwrap(),
-                Object::from(LuaString::new("n").unwrap()),
+                LuaString::new_unchecked("mode"),
+                Object::from(LuaString::new_unchecked("n")),
             ),
-            KeyValuePair::new(LuaString::new("blocking").unwrap(), Object::from(false)),
+            KeyValuePair::new(LuaString::new_unchecked("blocking"), Object::from(false)),
         ]);
         let current_mode = CurrentMode::try_from(dict).unwrap();
         assert_eq!(current_mode.mode(), Mode::Normal);

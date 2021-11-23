@@ -77,7 +77,7 @@ impl_vim_option!(WriteBackup, bool, "wb", "writebackup");
 //-------------------------------------------------------------------------------------------------
 // Custom types for options
 //-------------------------------------------------------------------------------------------------
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ClipboardSettings {
     unnamed: bool,
     unnamed_plus: bool,
@@ -97,13 +97,12 @@ impl ClipboardSettings {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<ClipboardSettings> for Object {
     fn from(value: ClipboardSettings) -> Self {
         match (value.unnamed, value.unnamed_plus) {
-            (true, true) => Self::from(LuaString::new("unnamed,unnamedplus").unwrap()),
-            (true, _) => Self::from(LuaString::new("unnamed").unwrap()),
-            (_, true) => Self::from(LuaString::new("unnamedplus").unwrap()),
+            (true, true) => Self::from(LuaString::new_unchecked("unnamed,unnamedplus")),
+            (true, _) => Self::from(LuaString::new_unchecked("unnamed")),
+            (_, true) => Self::from(LuaString::new_unchecked("unnamedplus")),
             (_, _) => Self::new_nil(),
         }
     }
@@ -139,7 +138,6 @@ impl ColorColumnValue {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<ColorColumnValue> for Object {
     fn from(value: ColorColumnValue) -> Self {
         let s = value
@@ -149,7 +147,7 @@ impl From<ColorColumnValue> for Object {
             .collect::<Vec<_>>()
             .join(",");
 
-        Self::from(LuaString::new(s).unwrap())
+        Self::from(LuaString::new_unchecked(s))
     }
 }
 
@@ -294,7 +292,6 @@ impl ListCharsSettings {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<ListCharsSettings> for Object {
     fn from(value: ListCharsSettings) -> Self {
         let mut settings_string = String::new();
@@ -339,7 +336,7 @@ impl From<ListCharsSettings> for Object {
             settings_string += &format!("nbsp:{}", nbsp);
         }
 
-        Self::from(LuaString::new(settings_string).unwrap())
+        Self::from(LuaString::new_unchecked(settings_string))
     }
 }
 
@@ -400,12 +397,11 @@ pub enum IncCommandValue {
     Split,
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<IncCommandValue> for Object {
     fn from(value: IncCommandValue) -> Self {
         match value {
-            IncCommandValue::NoSplit => Self::from(LuaString::new("nosplit").unwrap()),
-            IncCommandValue::Split => (Self::from(LuaString::new("split").unwrap())),
+            IncCommandValue::NoSplit => Self::from(LuaString::new_unchecked("nosplit")),
+            IncCommandValue::Split => (Self::from(LuaString::new_unchecked("split"))),
         }
     }
 }
@@ -429,7 +425,6 @@ pub enum ShowTablineValue {
     Always,
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<ShowTablineValue> for Object {
     fn from(value: ShowTablineValue) -> Self {
         match value {

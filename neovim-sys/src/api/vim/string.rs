@@ -30,28 +30,14 @@ impl String {
     ///
     pub fn new<T: Into<Vec<u8>>>(s: T) -> Result<Self, NulError> {
         let cstring = CString::new(s)?;
-        let mut vec = cstring.into_bytes();
 
-        let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
-        let ptr = uninit.as_mut_ptr();
+        Ok(new(cstring))
+    }
 
-        // Initializing the `size` field
-        // Using `write` instead of assignment via `=` to not call `drop` on the
-        // old, uninitialized value.
-        unsafe {
-            addr_of_mut!((*ptr).size).write(vec.len());
-        }
+    pub fn new_unchecked<T: Into<Vec<u8>>>(s: T) -> Self {
+        let cstring = unsafe { CString::from_vec_unchecked(s.into()) };
 
-        let new_data = vec.as_mut_ptr().cast::<c_char>();
-
-        unsafe {
-            // Initializing the `list` field
-            // If there is a panic here, then the `String` in the `name` field leaks.
-            addr_of_mut!((*ptr).data).write(new_data);
-        }
-        mem::forget(vec);
-
-        Ok(unsafe { uninit.assume_init() })
+        new(cstring)
     }
 
     #[must_use]
@@ -101,6 +87,31 @@ impl String {
     pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
+}
+
+fn new(cstring: CString) -> String {
+    let mut vec = cstring.into_bytes();
+
+    let mut uninit: MaybeUninit<String> = MaybeUninit::uninit();
+    let ptr = uninit.as_mut_ptr();
+
+    // Initializing the `size` field
+    // Using `write` instead of assignment via `=` to not call `drop` on the
+    // old, uninitialized value.
+    unsafe {
+        addr_of_mut!((*ptr).size).write(vec.len());
+    }
+
+    let new_data = vec.as_mut_ptr().cast::<c_char>();
+
+    unsafe {
+        // Initializing the `list` field
+        // If there is a panic here, then the `String` in the `name` field leaks.
+        addr_of_mut!((*ptr).data).write(new_data);
+    }
+    mem::forget(vec);
+
+    unsafe { uninit.assume_init() }
 }
 
 impl Clone for String {
