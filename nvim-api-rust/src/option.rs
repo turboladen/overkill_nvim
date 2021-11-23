@@ -514,6 +514,16 @@ impl VimOption for SplitBelow {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct SplitRight;
+
+impl VimOption for SplitRight {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "spr";
+    const LONG_NAME: &'static str = "splitright";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct SynMaxCol;
 
 impl VimOption for SynMaxCol {
