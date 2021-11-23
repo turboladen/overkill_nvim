@@ -47,6 +47,7 @@ macro_rules! impl_vim_option {
 impl_vim_option!(AutoIndent, bool, "ai", "autoindent");
 impl_vim_option!(BreakIndent, bool, "bri", "breakindent");
 impl_vim_option!(CmdHeight, u8, "ch", "cmdheight");
+impl_vim_option!(Clipboard, ClipboardSettings, "cb", "clipboard");
 impl_vim_option!(ColorColumn, ColorColumnValue, "cc", "colorcolumn");
 impl_vim_option!(ConcealLevel, ConcealLevelValue, "cole", "conceallevel");
 impl_vim_option!(CursorLine, bool, "cul", "cursorline");
@@ -76,6 +77,59 @@ impl_vim_option!(WriteBackup, bool, "wb", "writebackup");
 //-------------------------------------------------------------------------------------------------
 // Custom types for options
 //-------------------------------------------------------------------------------------------------
+#[derive(Debug, Clone, Default)]
+pub struct ClipboardSettings {
+    unnamed: bool,
+    unnamed_plus: bool,
+}
+
+impl ClipboardSettings {
+    pub const fn unnamed(self) -> Self {
+        let mut s = self;
+        s.unnamed = true;
+        s
+    }
+
+    pub const fn unnamed_plus(self) -> Self {
+        let mut s = self;
+        s.unnamed_plus = true;
+        s
+    }
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl From<ClipboardSettings> for Object {
+    fn from(value: ClipboardSettings) -> Self {
+        match (value.unnamed, value.unnamed_plus) {
+            (true, true) => Self::from(LuaString::new("unnamed,unnamedplus").unwrap()),
+            (true, _) => Self::from(LuaString::new("unnamed").unwrap()),
+            (_, true) => Self::from(LuaString::new("unnamedplus").unwrap()),
+            (_, _) => Self::new_nil(),
+        }
+    }
+}
+
+impl TryFrom<Object> for ClipboardSettings {
+    type Error = VimOptionError;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        let lua_string = value.into_string_unchecked();
+        let string = lua_string.to_string_lossy();
+        let split = string.split(',');
+        let mut settings = Self::default();
+
+        for item in split {
+            match item {
+                "unnamed" => settings.unnamed = true,
+                "unnamedplus" => settings.unnamed_plus = true,
+                _ => (),
+            }
+        }
+
+        Ok(settings)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ColorColumnValue(Vec<ColorColumnItem>);
 

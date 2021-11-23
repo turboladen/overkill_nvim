@@ -35,6 +35,7 @@ impl Global for super::AutoIndent {}
 impl Global for super::BreakIndent {}
 impl Global for super::CmdHeight {}
 impl Global for super::ColorColumn {}
+impl Global for super::Clipboard {}
 impl Global for super::CursorLine {}
 impl Global for super::ExpandTab {}
 impl Global for super::FoldEnable {}
