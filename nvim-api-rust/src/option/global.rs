@@ -47,14 +47,17 @@ impl Global for super::ListChars {}
 impl Global for super::Number {}
 impl Global for super::PasteToggle {}
 impl Global for super::ScrollOff {}
+impl Global for super::ShiftWidth {}
 impl Global for super::ShowTabline {}
 impl Global for super::SmartCase {}
 impl Global for super::SmartIndent {}
+impl Global for super::SoftTabStop {}
 impl Global for super::Spell {}
 impl Global for super::SplitBelow {}
 impl Global for super::SplitRight {}
 impl Global for super::SwapFile {}
 impl Global for super::SynMaxCol {}
+impl Global for super::TabStop {}
 impl Global for super::TermGuiColors {}
 impl Global for super::UndoFile {}
 impl Global for super::WriteBackup {}

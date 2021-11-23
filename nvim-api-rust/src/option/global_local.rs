@@ -36,7 +36,10 @@ impl GlobalLocal for super::ColorColumn {}
 impl GlobalLocal for super::CursorLine {}
 impl GlobalLocal for super::ExpandTab {}
 impl GlobalLocal for super::FoldEnable {}
+impl GlobalLocal for super::ShiftWidth {}
+impl GlobalLocal for super::SoftTabStop {}
 impl GlobalLocal for super::Spell {}
 impl GlobalLocal for super::SmartIndent {}
 impl GlobalLocal for super::SwapFile {}
+impl GlobalLocal for super::TabStop {}
 impl GlobalLocal for super::UndoFile {}
