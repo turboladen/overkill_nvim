@@ -30,36 +30,44 @@ pub enum VimOptionError {
     UnexpectedOptionValue(Object),
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct BreakIndent;
+macro_rules! impl_vim_option {
+    ($option:ident, $value:ty, $short_name:expr, $long_name:expr) => {
+        #[derive(Debug, Clone, Copy)]
+        pub struct $option;
 
-impl VimOption for BreakIndent {
-    type Value = bool;
+        impl VimOption for $option {
+            type Value = $value;
 
-    const SHORT_NAME: &'static str = "bri";
-    const LONG_NAME: &'static str = "breakindent";
+            const SHORT_NAME: &'static str = $short_name;
+            const LONG_NAME: &'static str = $long_name;
+        }
+    };
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct CmdHeight;
+impl_vim_option!(BreakIndent, bool, "bri", "breakindent");
+impl_vim_option!(CmdHeight, u8, "ch", "cmdheight");
+impl_vim_option!(ColorColumn, ColorColumnValue, "cc", "colorcolumn");
+impl_vim_option!(ConcealLevel, ConcealLevelValue, "cole", "conceallevel");
+impl_vim_option!(CursorLine, bool, "cul", "cursorline");
+impl_vim_option!(Hidden, bool, "hid", "hidden");
+impl_vim_option!(IncCommand, IncCommandValue, "icm", "inccommand");
+impl_vim_option!(LineBreak, bool, "lbr", "linebreak");
+impl_vim_option!(List, bool, "list", "list");
+impl_vim_option!(ListChars, ListCharsSettings, "lcs", "listchars");
+impl_vim_option!(Number, bool, "nu", "number");
+impl_vim_option!(PasteToggle, KeyCode, "pt", "pastetoggle");
+impl_vim_option!(ScrollOff, u16, "so", "scrolloff");
+impl_vim_option!(ShowTabline, ShowTablineValue, "stal", "showtabline");
+impl_vim_option!(SmartCase, bool, "scs", "smartcase");
+impl_vim_option!(Spell, bool, "spell", "spell");
+impl_vim_option!(SplitBelow, bool, "sb", "splitbelow");
+impl_vim_option!(SplitRight, bool, "spr", "splitright");
+impl_vim_option!(SynMaxCol, u32, "smc", "synmaxcol");
+impl_vim_option!(TermGuiColors, bool, "tgc", "termguicolors");
 
-impl VimOption for CmdHeight {
-    type Value = u8;
-
-    const SHORT_NAME: &'static str = "ch";
-    const LONG_NAME: &'static str = "cmdheight";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ColorColumn;
-
-impl VimOption for ColorColumn {
-    type Value = ColorColumnValue;
-
-    const SHORT_NAME: &'static str = "cc";
-    const LONG_NAME: &'static str = "colorcolumn";
-}
-
+//-------------------------------------------------------------------------------------------------
+// Custom types for options
+//-------------------------------------------------------------------------------------------------
 #[derive(Debug, Clone)]
 pub struct ColorColumnValue(Vec<ColorColumnItem>);
 
@@ -140,16 +148,6 @@ impl From<ColorColumnItem> for String {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ConcealLevel;
-
-impl VimOption for ConcealLevel {
-    type Value = ConcealLevelValue;
-
-    const SHORT_NAME: &'static str = "cole";
-    const LONG_NAME: &'static str = "conceallevel";
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum ConcealLevelValue {
     NormalText,
     OneCharReplacement,
@@ -180,46 +178,6 @@ impl TryFrom<Object> for ConcealLevelValue {
             _ => Err(VimOptionError::UnexpectedOptionValue(value)),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CursorLine;
-
-impl VimOption for CursorLine {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "cul";
-    const LONG_NAME: &'static str = "cursorline";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Hidden;
-
-impl VimOption for Hidden {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "hid";
-    const LONG_NAME: &'static str = "hidden";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct List;
-
-impl VimOption for List {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "list";
-    const LONG_NAME: &'static str = "list";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ListChars;
-
-impl VimOption for ListChars {
-    type Value = ListCharsSettings;
-
-    const SHORT_NAME: &'static str = "lcs";
-    const LONG_NAME: &'static str = "listchars";
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -375,36 +333,6 @@ impl TryFrom<Object> for ListCharsSettings {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Number;
-
-impl VimOption for Number {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "nu";
-    const LONG_NAME: &'static str = "number";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct PasteToggle;
-
-impl VimOption for PasteToggle {
-    type Value = KeyCode;
-
-    const SHORT_NAME: &'static str = "pt";
-    const LONG_NAME: &'static str = "pastetoggle";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct IncCommand;
-
-impl VimOption for IncCommand {
-    type Value = IncCommandValue;
-
-    const SHORT_NAME: &'static str = "icm";
-    const LONG_NAME: &'static str = "inccommand";
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum IncCommandValue {
     NoSplit,
     Split,
@@ -430,36 +358,6 @@ impl TryFrom<Object> for IncCommandValue {
             _ => Err(VimOptionError::UnexpectedOptionValue(value)),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct LineBreak;
-
-impl VimOption for LineBreak {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "lbr";
-    const LONG_NAME: &'static str = "linebreak";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ScrollOff;
-
-impl VimOption for ScrollOff {
-    type Value = u16;
-
-    const SHORT_NAME: &'static str = "scs";
-    const LONG_NAME: &'static str = "smartcase";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ShowTabline;
-
-impl VimOption for ShowTabline {
-    type Value = ShowTablineValue;
-
-    const SHORT_NAME: &'static str = "stal";
-    const LONG_NAME: &'static str = "showtabline";
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -491,66 +389,6 @@ impl TryFrom<Object> for ShowTablineValue {
             _ => Err(VimOptionError::UnexpectedOptionValue(value)),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct SmartCase;
-
-impl VimOption for SmartCase {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "scs";
-    const LONG_NAME: &'static str = "smartcase";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Spell;
-
-impl VimOption for Spell {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "spell";
-    const LONG_NAME: &'static str = "spell";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct SplitBelow;
-
-impl VimOption for SplitBelow {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "sb";
-    const LONG_NAME: &'static str = "splitbelow";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct SplitRight;
-
-impl VimOption for SplitRight {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "spr";
-    const LONG_NAME: &'static str = "splitright";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct SynMaxCol;
-
-impl VimOption for SynMaxCol {
-    type Value = u32;
-
-    const SHORT_NAME: &'static str = "smc";
-    const LONG_NAME: &'static str = "synmaxcol";
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct TermGuiColors;
-
-impl VimOption for TermGuiColors {
-    type Value = bool;
-
-    const SHORT_NAME: &'static str = "tgc";
-    const LONG_NAME: &'static str = "termguicolors";
 }
 
 // #[derive(Debug, Clone, Copy)]
