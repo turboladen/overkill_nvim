@@ -31,10 +31,13 @@ where
     }
 }
 
+impl Global for super::AutoIndent {}
 impl Global for super::BreakIndent {}
 impl Global for super::CmdHeight {}
 impl Global for super::ColorColumn {}
 impl Global for super::CursorLine {}
+impl Global for super::ExpandTab {}
+impl Global for super::FoldEnable {}
 impl Global for super::Hidden {}
 impl Global for super::IncCommand {}
 impl Global for super::LineBreak {}
@@ -45,8 +48,12 @@ impl Global for super::PasteToggle {}
 impl Global for super::ScrollOff {}
 impl Global for super::ShowTabline {}
 impl Global for super::SmartCase {}
+impl Global for super::SmartIndent {}
 impl Global for super::Spell {}
 impl Global for super::SplitBelow {}
 impl Global for super::SplitRight {}
+impl Global for super::SwapFile {}
 impl Global for super::SynMaxCol {}
 impl Global for super::TermGuiColors {}
+impl Global for super::UndoFile {}
+impl Global for super::WriteBackup {}

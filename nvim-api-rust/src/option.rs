@@ -44,11 +44,14 @@ macro_rules! impl_vim_option {
     };
 }
 
+impl_vim_option!(AutoIndent, bool, "ai", "autoindent");
 impl_vim_option!(BreakIndent, bool, "bri", "breakindent");
 impl_vim_option!(CmdHeight, u8, "ch", "cmdheight");
 impl_vim_option!(ColorColumn, ColorColumnValue, "cc", "colorcolumn");
 impl_vim_option!(ConcealLevel, ConcealLevelValue, "cole", "conceallevel");
 impl_vim_option!(CursorLine, bool, "cul", "cursorline");
+impl_vim_option!(ExpandTab, bool, "et", "expandtab");
+impl_vim_option!(FoldEnable, bool, "fen", "foldenable");
 impl_vim_option!(Hidden, bool, "hid", "hidden");
 impl_vim_option!(IncCommand, IncCommandValue, "icm", "inccommand");
 impl_vim_option!(LineBreak, bool, "lbr", "linebreak");
@@ -59,11 +62,16 @@ impl_vim_option!(PasteToggle, KeyCode, "pt", "pastetoggle");
 impl_vim_option!(ScrollOff, u16, "so", "scrolloff");
 impl_vim_option!(ShowTabline, ShowTablineValue, "stal", "showtabline");
 impl_vim_option!(SmartCase, bool, "scs", "smartcase");
+impl_vim_option!(SmartIndent, bool, "si", "smartindent");
 impl_vim_option!(Spell, bool, "spell", "spell");
 impl_vim_option!(SplitBelow, bool, "sb", "splitbelow");
 impl_vim_option!(SplitRight, bool, "spr", "splitright");
+impl_vim_option!(SwapFile, bool, "swf", "swapfile");
 impl_vim_option!(SynMaxCol, u32, "smc", "synmaxcol");
 impl_vim_option!(TermGuiColors, bool, "tgc", "termguicolors");
+impl_vim_option!(UndoFile, bool, "udf", "undofile");
+impl_vim_option!(WildMenu, bool, "smnu", "wildmenu");
+impl_vim_option!(WriteBackup, bool, "wb", "writebackup");
 
 //-------------------------------------------------------------------------------------------------
 // Custom types for options
