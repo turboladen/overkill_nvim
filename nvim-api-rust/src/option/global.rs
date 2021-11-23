@@ -15,7 +15,7 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn get_global() -> Result<Self::Value, Error> {
-        crate::api::vim::nvim_get_option(Self::SHORT_NAME)
+        crate::api::vim::nvim_get_global_option(Self::SHORT_NAME)
             .and_then(|object| Self::Value::try_from(object).map_err(Error::from))
     }
 
@@ -27,7 +27,7 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn set_global(value: Self::Value) -> Result<(), Error> {
-        crate::api::vim::nvim_set_option(Self::SHORT_NAME, Object::from(value))
+        crate::api::vim::nvim_set_global_option(Self::SHORT_NAME, Object::from(value))
     }
 }
 

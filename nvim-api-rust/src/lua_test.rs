@@ -221,7 +221,7 @@ pub extern "C" fn test_nvim_set_option() -> bool {
     {
         let option_name = "autoread";
 
-        match self::api::vim::nvim_get_option(option_name) {
+        match self::api::vim::nvim_get_global_option(option_name) {
             Ok(value) => {
                 if !value.as_boolean_unchecked() {
                     eprintln!(
@@ -234,8 +234,8 @@ pub extern "C" fn test_nvim_set_option() -> bool {
             Err(e) => print_error_return_false!(e),
         }
 
-        match self::api::vim::nvim_set_option(option_name, false.into()) {
-            Ok(_) => match self::api::vim::nvim_get_option(option_name) {
+        match self::api::vim::nvim_set_global_option(option_name, false.into()) {
+            Ok(_) => match self::api::vim::nvim_get_global_option(option_name) {
                 Ok(value) => {
                     let v = value.as_boolean_unchecked();
 
@@ -254,7 +254,7 @@ pub extern "C" fn test_nvim_set_option() -> bool {
     {
         let option_name = "aleph";
 
-        match self::api::vim::nvim_get_option(option_name) {
+        match self::api::vim::nvim_get_global_option(option_name) {
             Ok(value) => {
                 if !value.as_integer_unchecked() == 224 {
                     eprintln!("FAIL! Expected 224, got: {}", value.as_integer_unchecked());
@@ -264,8 +264,8 @@ pub extern "C" fn test_nvim_set_option() -> bool {
             Err(e) => print_error_return_false!(e),
         }
 
-        match self::api::vim::nvim_set_option(option_name, 225.into()) {
-            Ok(_) => match self::api::vim::nvim_get_option(option_name) {
+        match self::api::vim::nvim_set_global_option(option_name, 225.into()) {
+            Ok(_) => match self::api::vim::nvim_get_global_option(option_name) {
                 Ok(value) => {
                     if !value.as_integer_unchecked() == 225 {
                         eprintln!("FAIL! Expected 225, got: {}", value.as_integer_unchecked());
@@ -282,7 +282,7 @@ pub extern "C" fn test_nvim_set_option() -> bool {
     {
         let option_name = "pastetoggle";
 
-        match self::api::vim::nvim_get_option(option_name) {
+        match self::api::vim::nvim_get_global_option(option_name) {
             Ok(value) => {
                 let expected = "";
 
@@ -301,8 +301,8 @@ pub extern "C" fn test_nvim_set_option() -> bool {
         let expected_in = LuaString::new("<F8>").unwrap();
         let expected = LuaString::new("<F8>").unwrap();
 
-        match self::api::vim::nvim_set_option(option_name, expected_in.into()) {
-            Ok(_) => match self::api::vim::nvim_get_option(option_name) {
+        match self::api::vim::nvim_set_global_option(option_name, expected_in.into()) {
+            Ok(_) => match self::api::vim::nvim_get_global_option(option_name) {
                 Ok(value) => {
                     if value.as_string_unchecked() != &expected {
                         eprintln!(

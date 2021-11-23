@@ -7,14 +7,14 @@ use neovim_sys::{
     api::vim::{self, LuaError, LuaString, Object, ObjectType},
     option::{self, OptionFlags},
 };
-use std::{convert::TryFrom, ffi::CStr, };
+use std::{convert::TryFrom, ffi::CStr};
 
 /// # Errors
 ///
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-pub fn nvim_get_option(name: &str) -> Result<Object, Error> {
+pub fn nvim_get_global_option(name: &str) -> Result<Object, Error> {
     let api_name = LuaString::new(name)?;
     let mut out_err = LuaError::default();
 
@@ -32,7 +32,11 @@ pub fn nvim_get_option(name: &str) -> Result<Object, Error> {
 /// * If `name` can't be converted to a `LuaString`.
 /// * If nvim set an error on the call.
 ///
-pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
+pub fn nvim_set_global_option(name: &str, value: Object) -> Result<(), Error> {
+    _set_option(name, OptionFlags::OptGlobal as i32, value)
+}
+
+fn _set_option(name: &str, scope: i32, value: Object) -> Result<(), Error> {
     let name_ptr = LuaString::new(name).unwrap();
 
     let maybe_err = match value.object_type() {
@@ -41,7 +45,7 @@ pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
                 name_ptr.as_ptr(),
                 if value.as_boolean_unchecked() { 1 } else { 0 },
                 std::ptr::null(),
-                OptionFlags::OptGlobal as i32,
+                scope,
             )
         },
         ObjectType::kObjectTypeInteger => unsafe {
@@ -49,7 +53,7 @@ pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
                 name_ptr.as_ptr(),
                 value.as_integer_unchecked(),
                 std::ptr::null(),
-                OptionFlags::OptGlobal as i32,
+                scope,
             )
         },
         ObjectType::kObjectTypeString => {
@@ -60,7 +64,7 @@ pub fn nvim_set_option(name: &str, value: Object) -> Result<(), Error> {
                     name_ptr.as_ptr(),
                     -1, // <- -1 means use the name to look up the value
                     s.to_string_lossy().as_ref().as_ptr(),
-                    OptionFlags::OptGlobal as i32,
+                    scope,
                     0,
                 );
                 std::ptr::null()
