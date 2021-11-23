@@ -193,6 +193,16 @@ impl VimOption for CursorLine {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct Hidden;
+
+impl VimOption for Hidden {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "hid";
+    const LONG_NAME: &'static str = "hidden";
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct List;
 
 impl VimOption for List {

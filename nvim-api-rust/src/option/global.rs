@@ -35,6 +35,7 @@ impl Global for super::BreakIndent {}
 impl Global for super::CmdHeight {}
 impl Global for super::ColorColumn {}
 impl Global for super::CursorLine {}
+impl Global for super::Hidden {}
 impl Global for super::IncCommand {}
 impl Global for super::LineBreak {}
 impl Global for super::List {}
