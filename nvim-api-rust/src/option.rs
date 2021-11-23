@@ -5,7 +5,7 @@ pub use self::global::Global;
 
 use crate::{api::Error, key_code::KeyCode};
 use neovim_sys::api::vim::{LuaString, Object};
-use std::{borrow::Cow, convert::TryFrom};
+use std::{borrow::Cow, convert::TryFrom, num::NonZeroI64};
 
 /// The trait that all options implement, allowing to define each option's long name (ex.
 /// `autoindent`) and short name (ex. `ai`), as well as what type of value they expect. While vim's
@@ -50,6 +50,95 @@ impl VimOption for CmdHeight {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct ColorColumn;
+
+impl VimOption for ColorColumn {
+    type Value = ColorColumnValue;
+
+    const SHORT_NAME: &'static str = "cc";
+    const LONG_NAME: &'static str = "colorcolumn";
+}
+
+#[derive(Debug, Clone)]
+pub struct ColorColumnValue(Vec<ColorColumnItem>);
+
+impl ColorColumnValue {
+    pub fn new(inner: Vec<ColorColumnItem>) -> Self {
+        Self(inner)
+    }
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl From<ColorColumnValue> for Object {
+    fn from(value: ColorColumnValue) -> Self {
+        let s = value
+            .0
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>()
+            .join(",");
+
+        Self::from(LuaString::new(s).unwrap())
+    }
+}
+
+impl TryFrom<Object> for ColorColumnValue {
+    type Error = VimOptionError;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        let lua_string = value.into_string_unchecked();
+        let string = lua_string.to_string_lossy();
+        let split = string.split(',');
+        let mut inner = Vec::with_capacity(split.size_hint().0);
+
+        for item in split {
+            if let Some(positive) = item.strip_prefix('+') {
+                inner.push(ColorColumnItem::Offset(
+                    positive.parse::<NonZeroI64>().map_err(|_| {
+                        VimOptionError::UnexpectedOptionValue(Object::from(lua_string.clone()))
+                    })?,
+                ));
+            } else if item.starts_with('-') {
+                inner.push(ColorColumnItem::Offset(
+                    item.parse::<NonZeroI64>().map_err(|_| {
+                        VimOptionError::UnexpectedOptionValue(Object::from(lua_string.clone()))
+                    })?,
+                ));
+            } else {
+                inner.push(ColorColumnItem::Absolute(item.parse::<u32>().map_err(
+                    |_| VimOptionError::UnexpectedOptionValue(Object::from(lua_string.clone())),
+                )?));
+            }
+        }
+
+        Ok(Self(inner))
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ColorColumnItem {
+    Absolute(u32),
+    Offset(NonZeroI64),
+}
+
+impl From<ColorColumnItem> for String {
+    fn from(value: ColorColumnItem) -> Self {
+        match value {
+            ColorColumnItem::Absolute(column) => column.to_string(),
+            ColorColumnItem::Offset(offset) => {
+                let i = offset.get();
+
+                if i.is_positive() {
+                    format!("+{}", offset)
+                } else {
+                    i.to_string()
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct ConcealLevel;
 
 impl VimOption for ConcealLevel {
@@ -91,6 +180,7 @@ impl TryFrom<Object> for ConcealLevelValue {
         }
     }
 }
+
 #[derive(Debug, Clone, Copy)]
 pub struct List;
 
@@ -390,6 +480,16 @@ impl VimOption for SmartCase {
 
     const SHORT_NAME: &'static str = "scs";
     const LONG_NAME: &'static str = "smartcase";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Spell;
+
+impl VimOption for Spell {
+    type Value = bool;
+
+    const SHORT_NAME: &'static str = "spell";
+    const LONG_NAME: &'static str = "spell";
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -33,6 +33,7 @@ where
 
 impl Global for super::BreakIndent {}
 impl Global for super::CmdHeight {}
+impl Global for super::ColorColumn {}
 impl Global for super::IncCommand {}
 impl Global for super::LineBreak {}
 impl Global for super::List {}
@@ -42,4 +43,5 @@ impl Global for super::PasteToggle {}
 impl Global for super::ScrollOff {}
 impl Global for super::ShowTabline {}
 impl Global for super::SmartCase {}
+impl Global for super::Spell {}
 impl Global for super::SynMaxCol {}
