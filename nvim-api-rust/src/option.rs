@@ -48,7 +48,7 @@ impl_vim_option!(AutoIndent, bool, "ai", "autoindent");
 impl_vim_option!(BreakIndent, bool, "bri", "breakindent");
 impl_vim_option!(CmdHeight, u8, "ch", "cmdheight");
 impl_vim_option!(Clipboard, ClipboardSettings, "cb", "clipboard");
-impl_vim_option!(ColorColumn, ColorColumnValue, "cc", "colorcolumn");
+impl_vim_option!(ColorColumn, Flags<ColorColumnValue>, "cc", "colorcolumn");
 impl_vim_option!(ConcealLevel, ConcealLevelValue, "cole", "conceallevel");
 impl_vim_option!(CursorLine, bool, "cul", "cursorline");
 impl_vim_option!(ExpandTab, bool, "et", "expandtab");
@@ -67,6 +67,7 @@ impl_vim_option!(SmartCase, bool, "scs", "smartcase");
 impl_vim_option!(SmartIndent, bool, "si", "smartindent");
 impl_vim_option!(SoftTabStop, u8, "sts", "softtabstop");
 impl_vim_option!(Spell, bool, "spell", "spell");
+impl_vim_option!(SpellLang, Flags<SpellLangValue>, "spl", "spelllang");
 impl_vim_option!(SplitBelow, bool, "sb", "splitbelow");
 impl_vim_option!(SplitRight, bool, "spr", "splitright");
 impl_vim_option!(SwapFile, bool, "swf", "swapfile");
@@ -80,6 +81,36 @@ impl_vim_option!(WriteBackup, bool, "wb", "writebackup");
 //-------------------------------------------------------------------------------------------------
 // Custom types for options
 //-------------------------------------------------------------------------------------------------
+#[derive(Debug, Clone)]
+pub struct Flags<T>(Vec<T>)
+where
+    String: From<T>;
+
+impl<T> Flags<T>
+where
+    String: From<T>,
+{
+    pub fn new(inner: Vec<T>) -> Self {
+        Self(inner)
+    }
+}
+
+impl<T> From<Flags<T>> for Object
+where
+    String: From<T>,
+{
+    fn from(value: Flags<T>) -> Self {
+        let s = value
+            .0
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>()
+            .join(",");
+
+        Self::from(LuaString::new_unchecked(s))
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ClipboardSettings {
     unnamed: bool,
@@ -132,29 +163,7 @@ impl TryFrom<Object> for ClipboardSettings {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ColorColumnValue(Vec<ColorColumnItem>);
-
-impl ColorColumnValue {
-    pub fn new(inner: Vec<ColorColumnItem>) -> Self {
-        Self(inner)
-    }
-}
-
-impl From<ColorColumnValue> for Object {
-    fn from(value: ColorColumnValue) -> Self {
-        let s = value
-            .0
-            .into_iter()
-            .map(String::from)
-            .collect::<Vec<_>>()
-            .join(",");
-
-        Self::from(LuaString::new_unchecked(s))
-    }
-}
-
-impl TryFrom<Object> for ColorColumnValue {
+impl TryFrom<Object> for Flags<ColorColumnValue> {
     type Error = VimOptionError;
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
@@ -165,19 +174,19 @@ impl TryFrom<Object> for ColorColumnValue {
 
         for item in split {
             if let Some(positive) = item.strip_prefix('+') {
-                inner.push(ColorColumnItem::Offset(
+                inner.push(ColorColumnValue::Offset(
                     positive.parse::<NonZeroI64>().map_err(|_| {
                         VimOptionError::UnexpectedOptionValue(Object::from(lua_string.clone()))
                     })?,
                 ));
             } else if item.starts_with('-') {
-                inner.push(ColorColumnItem::Offset(
+                inner.push(ColorColumnValue::Offset(
                     item.parse::<NonZeroI64>().map_err(|_| {
                         VimOptionError::UnexpectedOptionValue(Object::from(lua_string.clone()))
                     })?,
                 ));
             } else {
-                inner.push(ColorColumnItem::Absolute(item.parse::<u32>().map_err(
+                inner.push(ColorColumnValue::Absolute(item.parse::<u32>().map_err(
                     |_| VimOptionError::UnexpectedOptionValue(Object::from(lua_string.clone())),
                 )?));
             }
@@ -188,16 +197,16 @@ impl TryFrom<Object> for ColorColumnValue {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum ColorColumnItem {
+pub enum ColorColumnValue {
     Absolute(u32),
     Offset(NonZeroI64),
 }
 
-impl From<ColorColumnItem> for String {
-    fn from(value: ColorColumnItem) -> Self {
+impl From<ColorColumnValue> for String {
+    fn from(value: ColorColumnValue) -> Self {
         match value {
-            ColorColumnItem::Absolute(column) => column.to_string(),
-            ColorColumnItem::Offset(offset) => {
+            ColorColumnValue::Absolute(column) => column.to_string(),
+            ColorColumnValue::Offset(offset) => {
                 let i = offset.get();
 
                 if i.is_positive() {
@@ -448,6 +457,251 @@ impl TryFrom<Object> for ShowTablineValue {
             2 => Ok(Self::Always),
             _ => Err(VimOptionError::UnexpectedOptionValue(value)),
         }
+    }
+}
+
+impl TryFrom<Object> for Flags<SpellLangValue> {
+    type Error = VimOptionError;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        let lua_string = value.into_string_unchecked();
+        let string = lua_string.to_string_lossy();
+        let split = string.split(',');
+        let mut inner = Vec::with_capacity(split.size_hint().0);
+
+        for item in split {
+            inner.push(SpellLangValue::from(item));
+        }
+
+        Ok(Self(inner))
+    }
+}
+
+/// Pulled from http://ftp.vim.org/vim/runtime/spell/.
+///
+#[derive(Debug, Clone)]
+pub enum SpellLangValue {
+    Af,
+    Am,
+    Bg,
+    Br,
+    Ca,
+    Cjk,
+    Cs,
+    Cy,
+    Da,
+    De,
+    De19,
+    De20,
+    DeAt,
+    DeCh,
+    DeDe,
+    El,
+    En,
+    EnAu,
+    EnCa,
+    EnGb,
+    EnNz,
+    EnUs,
+    Eo,
+    Es,
+    EsEs,
+    EsMx,
+    Fo,
+    Fr,
+    Ga,
+    Gd,
+    Gl,
+    He,
+    Hr,
+    Hu,
+    Id,
+    It,
+    Ku,
+    La,
+    Lt,
+    Lv,
+    Mg,
+    Mi,
+    Ms,
+    Nb,
+    Nl,
+    Nn,
+    Ny,
+    Pl,
+    Pt,
+    PtBr,
+    PtPt,
+    Ro,
+    Ru,
+    RuRu,
+    RuYo,
+    Rw,
+    Sk,
+    Sl,
+    Sr,
+    Sv,
+    Sw,
+    Tet,
+    Th,
+    Tl,
+    Tn,
+    Uk,
+    Yi,
+    Zu,
+    Custom(String),
+}
+
+impl<'a> From<&'a str> for SpellLangValue {
+    fn from(s: &str) -> Self {
+        match s {
+            "af" => Self::Af,
+            "am" => Self::Am,
+            "bg" => Self::Bg,
+            "br" => Self::Br,
+            "ca" => Self::Ca,
+            "cs" => Self::Cs,
+            "cy" => Self::Cy,
+            "da" => Self::Da,
+            "de" => Self::De,
+            "de_19" => Self::De19,
+            "de_20" => Self::De20,
+            "de_at" => Self::DeAt,
+            "de_ch" => Self::DeCh,
+            "de_de" => Self::DeDe,
+            "el" => Self::El,
+            "en" => Self::En,
+            "en_au" => Self::EnAu,
+            "en_ca" => Self::EnCa,
+            "en_gb" => Self::EnGb,
+            "en_nz" => Self::EnNz,
+            "en_us" => Self::EnUs,
+            "eo" => Self::Eo,
+            "es" => Self::Es,
+            "es_es" => Self::EsEs,
+            "es_mx" => Self::EsMx,
+            "fo" => Self::Fo,
+            "fr" => Self::Fr,
+            "ga" => Self::Ga,
+            "gd" => Self::Gd,
+            "gl" => Self::Gl,
+            "he" => Self::He,
+            "hr" => Self::Hr,
+            "hu" => Self::Hu,
+            "id" => Self::Id,
+            "it" => Self::It,
+            "ku" => Self::Ku,
+            "la" => Self::La,
+            "lt" => Self::Lt,
+            "lv" => Self::Lv,
+            "mg" => Self::Mg,
+            "mi" => Self::Mi,
+            "ms" => Self::Ms,
+            "nb" => Self::Nb,
+            "nl" => Self::Nl,
+            "nn" => Self::Nn,
+            "ny" => Self::Ny,
+            "pl" => Self::Pl,
+            "pt" => Self::Pt,
+            "pt_br" => Self::PtBr,
+            "pt_pt" => Self::PtPt,
+            "ro" => Self::Ro,
+            "ru" => Self::Ru,
+            "ru_ru" => Self::RuRu,
+            "ru_yo" => Self::RuYo,
+            "rw" => Self::Rw,
+            "sk" => Self::Sk,
+            "sl" => Self::Sl,
+            "sr" => Self::Sr,
+            "sv" => Self::Sv,
+            "sw" => Self::Sw,
+            "tet" => Self::Tet,
+            "th" => Self::Th,
+            "tl" => Self::Tl,
+            "tn" => Self::Tn,
+            "uk" => Self::Uk,
+            "yi" => Self::Yi,
+            "zu" => Self::Zu,
+            locale => Self::Custom(locale.to_string()),
+        }
+    }
+}
+
+impl From<SpellLangValue> for String {
+    fn from(spelllang_value: SpellLangValue) -> Self {
+        let s = match spelllang_value {
+            SpellLangValue::Af => "af",
+            SpellLangValue::Am => "am",
+            SpellLangValue::Bg => "bg",
+            SpellLangValue::Br => "br",
+            SpellLangValue::Ca => "ca",
+            SpellLangValue::Cjk => "cjk",
+            SpellLangValue::Cs => "cs",
+            SpellLangValue::Cy => "cy",
+            SpellLangValue::Da => "da",
+            SpellLangValue::De => "de",
+            SpellLangValue::De19 => "de_19",
+            SpellLangValue::De20 => "de_20",
+            SpellLangValue::DeAt => "de_at",
+            SpellLangValue::DeCh => "de_ch",
+            SpellLangValue::DeDe => "de_de",
+            SpellLangValue::El => "el",
+            SpellLangValue::En => "en",
+            SpellLangValue::EnAu => "en_au",
+            SpellLangValue::EnCa => "en_ca",
+            SpellLangValue::EnGb => "en_gb",
+            SpellLangValue::EnNz => "en_nz",
+            SpellLangValue::EnUs => "en_us",
+            SpellLangValue::Eo => "eo",
+            SpellLangValue::Es => "es",
+            SpellLangValue::EsEs => "es_es",
+            SpellLangValue::EsMx => "es_mx",
+            SpellLangValue::Fo => "fo",
+            SpellLangValue::Fr => "fr",
+            SpellLangValue::Ga => "ga",
+            SpellLangValue::Gd => "gd",
+            SpellLangValue::Gl => "gl",
+            SpellLangValue::He => "he",
+            SpellLangValue::Hr => "hr",
+            SpellLangValue::Hu => "hu",
+            SpellLangValue::Id => "id",
+            SpellLangValue::It => "it",
+            SpellLangValue::Ku => "ku",
+            SpellLangValue::La => "la",
+            SpellLangValue::Lt => "lt",
+            SpellLangValue::Lv => "lv",
+            SpellLangValue::Mg => "mg",
+            SpellLangValue::Mi => "mi",
+            SpellLangValue::Ms => "ms",
+            SpellLangValue::Nb => "nb",
+            SpellLangValue::Nl => "nl",
+            SpellLangValue::Nn => "nn",
+            SpellLangValue::Ny => "ny",
+            SpellLangValue::Pl => "pl",
+            SpellLangValue::Pt => "pt",
+            SpellLangValue::PtBr => "pt_br",
+            SpellLangValue::PtPt => "pt_pt",
+            SpellLangValue::Ro => "ro",
+            SpellLangValue::Ru => "ru",
+            SpellLangValue::RuRu => "ru_ru",
+            SpellLangValue::RuYo => "ru_yo",
+            SpellLangValue::Rw => "rw",
+            SpellLangValue::Sk => "sk",
+            SpellLangValue::Sl => "sl",
+            SpellLangValue::Sr => "sr",
+            SpellLangValue::Sv => "sv",
+            SpellLangValue::Sw => "sw",
+            SpellLangValue::Tet => "tet",
+            SpellLangValue::Th => "th",
+            SpellLangValue::Tl => "tl",
+            SpellLangValue::Tn => "tn",
+            SpellLangValue::Uk => "uk",
+            SpellLangValue::Yi => "yi",
+            SpellLangValue::Zu => "zu",
+            SpellLangValue::Custom(locale) => return locale,
+        };
+
+        Self::from(s)
     }
 }
 

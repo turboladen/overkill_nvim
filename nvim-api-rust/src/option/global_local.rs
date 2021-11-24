@@ -39,6 +39,7 @@ impl GlobalLocal for super::FoldEnable {}
 impl GlobalLocal for super::ShiftWidth {}
 impl GlobalLocal for super::SoftTabStop {}
 impl GlobalLocal for super::Spell {}
+impl GlobalLocal for super::SpellLang {}
 impl GlobalLocal for super::SmartIndent {}
 impl GlobalLocal for super::SwapFile {}
 impl GlobalLocal for super::TabStop {}

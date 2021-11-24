@@ -53,6 +53,7 @@ impl Global for super::SmartCase {}
 impl Global for super::SmartIndent {}
 impl Global for super::SoftTabStop {}
 impl Global for super::Spell {}
+impl Global for super::SpellLang {}
 impl Global for super::SplitBelow {}
 impl Global for super::SplitRight {}
 impl Global for super::SwapFile {}
