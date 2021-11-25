@@ -135,6 +135,7 @@ impl_vim_option!(CursorLine, bool, "cul", "cursorline");
 impl_vim_option!(ExpandTab, bool, "et", "expandtab");
 impl_vim_option!(FoldEnable, bool, "fen", "foldenable");
 impl_vim_option!(Hidden, bool, "hid", "hidden");
+impl_vim_option!(History, u32, "hi", "history");
 impl_vim_option!(IncCommand, IncCommandValue, "icm", "inccommand");
 impl_vim_option!(LineBreak, bool, "lbr", "linebreak");
 impl_vim_option!(List, bool, "list", "list");
