@@ -1,21 +1,6 @@
+use super::{CharFlags, VimOptionError};
 use neovim_sys::api::vim::{LuaString, Object};
 use std::convert::TryFrom;
-use super::{CharFlags, VimOptionError};
-
-impl TryFrom<Object> for CharFlags<ShortMessItem> {
-    type Error = VimOptionError;
-
-    fn try_from(object: Object) -> Result<Self, Self::Error> {
-        let s = object.as_string_unchecked().to_string_lossy();
-        let mut inner = Vec::with_capacity(s.len());
-
-        for char in s.chars() {
-            inner.push(ShortMessItem::try_from(char)?);
-        }
-
-        Ok(Self::new(inner))
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ShortMessItem {
@@ -61,6 +46,21 @@ pub enum ShortMessItem {
     SuppressFileInfoWhenEditing,
     /// `S`
     SuppressSearchCountMessage,
+}
+
+impl TryFrom<Object> for CharFlags<ShortMessItem> {
+    type Error = VimOptionError;
+
+    fn try_from(object: Object) -> Result<Self, Self::Error> {
+        let s = object.as_string_unchecked().to_string_lossy();
+        let mut inner = Vec::with_capacity(s.len());
+
+        for char in s.chars() {
+            inner.push(ShortMessItem::try_from(char)?);
+        }
+
+        Ok(Self::new(inner))
+    }
 }
 
 impl TryFrom<char> for ShortMessItem {

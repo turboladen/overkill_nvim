@@ -1,7 +1,18 @@
 pub mod flags;
 
+macro_rules! def_settings_builder_method {
+    ($meth:ident) => {
+        pub const fn $meth(self) -> Self {
+            let mut s = self;
+            s.$meth = true;
+            s
+        }
+    };
+}
+
 mod clipboard_settings;
 mod color_column_value;
+mod complete_opt_settings;
 mod conceal_level_value;
 mod inc_command_value;
 mod list_char_settings;
@@ -12,6 +23,7 @@ mod spell_lang_value;
 pub use self::{
     clipboard_settings::ClipboardSettings,
     color_column_value::ColorColumnValue,
+    complete_opt_settings::CompleteOptSettings,
     conceal_level_value::ConcealLevelValue,
     flags::{CharFlags, StringFlags},
     inc_command_value::IncCommandValue,
@@ -117,6 +129,7 @@ impl_vim_option!(
     "cc",
     "colorcolumn"
 );
+impl_vim_option!(CompleteOpt, CompleteOptSettings, "cot", "completeopt");
 impl_vim_option!(ConcealLevel, ConcealLevelValue, "cole", "conceallevel");
 impl_vim_option!(CursorLine, bool, "cul", "cursorline");
 impl_vim_option!(ExpandTab, bool, "et", "expandtab");

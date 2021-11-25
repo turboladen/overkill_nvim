@@ -1,5 +1,5 @@
-use neovim_sys::api::vim::{LuaString, Object};
 use super::VimOptionError;
+use neovim_sys::api::vim::{LuaString, Object};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ClipboardSettings {
@@ -8,17 +8,8 @@ pub struct ClipboardSettings {
 }
 
 impl ClipboardSettings {
-    pub const fn unnamed(self) -> Self {
-        let mut s = self;
-        s.unnamed = true;
-        s
-    }
-
-    pub const fn unnamed_plus(self) -> Self {
-        let mut s = self;
-        s.unnamed_plus = true;
-        s
-    }
+    def_settings_builder_method!(unnamed);
+    def_settings_builder_method!(unnamed_plus);
 }
 
 impl From<ClipboardSettings> for Object {
