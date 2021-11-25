@@ -158,6 +158,7 @@ impl_vim_option!(SynMaxCol, u32, "smc", "synmaxcol");
 impl_vim_option!(TabStop, u8, "ts", "tabstop");
 impl_vim_option!(TermGuiColors, bool, "tgc", "termguicolors");
 impl_vim_option!(UndoFile, bool, "udf", "undofile");
+impl_vim_option!(UpdateTime, u32, "ut", "updatetime");
 impl_vim_option!(WildMenu, bool, "smnu", "wildmenu");
 impl_vim_option!(WriteBackup, bool, "wb", "writebackup");
 
