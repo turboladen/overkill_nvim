@@ -33,7 +33,7 @@ pub use self::{
     spell_lang_value::SpellLangValue,
 };
 
-use crate::{api::Error, key_code::KeyCode};
+use crate::key_code::KeyCode;
 use neovim_sys::api::vim::Object;
 use std::convert::TryFrom;
 
@@ -44,8 +44,8 @@ use std::convert::TryFrom;
 ///
 pub trait VimOption
 where
-    Object: From<Self::Value>,
-    Error: From<<<Self as VimOption>::Value as TryFrom<Object>>::Error>,
+    Object: TryFrom<Self::Value>,
+    // VimOptionError: From<<Self::Value as TryFrom<Object>>::Error>,
 {
     type Value: TryFrom<Object>;
 
@@ -59,9 +59,10 @@ where
     ///
     /// Errors if nvim errors on the call.
     ///
-    fn get() -> Result<Self::Value, Error> {
+    fn get() -> Result<Self::Value, VimOptionError> {
         crate::api::vim::nvim_get_global_local_option(Self::SHORT_NAME)
-            .and_then(|object| Self::Value::try_from(object).map_err(Error::from))
+            .map_err(|e| VimOptionError::from(e))
+            .and_then(|object| Self::Value::try_from(object).map_err(VimOptionError::from))
     }
 
     /// Calls `nvim_get_global_local_option()`, but handles converting the `value` param from a `Self::Value`
@@ -71,8 +72,8 @@ where
     ///
     /// Errors if nvim errors on the call.
     ///
-    fn set(value: Self::Value) -> Result<(), Error> {
-        crate::api::vim::nvim_set_global_local_option(Self::SHORT_NAME, Object::from(value))
+    fn set(value: Self::Value) -> Result<(), VimOptionError> {
+        crate::api::vim::nvim_set_global_local_option(Self::SHORT_NAME, Object::try_from(value)?)
     }
 
     /// Calls `nvim_get_global_option()`, but handles converting the resulting nvim Object into
@@ -82,9 +83,9 @@ where
     ///
     /// Errors if nvim errors on the call.
     ///
-    fn get_global() -> Result<Self::Value, Error> {
+    fn get_global() -> Result<Self::Value, VimOptionError> {
         crate::api::vim::nvim_get_global_option(Self::SHORT_NAME)
-            .and_then(|object| Self::Value::try_from(object).map_err(Error::from))
+            .and_then(|object| Self::Value::try_from(object).map_err(VimOptionError::from))
     }
 
     /// Calls `nvim_set_global_option()`, but handles converting the `value` param from a `Self::Value`
@@ -94,7 +95,7 @@ where
     ///
     /// Errors if nvim errors on the call.
     ///
-    fn set_global(value: Self::Value) -> Result<(), Error> {
+    fn set_global(value: Self::Value) -> Result<(), VimOptionError> {
         crate::api::vim::nvim_set_global_option(Self::SHORT_NAME, Object::from(value))
     }
 }
@@ -106,6 +107,11 @@ pub enum VimOptionError {
 
     #[error(transparent)]
     KeyCode(#[from] crate::key_code::InvalidKeyCode),
+
+    // #[error(transparent)]
+    // ApiError(#[from] crate::api::Error),
+    #[error(transparent)]
+    ObjectError(#[from] neovim_sys::api::vim::object::Error),
 }
 
 macro_rules! impl_vim_option {
@@ -137,6 +143,7 @@ impl_vim_option!(ConcealLevel, ConcealLevelValue, "cole", "conceallevel");
 impl_vim_option!(CursorLine, bool, "cul", "cursorline");
 impl_vim_option!(ExpandTab, bool, "et", "expandtab");
 impl_vim_option!(FoldEnable, bool, "fen", "foldenable");
+impl_vim_option!(GrepPrg, String, "gp", "grepprg");
 impl_vim_option!(Hidden, bool, "hid", "hidden");
 impl_vim_option!(History, u32, "hi", "history");
 impl_vim_option!(IncCommand, IncCommandValue, "icm", "inccommand");
@@ -168,13 +175,13 @@ impl_vim_option!(WriteBackup, bool, "wb", "writebackup");
 impl flags::AddAssignFlags for ShortMess {
     type Item = ShortMessItem;
 
-    fn add_assign(rhs: Self::Item) -> Result<(), Error> {
+    fn add_assign(rhs: Self::Item) -> Result<(), VimOptionError> {
         let mut current = Self::get()?;
         current.push(rhs);
         Self::set(current)
     }
 
-    fn add_assign_global(rhs: Self::Item) -> Result<(), Error> {
+    fn add_assign_global(rhs: Self::Item) -> Result<(), VimOptionError> {
         let mut current = Self::get_global()?;
         current.push(rhs);
         Self::set_global(current)
@@ -184,13 +191,13 @@ impl flags::AddAssignFlags for ShortMess {
 impl flags::SubAssignFlags for ShortMess {
     type Item = ShortMessItem;
 
-    fn sub_assign(rhs: &Self::Item) -> Result<(), Error> {
+    fn sub_assign(rhs: &Self::Item) -> Result<(), VimOptionError> {
         let mut current = Self::get()?;
         current.remove(rhs);
         Self::set(current)
     }
 
-    fn sub_assign_global(rhs: &Self::Item) -> Result<(), Error> {
+    fn sub_assign_global(rhs: &Self::Item) -> Result<(), VimOptionError> {
         let mut current = Self::get_global()?;
         current.remove(rhs);
         Self::set_global(current)
