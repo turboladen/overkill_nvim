@@ -1,5 +1,5 @@
 [package]
-name = "nvim-api-rust"
+name = "nvim-api-rs"
 version = "0.1.0"
 authors = ["Steve Loveless <steve.loveless@gmail.com>"]
 edition = "2021"

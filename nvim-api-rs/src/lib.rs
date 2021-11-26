@@ -6,10 +6,10 @@
 //!
 #![deny(unused_extern_crates)]
 #![warn(
-    box_pointers,
+    // box_pointers,
     clippy::all,
     clippy::nursery,
-    clippy::pedantic,
+    // clippy::pedantic,
     future_incompatible,
     missing_copy_implementations,
     // missing_docs,
