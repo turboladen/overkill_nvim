@@ -103,6 +103,9 @@ where
 pub enum VimOptionError {
     #[error("Unexpected option value: '{:?}'", _0)]
     UnexpectedOptionValue(Object),
+
+    #[error(transparent)]
+    KeyCode(#[from] crate::key_code::InvalidKeyCode),
 }
 
 macro_rules! impl_vim_option {

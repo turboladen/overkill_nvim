@@ -1,4 +1,3 @@
-use crate::api::Error;
 use neovim_sys::api::vim::{LuaString, Object};
 use std::{borrow::Borrow, fmt};
 
@@ -209,7 +208,7 @@ impl fmt::Display for KeyCode {
 }
 
 impl TryFrom<Object> for KeyCode {
-    type Error = Error;
+    type Error = InvalidKeyCode;
 
     fn try_from(value: Object) -> Result<Self, Self::Error> {
         let s = value.as_string_unchecked().to_string_lossy();
@@ -323,20 +322,16 @@ impl TryFrom<Object> for KeyCode {
                     (Some("A"), Some(c)) => Self::Alt(c),
                     (Some("D"), Some(c)) => Self::Super(c),
                     (Some(l), Some(c)) => {
-                        eprintln!("Got lhs '{}', rhs '{}'", l, c);
-                        return Err(Error::Raw("poop".to_string()));
+                        return Err(InvalidKeyCode(s.to_string()));
                     }
                     (Some(l), None) => {
-                        eprintln!("Got lhs '{}', but no rhs", l);
-                        return Err(Error::Raw("poop".to_string()));
+                        return Err(InvalidKeyCode(s.to_string()));
                     }
                     (None, Some(c)) => {
-                        eprintln!("Got rhs '{}', but no lhs", c);
-                        return Err(Error::Raw("poop".to_string()));
+                        return Err(InvalidKeyCode(s.to_string()));
                     }
                     (None, None) => {
-                        eprintln!("Got NOTHING");
-                        return Err(Error::Raw("poop".to_string()));
+                        return Err(InvalidKeyCode(s.to_string()));
                     }
                 }
             }
@@ -345,6 +340,10 @@ impl TryFrom<Object> for KeyCode {
         Ok(code)
     }
 }
+
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Invalid key-code: '{}'", _0)]
+pub struct InvalidKeyCode(String);
 
 #[allow(clippy::fallible_impl_from)]
 impl From<KeyCode> for Object {
