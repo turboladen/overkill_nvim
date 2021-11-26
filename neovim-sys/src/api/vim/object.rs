@@ -482,6 +482,14 @@ impl From<Dictionary> for Object {
     }
 }
 
+impl TryFrom<String> for Object {
+    type Error = std::ffi::NulError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(Self::from(LuaString::new(value)?))
+    }
+}
+
 macro_rules! copy_inner_for_clone {
     ($_self:expr, $field_name:ident) => {{
         let value = $_self.data.$field_name();
@@ -629,6 +637,23 @@ impl TryFrom<Object> for Float {
             ObjectType::kObjectTypeFloat => Ok(value.data.float()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::kObjectTypeFloat,
+                actual: value.object_type,
+            }),
+        }
+    }
+}
+
+impl TryFrom<Object> for String {
+    type Error = Error;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        match value.object_type {
+            ObjectType::kObjectTypeString => {
+                let lua_string = value.as_string_unchecked();
+                Ok(lua_string.to_string_lossy().to_string())
+            }
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeString,
                 actual: value.object_type,
             }),
         }
