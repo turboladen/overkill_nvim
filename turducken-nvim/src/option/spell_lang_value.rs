@@ -1,5 +1,5 @@
 use super::{StringFlags, VimOptionError};
-use neovim_sys::api::vim::Object;
+use nvim_api_rs::sys::api::vim::Object;
 use std::convert::TryFrom;
 
 impl TryFrom<Object> for StringFlags<SpellLangValue> {

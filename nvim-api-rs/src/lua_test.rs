@@ -320,39 +320,39 @@ pub extern "C" fn test_nvim_set_option() -> bool {
     }
 
     // Using high-level API
-    {
-        use crate::{
-            key_code::KeyCode,
-            option::{Global, PasteToggle},
-        };
+    // {
+    //     use crate::{
+    //         key_code::KeyCode,
+    //         option::{Global, PasteToggle},
+    //     };
 
-        match PasteToggle::get_global() {
-            Ok(value) => match value {
-                KeyCode::F8 => (),
-                v => {
-                    eprintln!("FAIL! Expected `\"{}\"`, got: `\"{}\"`", KeyCode::F8, v);
-                    return false;
-                }
-            },
-            Err(e) => print_error_return_false!(e),
-        }
+    //     match PasteToggle::get_global() {
+    //         Ok(value) => match value {
+    //             KeyCode::F8 => (),
+    //             v => {
+    //                 eprintln!("FAIL! Expected `\"{}\"`, got: `\"{}\"`", KeyCode::F8, v);
+    //                 return false;
+    //             }
+    //         },
+    //         Err(e) => print_error_return_false!(e),
+    //     }
 
-        let new_value = KeyCode::F9;
+    //     let new_value = KeyCode::F9;
 
-        match PasteToggle::set_global(new_value) {
-            Ok(_) => match PasteToggle::get_global() {
-                Ok(value) => match value {
-                    KeyCode::F9 => (),
-                    v => {
-                        eprintln!("FAIL! Expected `\"{}\"`, got: `\"{}\"`", new_value, v);
-                        return false;
-                    }
-                },
-                Err(e) => print_error_return_false!(e),
-            },
-            Err(e) => print_error_return_false!(e),
-        }
-    }
+    //     match PasteToggle::set_global(new_value) {
+    //         Ok(_) => match PasteToggle::get_global() {
+    //             Ok(value) => match value {
+    //                 KeyCode::F9 => (),
+    //                 v => {
+    //                     eprintln!("FAIL! Expected `\"{}\"`, got: `\"{}\"`", new_value, v);
+    //                     return false;
+    //                 }
+    //             },
+    //             Err(e) => print_error_return_false!(e),
+    //         },
+    //         Err(e) => print_error_return_false!(e),
+    //     }
+    // }
 
     true
 }

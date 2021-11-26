@@ -1,4 +1,4 @@
-use neovim_sys::api::vim::Object;
+use nvim_api_rs::sys::api::vim::Object;
 use std::{convert::TryFrom, num::NonZeroI64};
 use super::{StringFlags, VimOptionError};
 

@@ -1,4 +1,4 @@
-use neovim_sys::api::vim::{LuaString, Object};
+use nvim_api_rs::sys::api::vim::{LuaString, Object};
 use std::convert::TryFrom;
 use super::VimOptionError;
 

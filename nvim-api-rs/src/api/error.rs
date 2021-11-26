@@ -1,10 +1,9 @@
-use crate::option::VimOptionError;
 use neovim_sys::api::vim::{self, LuaError, LuaString};
 use std::ffi::NulError;
 
 /// The general error type for handling errors.
 ///
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum Error {
     /// These errors are the error you see when reading neovim documention, where the type is
     /// `Error`.
@@ -29,9 +28,6 @@ pub enum Error {
     ///
     #[error("v:errmsg: '{}'", .0)]
     VErrMsg(LuaString),
-
-    #[error(transparent)]
-    Option(#[from] VimOptionError),
 
     #[error("Error from vim: {}", _0)]
     Raw(String),

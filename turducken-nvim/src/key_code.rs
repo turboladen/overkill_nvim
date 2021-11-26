@@ -1,4 +1,4 @@
-use neovim_sys::api::vim::{LuaString, Object};
+use nvim_api_rs::sys::api::vim::{LuaString, Object};
 use std::{borrow::Borrow, fmt};
 
 /// :help key-codes
@@ -321,13 +321,13 @@ impl TryFrom<Object> for KeyCode {
                     (Some("M"), Some(c)) => Self::Meta(c),
                     (Some("A"), Some(c)) => Self::Alt(c),
                     (Some("D"), Some(c)) => Self::Super(c),
-                    (Some(l), Some(c)) => {
+                    (Some(_), Some(_)) => {
                         return Err(InvalidKeyCode(s.to_string()));
                     }
-                    (Some(l), None) => {
+                    (Some(_), None) => {
                         return Err(InvalidKeyCode(s.to_string()));
                     }
-                    (None, Some(c)) => {
+                    (None, Some(_)) => {
                         return Err(InvalidKeyCode(s.to_string()));
                     }
                     (None, None) => {

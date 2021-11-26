@@ -12,6 +12,7 @@
     // clippy::pedantic,
     future_incompatible,
     missing_copy_implementations,
+    // missing_docs,
     nonstandard_style,
     rust_2018_idioms,
     trivial_casts,
@@ -20,9 +21,5 @@
     unused_qualifications
 )]
 
-pub mod api;
-
-pub use neovim_sys as sys;
-
-#[cfg(feature = "lua_test")]
-pub mod lua_test;
+pub mod key_code;
+pub mod option;

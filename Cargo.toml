@@ -1,3 +1,3 @@
 [workspace]
-members = ["neovim-sys", "nvim-api-rs"]
+members = ["neovim-sys", "nvim-api-rs", "turducken-nvim"]
 resolver = "2"

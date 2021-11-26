@@ -34,7 +34,7 @@ pub use self::{
 };
 
 use crate::key_code::KeyCode;
-use neovim_sys::api::vim::Object;
+use nvim_api_rs::sys::api::vim::Object;
 use std::convert::TryFrom;
 
 /// The trait that all options implement, allowing to define each option's long name (ex.
@@ -44,8 +44,8 @@ use std::convert::TryFrom;
 ///
 pub trait VimOption
 where
-    Object: TryFrom<Self::Value>,
-    // VimOptionError: From<<Self::Value as TryFrom<Object>>::Error>,
+    Object: From<Self::Value>,
+    VimOptionError: From<<<Self as VimOption>::Value as TryFrom<Object>>::Error>,
 {
     type Value: TryFrom<Object>;
 
@@ -60,9 +60,9 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn get() -> Result<Self::Value, VimOptionError> {
-        crate::api::vim::nvim_get_global_local_option(Self::SHORT_NAME)
-            .map_err(|e| VimOptionError::from(e))
-            .and_then(|object| Self::Value::try_from(object).map_err(VimOptionError::from))
+        let object = nvim_api_rs::api::vim::nvim_get_global_local_option(Self::SHORT_NAME)?;
+
+        Self::Value::try_from(object).map_err(VimOptionError::from)
     }
 
     /// Calls `nvim_get_global_local_option()`, but handles converting the `value` param from a `Self::Value`
@@ -73,7 +73,10 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn set(value: Self::Value) -> Result<(), VimOptionError> {
-        crate::api::vim::nvim_set_global_local_option(Self::SHORT_NAME, Object::try_from(value)?)
+        Ok(nvim_api_rs::api::vim::nvim_set_global_local_option(
+            Self::SHORT_NAME,
+            Object::from(value),
+        )?)
     }
 
     /// Calls `nvim_get_global_option()`, but handles converting the resulting nvim Object into
@@ -84,8 +87,9 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn get_global() -> Result<Self::Value, VimOptionError> {
-        crate::api::vim::nvim_get_global_option(Self::SHORT_NAME)
-            .and_then(|object| Self::Value::try_from(object).map_err(VimOptionError::from))
+        let object = nvim_api_rs::api::vim::nvim_get_global_option(Self::SHORT_NAME)?;
+
+        Self::Value::try_from(object).map_err(VimOptionError::from)
     }
 
     /// Calls `nvim_set_global_option()`, but handles converting the `value` param from a `Self::Value`
@@ -96,7 +100,10 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn set_global(value: Self::Value) -> Result<(), VimOptionError> {
-        crate::api::vim::nvim_set_global_option(Self::SHORT_NAME, Object::from(value))
+        Ok(nvim_api_rs::api::vim::nvim_set_global_option(
+            Self::SHORT_NAME,
+            Object::from(value),
+        )?)
     }
 }
 
@@ -108,10 +115,11 @@ pub enum VimOptionError {
     #[error(transparent)]
     KeyCode(#[from] crate::key_code::InvalidKeyCode),
 
-    // #[error(transparent)]
-    // ApiError(#[from] crate::api::Error),
     #[error(transparent)]
-    ObjectError(#[from] neovim_sys::api::vim::object::Error),
+    ObjectError(#[from] nvim_api_rs::sys::api::vim::object::Error),
+
+    #[error(transparent)]
+    ApiError(#[from] nvim_api_rs::api::Error),
 }
 
 macro_rules! impl_vim_option {
@@ -143,7 +151,7 @@ impl_vim_option!(ConcealLevel, ConcealLevelValue, "cole", "conceallevel");
 impl_vim_option!(CursorLine, bool, "cul", "cursorline");
 impl_vim_option!(ExpandTab, bool, "et", "expandtab");
 impl_vim_option!(FoldEnable, bool, "fen", "foldenable");
-impl_vim_option!(GrepPrg, String, "gp", "grepprg");
+// impl_vim_option!(GrepPrg, String, "gp", "grepprg");
 impl_vim_option!(Hidden, bool, "hid", "hidden");
 impl_vim_option!(History, u32, "hi", "history");
 impl_vim_option!(IncCommand, IncCommandValue, "icm", "inccommand");
