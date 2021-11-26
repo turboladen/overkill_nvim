@@ -144,7 +144,10 @@ mod tests {
                 LuaString::new_unchecked("inner two one"),
                 Object::from(LuaString::new_unchecked("first one")),
             ),
-            KeyValuePair::new(LuaString::new_unchecked("inner two two"), Object::from(true)),
+            KeyValuePair::new(
+                LuaString::new_unchecked("inner two two"),
+                Object::from(true),
+            ),
         ]);
 
         let dictionary = Dictionary::new([

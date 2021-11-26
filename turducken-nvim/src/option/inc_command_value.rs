@@ -1,6 +1,6 @@
+use super::VimOptionError;
 use nvim_api_rs::sys::api::vim::{LuaString, Object};
 use std::{borrow::Cow, convert::TryFrom};
-use super::VimOptionError;
 
 #[derive(Debug, Clone, Copy)]
 pub enum IncCommandValue {

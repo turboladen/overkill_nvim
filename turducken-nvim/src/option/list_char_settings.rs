@@ -1,6 +1,6 @@
+use super::VimOptionError;
 use nvim_api_rs::sys::api::vim::{LuaString, Object};
 use std::convert::TryFrom;
-use super::VimOptionError;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ListCharsSettings {

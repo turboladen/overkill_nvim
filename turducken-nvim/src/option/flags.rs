@@ -13,7 +13,7 @@ use nvim_api_rs::sys::api::vim::Object;
 pub trait AddAssignFlags: VimOption
 where
     Object: From<Self::Value>,
-    VimOptionError: From<<<Self as VimOption>::Value as TryFrom<Object>>::Error>
+    VimOptionError: From<<<Self as VimOption>::Value as TryFrom<Object>>::Error>,
 {
     type Item: PartialEq;
 
@@ -29,7 +29,7 @@ where
 pub trait SubAssignFlags: VimOption
 where
     Object: From<Self::Value>,
-    VimOptionError: From<<<Self as VimOption>::Value as TryFrom<Object>>::Error>
+    VimOptionError: From<<<Self as VimOption>::Value as TryFrom<Object>>::Error>,
 {
     type Item: PartialEq;
 
