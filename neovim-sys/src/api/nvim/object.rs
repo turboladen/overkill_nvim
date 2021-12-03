@@ -1,8 +1,8 @@
 //!
 //! This module contains types and functions for working with neovim Lua `Object`s.
 //!
-use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, LuaString};
-use std::{convert::TryFrom, fmt::Debug, mem::ManuallyDrop};
+use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, NvimString};
+use std::{borrow::Cow, convert::TryFrom, fmt::Debug, mem::ManuallyDrop, num::NonZeroI64};
 
 /// An error that can only happen when dealing wit `Object`s.
 ///
@@ -26,6 +26,11 @@ pub enum Error {
         ///
         actual: ObjectType,
     },
+
+    /// Error that occurs when converting integer types fails.
+    ///
+    #[error(transparent)]
+    TryFromIntError(#[from] std::num::TryFromIntError),
 }
 
 /// Wrapper for neovim's Lua `Object`, which can be a:
@@ -34,7 +39,7 @@ pub enum Error {
 /// - `boolean` (same as Rust's `bool`)
 /// - `integer` (same as Rust's `i64`)
 /// - `float` (same as Rust's `f64`)
-/// - `string` (similar to Rust's `CString`; wrapped by this crate's `LuaString`)
+/// - `string` (similar to Rust's `CString`; wrapped by this crate's `NvimString`)
 /// - `array` (wrapped by this crate's `Array`)
 /// - `dictionary` (wrapped by this crate's `Dictionary`)
 ///
@@ -167,13 +172,13 @@ impl Object {
         try_as_type!(self, kObjectTypeFloat, float)
     }
 
-    /// Tries to extract a reference to the inner `LuaString`.
+    /// Tries to extract a reference to the inner `NvimString`.
     ///
     /// # Errors
     ///
-    /// If the wrapped type is not a `LuaString`.
+    /// If the wrapped type is not a `NvimString`.
     ///
-    pub fn try_as_string(&self) -> Result<&LuaString, Error> {
+    pub fn try_as_string(&self) -> Result<&NvimString, Error> {
         try_as_ref_type!(self, kObjectTypeString, string)
     }
 
@@ -229,7 +234,7 @@ impl Object {
     ///
     #[must_use]
     #[inline]
-    pub fn as_string_unchecked(&self) -> &LuaString {
+    pub fn as_string_unchecked(&self) -> &NvimString {
         self.data.string()
     }
 
@@ -293,13 +298,13 @@ impl Object {
     /// Similar to `as_string_unchecked()`, where it does not check `self`'s `object_type` (thus
     /// calling this if `self`'s internal data represents another type will give unexpected
     /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
-    /// value as a `LuaString`.
+    /// value as a `NvimString`.
     ///
     /// This is useful for when you only care about the inner type/value of the `Object`.
     ///
     #[must_use]
-    pub fn into_string_unchecked(self) -> LuaString {
-        let s = LuaString {
+    pub fn into_string_unchecked(self) -> NvimString {
+        let s = NvimString {
             data: unsafe { self.data.string.data },
             size: unsafe { self.data.string.size },
         };
@@ -412,6 +417,24 @@ impl From<Integer> for Object {
     }
 }
 
+macro_rules! impl_from_int {
+    ($int_type:ident) => {
+        impl From<$int_type> for Object {
+            fn from(i: $int_type) -> Self {
+                Self::from(Integer::from(i))
+            }
+        }
+    };
+}
+
+impl_from_int!(i8);
+impl_from_int!(u8);
+impl_from_int!(i16);
+impl_from_int!(u16);
+impl_from_int!(i32);
+impl_from_int!(u32);
+impl_from_int!(NonZeroI64);
+
 impl From<Float> for Object {
     #[inline]
     fn from(float: Float) -> Self {
@@ -419,8 +442,8 @@ impl From<Float> for Object {
     }
 }
 
-impl From<LuaString> for Object {
-    fn from(string: LuaString) -> Self {
+impl From<NvimString> for Object {
+    fn from(string: NvimString) -> Self {
         new_clone_type!(kObjectTypeString, string)
     }
 }
@@ -434,6 +457,30 @@ impl From<Array> for Object {
 impl From<Dictionary> for Object {
     fn from(dictionary: Dictionary) -> Self {
         new_clone_type!(kObjectTypeDictionary, dictionary)
+    }
+}
+
+impl TryFrom<String> for Object {
+    type Error = std::ffi::NulError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(Self::from(NvimString::new(value)?))
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Object {
+    type Error = std::ffi::NulError;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Ok(Self::from(NvimString::new(value)?))
+    }
+}
+
+impl<'a> TryFrom<Cow<'a, str>> for Object {
+    type Error = std::ffi::NulError;
+
+    fn try_from(value: Cow<'a, str>) -> Result<Self, Self::Error> {
+        Ok(Self::from(NvimString::new(value.as_bytes())?))
     }
 }
 
@@ -545,6 +592,38 @@ impl TryFrom<Object> for Integer {
     }
 }
 
+macro_rules! impl_try_from_for_int {
+    ($int:ty) => {
+        impl TryFrom<Object> for $int {
+            type Error = Error;
+
+            fn try_from(value: Object) -> Result<Self, Self::Error> {
+                match value.object_type {
+                    ObjectType::kObjectTypeInteger => {
+                        Self::try_from(value.data.integer()).map_err(Error::from)
+                    }
+                    _ => Err(Error::TypeError {
+                        expected: ObjectType::kObjectTypeInteger,
+                        actual: value.object_type,
+                    }),
+                }
+            }
+        }
+    };
+}
+
+impl_try_from_for_int!(i8);
+impl_try_from_for_int!(u8);
+impl_try_from_for_int!(i16);
+impl_try_from_for_int!(u16);
+impl_try_from_for_int!(i32);
+impl_try_from_for_int!(u32);
+impl_try_from_for_int!(u64);
+impl_try_from_for_int!(u128);
+impl_try_from_for_int!(isize);
+impl_try_from_for_int!(usize);
+impl_try_from_for_int!(NonZeroI64);
+
 impl TryFrom<Object> for Float {
     type Error = Error;
 
@@ -556,6 +635,14 @@ impl TryFrom<Object> for Float {
                 actual: value.object_type,
             }),
         }
+    }
+}
+
+impl TryFrom<Object> for String {
+    type Error = Error;
+
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        Ok(NvimString::try_from(value)?.to_string_lossy().to_string())
     }
 }
 
@@ -599,7 +686,7 @@ pub enum ObjectType {
     ///
     kObjectTypeFloat,
 
-    /// String, wrapped by `LuaString`.
+    /// String, wrapped by `NvimString`.
     ///
     kObjectTypeString,
 
@@ -624,7 +711,7 @@ pub(crate) union ObjectData {
     boolean: Boolean,
     integer: Integer,
     float: Float,
-    string: ManuallyDrop<LuaString>,
+    string: ManuallyDrop<NvimString>,
     array: ManuallyDrop<Array>,
     dictionary: ManuallyDrop<Dictionary>,
     luaref: LuaRef,
@@ -643,7 +730,7 @@ impl ObjectData {
         unsafe { self.float }
     }
 
-    pub(crate) fn string(&self) -> &LuaString {
+    pub(crate) fn string(&self) -> &NvimString {
         unsafe { &self.string }
     }
 
@@ -709,12 +796,12 @@ mod tests {
     #[test]
     fn test_from_string() {
         fn do_it(input: &str) {
-            let subject = Object::from(LuaString::new(input).unwrap());
+            let subject = Object::from(NvimString::new(input).unwrap());
 
             assert_eq!(subject.object_type, ObjectType::kObjectTypeString);
             assert_eq!(
                 subject.as_string_unchecked(),
-                &LuaString::new(input).unwrap()
+                &NvimString::new(input).unwrap()
             );
         }
 
@@ -726,8 +813,8 @@ mod tests {
     #[test]
     fn test_from_array() {
         fn do_it(input: &str) {
-            let subject = Object::from(Array::new([Object::from(LuaString::new(input).unwrap())]));
-            let expected = Array::new([Object::from(LuaString::new(input).unwrap())]);
+            let subject = Object::from(Array::new([Object::from(NvimString::new(input).unwrap())]));
+            let expected = Array::new([Object::from(NvimString::new(input).unwrap())]);
 
             assert_eq!(subject.object_type, ObjectType::kObjectTypeArray);
             assert_eq!(subject.as_array_unchecked(), &expected);

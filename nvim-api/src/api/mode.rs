@@ -1,4 +1,4 @@
-use neovim_sys::api::vim::{Dictionary, LuaString};
+use neovim_sys::api::nvim::{Dictionary, NvimString};
 use std::convert::TryFrom;
 
 /// Represents any possible neovim "mode".
@@ -72,8 +72,8 @@ impl From<&str> for Mode {
     }
 }
 
-impl From<&LuaString> for Mode {
-    fn from(mode: &LuaString) -> Self {
+impl From<&NvimString> for Mode {
+    fn from(mode: &NvimString) -> Self {
         match mode.as_c_str().to_string_lossy().as_ref() {
             "n" => Self::Normal,
             "i" => Self::Insert,
@@ -95,7 +95,7 @@ impl From<&LuaString> for Mode {
 }
 
 #[allow(clippy::fallible_impl_from)]
-impl From<Mode> for LuaString {
+impl From<Mode> for NvimString {
     fn from(mode: Mode) -> Self {
         let s = match mode {
             Mode::Normal => "n",
@@ -173,16 +173,16 @@ pub enum CurrentModeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use neovim_sys::api::vim::{KeyValuePair, Object};
+    use neovim_sys::api::nvim::{KeyValuePair, Object};
 
     #[test]
     fn try_from_dictionary_test() {
         let dict = Dictionary::new([
             KeyValuePair::new(
-                LuaString::new("mode").unwrap(),
-                Object::from(LuaString::new("n").unwrap()),
+                NvimString::new_unchecked("mode"),
+                Object::from(NvimString::new_unchecked("n")),
             ),
-            KeyValuePair::new(LuaString::new("blocking").unwrap(), Object::from(false)),
+            KeyValuePair::new(NvimString::new_unchecked("blocking"), Object::from(false)),
         ]);
         let current_mode = CurrentMode::try_from(dict).unwrap();
         assert_eq!(current_mode.mode(), Mode::Normal);

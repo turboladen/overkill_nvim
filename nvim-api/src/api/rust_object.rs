@@ -1,5 +1,5 @@
-use neovim_sys::api::vim::{
-    Array, Boolean, Dictionary, Float, Integer, LuaString, Object, ObjectType,
+use neovim_sys::api::nvim::{
+    Array, Boolean, Dictionary, Float, Integer, NvimString, Object, ObjectType,
 };
 
 /// While the internal object, `neovim_sys::vim::Object` is just fine to work with, this type
@@ -30,7 +30,7 @@ pub enum RustObject {
     /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
     /// `ObjectType::kObjectTypeString`.
     ///
-    String(LuaString),
+    String(NvimString),
 
     /// Represents a `neovim_sys::vim::Object` where its `object_type()` is
     /// `ObjectType::kObjectTypeArray`.

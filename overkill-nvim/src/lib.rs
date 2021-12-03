@@ -1,8 +1,7 @@
 //!
-//! # neovim
+//! # overkill-nvim
 //!
-//! This crate provides a Rust abstraction over `neovim-sys`, giving native (not msgpack) access to
-//! neovim types and functions.
+//! This crate provides something like a framework for building neovim plugins.
 //!
 #![deny(unused_extern_crates)]
 #![warn(
@@ -21,9 +20,10 @@
     unused_qualifications
 )]
 
-pub mod api;
-
-pub use neovim_sys as sys;
+pub mod key_code;
+pub mod option;
 
 #[cfg(feature = "lua_test")]
 pub mod lua_test;
+
+pub use nvim_api::api::{Array, Boolean, Dictionary, Float, Integer, NvimString, Object};
