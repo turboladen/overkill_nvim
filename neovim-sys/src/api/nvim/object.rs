@@ -555,7 +555,7 @@ impl Debug for Object {
             ObjectType::kObjectTypeBoolean => d.field("data", &self.data.boolean()),
             ObjectType::kObjectTypeInteger => d.field("data", &self.data.integer()),
             ObjectType::kObjectTypeFloat => d.field("data", &self.data.float()),
-            ObjectType::kObjectTypeString => d.field("data", self.data.string()),
+            ObjectType::kObjectTypeString => d.field("data", &self.data.string().to_string_lossy()),
             ObjectType::kObjectTypeArray => d.field("data", self.data.array()),
             ObjectType::kObjectTypeDictionary => d.field("data", self.data.dictionary()),
         };

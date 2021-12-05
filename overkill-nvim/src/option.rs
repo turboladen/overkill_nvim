@@ -42,7 +42,10 @@ pub use self::{
 };
 
 use crate::key_code::KeyCode;
-use nvim_api::api::{nvim, Integer, NvimString, Object};
+use nvim_api::{
+    api::{nvim, Integer, NvimString, Object},
+    sys::api::nvim::ObjectType,
+};
 use std::convert::{Infallible, TryFrom};
 
 /// The trait that all options implement, allowing to define each option's long name (ex.
@@ -188,7 +191,8 @@ where
     ///
     /// # Errors
     ///
-    /// Errors if nvim errors on the call. If the returned value can't be converted to a `Integer`.
+    /// * Errors if nvim errors on the call.
+    /// * Errors if the returned value can't be converted from an `Integer`.
     ///
     fn get() -> Result<Self::Value, NvimOptionError> {
         let object = Self::get_object()?;
@@ -211,7 +215,9 @@ where
     ///
     /// # Errors
     ///
-    /// Errors if nvim errors on the call. If the returned value can't be converted to a `Integer`.
+    /// * Errors if nvim errors on the call.
+    /// * Errors if the `Object` returned from nvim can't be converted to a `Integer`.
+    /// * Errors if the conversion from `Integer` to `Self::Value` errors.
     ///
     fn get_global() -> Result<Self::Value, NvimOptionError> {
         let object = Self::get_global_object()?;
@@ -252,8 +258,8 @@ where
     ///
     /// # Errors
     ///
-    /// Errors if nvim errors on the call. If the returned value can't be converted to a
-    /// `NvimString`.
+    /// * Errors if nvim errors on the call.
+    /// * Errors if the returned value can't be converted from a `NvimString`.
     ///
     fn get() -> Result<Self::Value, NvimOptionError> {
         let object = Self::get_object()?;
@@ -276,8 +282,8 @@ where
     ///
     /// # Errors
     ///
-    /// Errors if nvim errors on the call. If the returned value can't be converted to a
-    /// `NvimString`.
+    /// * Errors if nvim errors on the call.
+    /// * If nvim returns an `NvimString` that can't be converted to `Self::Value`.
     ///
     fn get_global() -> Result<Self::Value, NvimOptionError> {
         let object = Self::get_global_object()?;
@@ -294,6 +300,103 @@ where
     ///
     fn set_global(value: Self::Value) -> Result<(), NvimOptionError> {
         Ok(Self::set_global_object(NvimString::from(value))?)
+    }
+}
+
+/// Trait for getting and setting options that have string values, but can also be `""`. (By
+/// contrast, `StringOption` options can never be `""`.)
+///
+pub trait NullableStringOption: NvimOption
+where
+    NvimString: From<Self::Value>,
+    NvimOptionError: From<<Self::Value as TryFrom<NvimString>>::Error>,
+{
+    /// The type of value the implementation works with. This allows for defining a type that
+    /// represents the set of supported strings the given option supports. Note that for cases
+    /// where the option needs to be an empty string, the conversion for `Self::Value` doesn't need
+    /// to handle this; the handling of the empty string case happens here in the trait (which
+    /// allows `Self::Value` to handle cases where this actually is some value.
+    ///
+    type Value: TryFrom<NvimString>;
+
+    /// Analogous to `:set option?`.
+    ///
+    /// # Errors
+    ///
+    /// * Errors if nvim errors on the call.
+    /// * If `Self::Value` can't be converted from a `NvimString`.
+    ///
+    fn get() -> Result<Option<Self::Value>, NvimOptionError> {
+        let object = Self::get_object()?;
+
+        match object.object_type() {
+            ObjectType::kObjectTypeNil => Ok(None),
+            ObjectType::kObjectTypeString => {
+                let s = object.into_string_unchecked();
+
+                if s.is_empty() {
+                    Ok(None)
+                } else {
+                    Self::Value::try_from(s)
+                        .map(|value| Some(value))
+                        .map_err(NvimOptionError::from)
+                }
+            }
+            _ => Err(NvimOptionError::UnexpectedOptionValue(object)),
+        }
+    }
+
+    /// Analogous to `:set option=value`.
+    ///
+    /// # Errors
+    ///
+    /// Errors if nvim errors on the call.
+    ///
+    fn set(value: Option<Self::Value>) -> Result<(), NvimOptionError> {
+        match value {
+            Some(v) => Self::set_object(NvimString::from(v)),
+            None => Self::set_object(NvimString::default()),
+        }
+    }
+
+    /// Analogous to `:setglobal option?`.
+    ///
+    /// # Errors
+    ///
+    /// * Errors if nvim errors on the call.
+    /// * If `Self::Value` can't be converted from a `NvimString`.
+    ///
+    fn get_global() -> Result<Option<Self::Value>, NvimOptionError> {
+        let object = Self::get_global_object()?;
+
+        match object.object_type() {
+            ObjectType::kObjectTypeNil => Ok(None),
+            ObjectType::kObjectTypeString => {
+                let s = object.into_string_unchecked();
+
+                if s.is_empty() {
+                    Ok(None)
+                } else {
+                    Self::Value::try_from(s)
+                        .map(|value| Some(value))
+                        .map_err(NvimOptionError::from)
+                }
+            }
+            _ => Err(NvimOptionError::UnexpectedOptionValue(object)),
+        }
+    }
+
+    /// Analogous to `:setglobal option=value`.
+    ///
+    /// # Errors
+    ///
+    /// Errors if nvim errors on the call.
+    ///
+    fn set_global(value: Option<Self::Value>) -> Result<(), NvimOptionError> {
+        match value {
+            Some(v) => Self::set_global_object(NvimString::from(v)),
+            None => Self::set_global_object(NvimString::default()),
+        }
     }
 }
 
@@ -361,6 +464,14 @@ macro_rules! impl_vim_option {
         }
     };
 
+    ($option:ident, nullable_string: $value:ty, $short_name:expr, $long_name:expr) => {
+        impl_vim_option!(@base $option, $short_name, $long_name);
+
+        impl NullableStringOption for $option {
+            type Value = $value;
+        }
+    };
+
     ($option:ident, num: $value:ty, $short_name:expr, $long_name:expr) => {
         impl_vim_option!(@base $option, $short_name, $long_name);
 
@@ -379,10 +490,15 @@ macro_rules! impl_vim_option {
 impl_vim_option!(AutoIndent, bool, "ai", "autoindent");
 impl_vim_option!(BreakIndent, bool, "bri", "breakindent");
 impl_vim_option!(CmdHeight, num: u8, "ch", "cmdheight");
-impl_vim_option!(Clipboard, string: ClipboardSettings, "cb", "clipboard");
+impl_vim_option!(
+    Clipboard,
+    nullable_string: ClipboardSettings,
+    "cb",
+    "clipboard"
+);
 impl_vim_option!(
     ColorColumn,
-    string: StringFlags<ColorColumnValue>,
+    nullable_string: StringFlags<ColorColumnValue>,
     "cc",
     "colorcolumn"
 );
@@ -402,13 +518,18 @@ impl_vim_option!(History, num: u32, "hi", "history");
 impl_vim_option!(IncCommand, string: IncCommandValue, "icm", "inccommand");
 impl_vim_option!(LineBreak, bool, "lbr", "linebreak");
 impl_vim_option!(List, bool, "list", "list");
-impl_vim_option!(ListChars, string: ListCharsSettings, "lcs", "listchars");
+impl_vim_option!(
+    ListChars,
+    nullable_string: ListCharsSettings,
+    "lcs",
+    "listchars"
+);
 impl_vim_option!(Number, bool, "nu", "number");
-impl_vim_option!(PasteToggle, string: KeyCode, "pt", "pastetoggle");
+impl_vim_option!(PasteToggle, nullable_string: KeyCode, "pt", "pastetoggle");
 impl_vim_option!(ScrollOff, num: u16, "so", "scrolloff");
 impl_vim_option!(
     ShortMess,
-    string: CharFlags<ShortMessItem>,
+    nullable_string: CharFlags<ShortMessItem>,
     "shm",
     "shortmess"
 );
@@ -440,15 +561,23 @@ impl flags::AddAssignFlags for ShortMess {
     type Item = ShortMessItem;
 
     fn add_assign(rhs: Self::Item) -> Result<(), NvimOptionError> {
-        let mut current = <Self as StringOption>::get()?;
-        current.push(rhs);
-        <Self as StringOption>::set(current)
+        match Self::get()? {
+            Some(mut current) => {
+                current.push(rhs);
+                Self::set(Some(current))
+            }
+            None => Self::set(Some(CharFlags::new(vec![rhs]))),
+        }
     }
 
     fn add_assign_global(rhs: Self::Item) -> Result<(), NvimOptionError> {
-        let mut current = <Self as StringOption>::get_global()?;
-        current.push(rhs);
-        <Self as StringOption>::set_global(current)
+        match Self::get_global()? {
+            Some(mut current) => {
+                current.push(rhs);
+                Self::set(Some(current))
+            }
+            None => Self::set_global(Some(CharFlags::new(vec![rhs]))),
+        }
     }
 }
 
@@ -456,14 +585,32 @@ impl flags::SubAssignFlags for ShortMess {
     type Item = ShortMessItem;
 
     fn sub_assign(rhs: &Self::Item) -> Result<(), NvimOptionError> {
-        let mut current = <Self as StringOption>::get()?;
-        current.remove(rhs);
-        <Self as StringOption>::set(current)
+        match Self::get()? {
+            Some(mut current) => {
+                current.remove(rhs);
+
+                if current.is_empty() {
+                    Self::set(None)
+                } else {
+                    Self::set(Some(current))
+                }
+            }
+            None => Ok(()),
+        }
     }
 
     fn sub_assign_global(rhs: &Self::Item) -> Result<(), NvimOptionError> {
-        let mut current = <Self as StringOption>::get_global()?;
-        current.remove(rhs);
-        <Self as StringOption>::set_global(current)
+        match Self::get_global()? {
+            Some(mut current) => {
+                current.remove(rhs);
+
+                if current.is_empty() {
+                    Self::set_global(None)
+                } else {
+                    Self::set_global(Some(current))
+                }
+            }
+            None => Ok(()),
+        }
     }
 }

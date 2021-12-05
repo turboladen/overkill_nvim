@@ -38,7 +38,7 @@ where
     /// Removes an element from the flag list.
     ///
     pub fn remove(&mut self, value: &T) {
-        self.0.retain(|v| v == value);
+        self.0.retain(|v| v != value);
     }
 }
 
