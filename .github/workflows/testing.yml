@@ -67,7 +67,7 @@ jobs:
         uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
-          version: v0.5.1
+          version: v0.6.0
 
       - name: Install plenary.nvim
         uses: actions/checkout@v2
