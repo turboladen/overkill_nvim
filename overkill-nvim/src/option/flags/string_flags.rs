@@ -44,13 +44,13 @@ where
 
 impl<T> From<StringFlags<T>> for NvimString
 where
-    NvimString: From<T>,
+    Self: From<T>,
 {
     fn from(value: StringFlags<T>) -> Self {
         let s = value
             .0
             .into_iter()
-            .map(NvimString::from)
+            .map(Self::from)
             .collect::<Vec<_>>()
             .join(",");
 

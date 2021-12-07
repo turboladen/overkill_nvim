@@ -288,7 +288,7 @@ impl From<SpellLangValue> for NvimString {
             SpellLangValue::Uk => "uk",
             SpellLangValue::Yi => "yi",
             SpellLangValue::Zu => "zu",
-            SpellLangValue::Custom(locale) => return NvimString::new(locale).unwrap(),
+            SpellLangValue::Custom(locale) => return Self::new(locale).unwrap(),
         };
 
         Self::new_unchecked(s)

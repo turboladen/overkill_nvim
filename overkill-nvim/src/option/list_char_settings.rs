@@ -1,5 +1,5 @@
 use super::NvimOptionError;
-use nvim_api::sys::api::nvim::{NvimString, };
+use nvim_api::sys::api::nvim::NvimString;
 use std::convert::TryFrom;
 
 /// Represents an option value for `'listchars'`.

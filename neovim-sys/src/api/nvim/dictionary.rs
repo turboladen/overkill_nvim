@@ -178,11 +178,17 @@ mod tests {
                 let mut inner_vec1 = Vec::from(inner_dict1.clone());
 
                 let inner_kvp1 = inner_vec1.remove(0);
-                assert_eq!(inner_kvp1.key(), &NvimString::new_unchecked("inner one one"));
+                assert_eq!(
+                    inner_kvp1.key(),
+                    &NvimString::new_unchecked("inner one one")
+                );
                 assert_eq!(inner_kvp1.value().try_as_integer().unwrap(), 42);
 
                 let inner_kvp2 = inner_vec1.remove(0);
-                assert_eq!(inner_kvp2.key(), &NvimString::new_unchecked("inner one two"));
+                assert_eq!(
+                    inner_kvp2.key(),
+                    &NvimString::new_unchecked("inner one two")
+                );
                 assert_ulps_eq!(inner_kvp2.value().try_as_float().unwrap(), 42.42);
             }
         }
@@ -198,14 +204,20 @@ mod tests {
                 let mut inner_vec2 = Vec::from(inner_dict2.clone());
 
                 let inner_kvp1 = inner_vec2.remove(0);
-                assert_eq!(inner_kvp1.key(), &NvimString::new_unchecked("inner two one"));
+                assert_eq!(
+                    inner_kvp1.key(),
+                    &NvimString::new_unchecked("inner two one")
+                );
                 assert_eq!(
                     inner_kvp1.value().try_as_string().unwrap(),
                     &NvimString::new_unchecked("first one")
                 );
 
                 let inner_kvp2 = inner_vec2.remove(0);
-                assert_eq!(inner_kvp2.key(), &NvimString::new_unchecked("inner two two"));
+                assert_eq!(
+                    inner_kvp2.key(),
+                    &NvimString::new_unchecked("inner two two")
+                );
                 assert!(inner_kvp2.value().try_as_boolean().unwrap());
             }
         }

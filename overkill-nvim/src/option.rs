@@ -208,7 +208,7 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn set(value: Self::Value) -> Result<(), NvimOptionError> {
-        Ok(Self::set_object(Integer::from(value))?)
+        Self::set_object(Integer::from(value))
     }
 
     /// Analogous to `:setglobal option?`.
@@ -233,7 +233,7 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn set_global(value: Self::Value) -> Result<(), NvimOptionError> {
-        Ok(Self::set_global_object(Integer::from(value))?)
+        Self::set_global_object(Integer::from(value))
     }
 }
 
@@ -275,7 +275,7 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn set(value: Self::Value) -> Result<(), NvimOptionError> {
-        Ok(Self::set_object(NvimString::from(value))?)
+        Self::set_object(NvimString::from(value))
     }
 
     /// Analogous to `:setglobal option?`.
@@ -299,7 +299,7 @@ where
     /// Errors if nvim errors on the call.
     ///
     fn set_global(value: Self::Value) -> Result<(), NvimOptionError> {
-        Ok(Self::set_global_object(NvimString::from(value))?)
+        Self::set_global_object(NvimString::from(value))
     }
 }
 
@@ -338,7 +338,7 @@ where
                     Ok(None)
                 } else {
                     Self::Value::try_from(s)
-                        .map(|value| Some(value))
+                        .map(Some)
                         .map_err(NvimOptionError::from)
                 }
             }
@@ -378,7 +378,7 @@ where
                     Ok(None)
                 } else {
                     Self::Value::try_from(s)
-                        .map(|value| Some(value))
+                        .map(Some)
                         .map_err(NvimOptionError::from)
                 }
             }

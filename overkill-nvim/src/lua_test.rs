@@ -27,7 +27,6 @@ fn panic_hook(panic_info: &std::panic::PanicInfo<'_>) {
 
     if let Some(s) = panic_info.payload().downcast_ref::<String>() {
         eprintln!("FAIL: {}", s);
-        return;
     }
 }
 
@@ -38,9 +37,7 @@ macro_rules! test {
         pub extern "C" fn $name() -> bool {
             std::panic::set_hook(Box::new(panic_hook));
 
-            let result = std::panic::catch_unwind(|| {
-                $body
-            });
+            let result = std::panic::catch_unwind(|| $body);
 
             result.is_ok()
         }
@@ -118,7 +115,7 @@ test!(
         let value = ShortMess::get_global().unwrap().unwrap();
         assert_eq!(value.len(), before_len - 1, "value: {:?}", value);
 
-        let mut expected = before.clone();
+        let mut expected = before;
         expected.remove(&to_remove);
 
         assert_eq!(expected, value);

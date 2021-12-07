@@ -1,5 +1,5 @@
 use super::NvimOptionError;
-use nvim_api::sys::api::nvim::{NvimString, };
+use nvim_api::sys::api::nvim::NvimString;
 
 /// Allows for setting `'clipboard'` in a typed manner.
 ///

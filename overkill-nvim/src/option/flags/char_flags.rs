@@ -50,12 +50,14 @@ where
 
     /// How many flag items are set?
     ///
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
     /// Are there 0 flag items set?
     ///
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

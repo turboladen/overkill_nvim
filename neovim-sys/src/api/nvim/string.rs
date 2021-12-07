@@ -169,7 +169,7 @@ impl Drop for String {
 impl From<String> for std::string::String {
     #[inline]
     fn from(string: String) -> Self {
-        unsafe { std::string::String::from_utf8_unchecked(string.to_bytes().to_vec()) }
+        unsafe { Self::from_utf8_unchecked(string.to_bytes().to_vec()) }
     }
 }
 
