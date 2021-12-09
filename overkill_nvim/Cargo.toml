@@ -1,5 +1,5 @@
 [package]
-name = "nvim-api"
+name = "overkill_nvim"
 version = "0.1.0"
 authors = ["Steve Loveless <steve.loveless@gmail.com>"]
 edition = "2021"
@@ -7,11 +7,12 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
-approx = { version = "0.5", optional = true }
-neovim-sys = { path = "../neovim-sys" }
+nvim_api = { path = "../nvim_api/" }
 thiserror = "1.0"
 
 [features]
 default = []
-lua_test = ["approx"]
+lua_test = []
