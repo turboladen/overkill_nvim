@@ -17,7 +17,6 @@ use super::{object::Error, Object, ObjectType};
 /// Named `String` here, but is exported as `NvimString`, just to save on confusion with Rust's
 /// `String`.
 ///
-#[derive(Debug)]
 #[repr(C)]
 pub struct String {
     // This must not contain the nul byte.
@@ -126,6 +125,19 @@ impl Default for String {
     }
 }
 
+impl fmt::Debug for String {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NvimString")
+            .field("data", &unsafe {
+                std::string::String::from_utf8_unchecked(
+                    std::slice::from_raw_parts(self.data as *const u8, self.size).to_vec(),
+                )
+            })
+            .field("size", &self.size)
+            .finish()
+    }
+}
+
 impl Clone for String {
     fn clone(&self) -> Self {
         let dst = CString::new(self.to_bytes()).unwrap();
@@ -157,7 +169,7 @@ impl Drop for String {
 impl From<String> for std::string::String {
     #[inline]
     fn from(string: String) -> Self {
-        string.to_string_lossy().to_string()
+        unsafe { Self::from_utf8_unchecked(string.to_bytes().to_vec()) }
     }
 }
 
@@ -292,5 +304,38 @@ mod tests {
         assert_eq!(lua_string.size, 8);
         let cstring = CString::try_from(lua_string).unwrap();
         assert_eq!(&cstring.into_string().unwrap(), "burritos");
+    }
+
+    #[test]
+    fn test_new_empty_string() {
+        let lua_string = String::new_unchecked("");
+
+        assert_eq!(lua_string.len(), 0);
+        assert_eq!(&lua_string.to_string_lossy(), "");
+    }
+
+    #[test]
+    fn test_default() {
+        let lua_string = String::default();
+
+        assert_eq!(lua_string.len(), 0);
+        assert_eq!(&lua_string.to_string_lossy(), "");
+    }
+
+    #[test]
+    fn test_debug() {
+        let lua_string = String::new_unchecked("");
+
+        assert_eq!(
+            &format!("{:?}", lua_string),
+            r#"NvimString { data: "", size: 0 }"#
+        );
+
+        let lua_string = String::new_unchecked("nvim");
+
+        assert_eq!(
+            &format!("{:?}", lua_string),
+            r#"NvimString { data: "nvim", size: 4 }"#
+        );
     }
 }

@@ -80,7 +80,12 @@ extern "C" {
 
     /// Sets a highlight group.
     ///
-    pub fn nvim_set_hl(namespace_id: Integer, name: NvimString, val: Dictionary, err: *mut LuaError);
+    pub fn nvim_set_hl(
+        namespace_id: Integer,
+        name: NvimString,
+        val: Dictionary,
+        err: *mut LuaError,
+    );
 
     /// Gets existing, non-anonymous namespaces.
     ///

@@ -38,19 +38,19 @@ where
     /// Removes an element from the flag list.
     ///
     pub fn remove(&mut self, value: &T) {
-        self.0.retain(|v| v == value);
+        self.0.retain(|v| v != value);
     }
 }
 
 impl<T> From<StringFlags<T>> for NvimString
 where
-    NvimString: From<T>,
+    Self: From<T>,
 {
     fn from(value: StringFlags<T>) -> Self {
         let s = value
             .0
             .into_iter()
-            .map(NvimString::from)
+            .map(Self::from)
             .collect::<Vec<_>>()
             .join(",");
 

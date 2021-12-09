@@ -1,4 +1,4 @@
-use nvim_api::sys::api::nvim::{NvimString};
+use nvim_api::sys::api::nvim::NvimString;
 
 /// A collection of flags where each flag is a single character.
 ///
@@ -13,7 +13,7 @@ use nvim_api::sys::api::nvim::{NvimString};
 /// ])).ok();
 /// ```
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CharFlags<T>(Vec<T>)
 where
     char: From<T>;
@@ -36,10 +36,30 @@ where
         self.0.push(value);
     }
 
+    /// Pops an element from the flag list.
+    ///
+    pub fn pop(&mut self) -> Option<T> {
+        self.0.pop()
+    }
+
     /// Removes an element from the flag list.
     ///
     pub fn remove(&mut self, value: &T) {
-        self.0.retain(|v| v == value);
+        self.0.retain(|v| v != value);
+    }
+
+    /// How many flag items are set?
+    ///
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Are there 0 flag items set?
+    ///
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
