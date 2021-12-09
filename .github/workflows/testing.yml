@@ -86,7 +86,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --package nvim-api --package overkill-nvim --features lua_test
+          args: --package nvim_api --package overkill_nvim --features lua_test
 
       - name: View files in target/
         run: ls -R target/

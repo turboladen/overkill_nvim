@@ -1,3 +1,2 @@
 [workspace]
-members = ["neovim-sys", "nvim-api", "overkill-nvim"]
-resolver = "2"
+members = ["neovim_sys", "nvim_api", "overkill_nvim"]
