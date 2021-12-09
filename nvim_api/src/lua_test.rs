@@ -2,44 +2,29 @@
 
 use crate::api::{self, Mode, Object, RustObject};
 use neovim_sys::api::nvim::{Array, Dictionary, KeyValuePair, NvimString, ObjectType};
+use nvim_api_test::nvim_test;
 use std::borrow::Borrow;
 
-macro_rules! print_error_return_false {
-    ($e:expr) => {{
-        eprintln!("Got error during test: {}", $e);
-        return false;
-    }};
+fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) {
+    self::api::nvim::nvim_set_var(var, value).unwrap();
+
+    let t = self::api::nvim::nvim_get_var(var)
+        .map(RustObject::from)
+        .unwrap();
+
+    assert_eq!(
+        t, *expected_object_variant,
+        "Got unexpected value type: {:?}",
+        t
+    );
 }
 
-fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) -> bool {
-    if let Err(e) = self::api::nvim::nvim_set_var(var, value) {
-        eprintln!("Error setting var: {}", e);
-        return false;
-    }
-
-    match self::api::nvim::nvim_get_var(var).map(RustObject::from) {
-        Ok(ref t) => {
-            if t == expected_object_variant {
-                true
-            } else {
-                eprintln!("Got unexpected value type: {:?}", t);
-                false
-            }
-        }
-        Err(e) => print_error_return_false!(e),
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn test_nvim_set_var() -> bool {
+#[nvim_test]
+fn test_nvim_set_var() {
     // nil
     {
-        let var = "nvim_set_var_test_nil";
         let value = Object::new_nil();
-
-        if !_test_nvim_setget_var(var, value, &RustObject::Nil) {
-            return false;
-        }
+        _test_nvim_setget_var("nvim_set_var_test_nil", value, &RustObject::Nil);
     }
 
     // bool
@@ -47,9 +32,7 @@ pub extern "C" fn test_nvim_set_var() -> bool {
         let var = "nvim_set_var_test_bool";
         let value = Object::from(true);
 
-        if !_test_nvim_setget_var(var, value, &RustObject::Boolean(true)) {
-            return false;
-        }
+        _test_nvim_setget_var(var, value, &RustObject::Boolean(true));
     }
 
     // Integer
@@ -57,9 +40,7 @@ pub extern "C" fn test_nvim_set_var() -> bool {
         let var = "nvim_set_var_test_integer";
         let value = Object::from(42);
 
-        if !_test_nvim_setget_var(var, value, &RustObject::Integer(42)) {
-            return false;
-        }
+        _test_nvim_setget_var(var, value, &RustObject::Integer(42));
     }
 
     // Float
@@ -67,9 +48,7 @@ pub extern "C" fn test_nvim_set_var() -> bool {
         let var = "nvim_set_var_test_float";
         let value = Object::from(123.456);
 
-        if !_test_nvim_setget_var(var, value, &RustObject::Float(123.456)) {
-            return false;
-        }
+        _test_nvim_setget_var(var, value, &RustObject::Float(123.456));
     }
 
     // String
@@ -78,13 +57,11 @@ pub extern "C" fn test_nvim_set_var() -> bool {
         let string = NvimString::new_unchecked("this is a test");
         let value = Object::from(string);
 
-        if !_test_nvim_setget_var(
+        _test_nvim_setget_var(
             var,
             value,
             &RustObject::String(NvimString::new_unchecked("this is a test")),
-        ) {
-            return false;
-        }
+        );
     }
 
     // Array
@@ -96,9 +73,7 @@ pub extern "C" fn test_nvim_set_var() -> bool {
         let value = Object::from(make_subject());
         let var = "nvim_set_var_test_array";
 
-        if !_test_nvim_setget_var(var, value, &RustObject::Array(make_subject())) {
-            return false;
-        }
+        _test_nvim_setget_var(var, value, &RustObject::Array(make_subject()));
     }
 
     // Dictionary
@@ -111,213 +86,105 @@ pub extern "C" fn test_nvim_set_var() -> bool {
         let value = Object::from(make_subject());
         let var = "nvim_set_var_test_dictionary";
 
-        if !_test_nvim_setget_var(var, value, &RustObject::Dictionary(make_subject())) {
-            return false;
-        }
+        _test_nvim_setget_var(var, value, &RustObject::Dictionary(make_subject()));
     }
-
-    true
 }
 
-#[no_mangle]
-pub extern "C" fn test_nvim_set_vvar() -> bool {
+#[nvim_test]
+fn test_nvim_set_vvar() {
     let vvar = "warningmsg";
     let string = NvimString::new_unchecked("meow");
     let value = Object::from(string);
 
-    if let Err(e) = self::api::nvim::nvim_set_vvar(vvar, value) {
-        eprintln!("Error setting vvar: {}", e);
-    }
+    self::api::nvim::nvim_set_vvar(vvar, value).unwrap();
 
-    match self::api::nvim::nvim_get_vvar(vvar) {
-        Ok(object) if object.object_type() == ObjectType::kObjectTypeString => {
-            let string = object.as_string_unchecked();
+    let object = self::api::nvim::nvim_get_vvar(vvar).unwrap();
+    assert_eq!(object.object_type(), ObjectType::kObjectTypeString);
 
-            if string != &NvimString::new_unchecked("meow") {
-                eprintln!(
-                    "FAIL! Expected 'meow', got '{}'",
-                    string.as_c_str().to_string_lossy()
-                );
-                return false;
-            }
-        }
-        Ok(t) => {
-            eprintln!("Got unexpected value type: {:?}", t);
-            return false;
-        }
-        Err(e) => print_error_return_false!(e),
-    }
-
-    true
+    let string = object.into_string_unchecked();
+    assert_eq!(string, NvimString::new_unchecked("meow"));
 }
 
-#[no_mangle]
-pub extern "C" fn test_nvim_buf_set_var() -> bool {
-    let mut result = true;
+#[nvim_test]
+fn test_nvim_buf_set_var() {
+    fn make_subject() -> Dictionary {
+        let key = NvimString::new_unchecked("meow");
+        let value = Object::from(4242);
+        Dictionary::new([KeyValuePair::new(key, value)])
+    }
 
+    let value = Object::from(make_subject());
     let var = "nvim_rs_buf_set_get_var";
 
-    // Dictionary
-    {
-        fn make_subject() -> Dictionary {
-            let key = NvimString::new_unchecked("meow");
-            let value = Object::from(4242);
-            Dictionary::new([KeyValuePair::new(key, value)])
-        }
-        let value = Object::from(make_subject());
+    self::api::buffer::nvim_buf_set_var(0, var, value).unwrap();
 
-        if let Err(e) = self::api::buffer::nvim_buf_set_var(0, var, value) {
-            eprintln!("Error setting var: {}", e);
-        }
+    let object = self::api::buffer::nvim_buf_get_var(0, var).unwrap();
+    assert_eq!(object.object_type(), ObjectType::kObjectTypeDictionary);
 
-        match self::api::buffer::nvim_buf_get_var(0, var) {
-            Ok(object) if object.object_type() == ObjectType::kObjectTypeDictionary => {
-                let dict = object.as_dictionary_unchecked();
-                if dict != &make_subject() {
-                    eprintln!("FAIL! Expected 'this is a test', got '{:?}'", dict);
-                    result = false;
-                }
-            }
-            Ok(t) => {
-                eprintln!("Got unexpected value type: {:?}", t);
-                result = false;
-            }
-            Err(e) => print_error_return_false!(e),
-        }
-    }
-    result
+    let dict = object.into_dictionary_unchecked();
+    assert_eq!(dict, make_subject());
 }
 
-#[no_mangle]
-pub extern "C" fn test_nvim_get_current_buf() -> bool {
-    self::api::nvim::nvim_get_current_buf() == 1
+#[nvim_test]
+fn test_nvim_get_current_buf() {
+    assert_eq!(self::api::nvim::nvim_get_current_buf(), 1);
 }
 
-#[no_mangle]
-pub extern "C" fn test_nvim_feedkeys() -> bool {
-    match self::api::nvim::nvim_feedkeys("j", Mode::Normal, false) {
-        Ok(()) => true,
-        Err(e) => print_error_return_false!(e),
-    }
+#[nvim_test]
+fn test_nvim_feedkeys() {
+    self::api::nvim::nvim_feedkeys("j", Mode::Normal, false).unwrap();
 }
 
-#[no_mangle]
-pub extern "C" fn test_nvim_get_mode() -> bool {
-    match self::api::nvim::nvim_get_mode() {
-        Ok(current_mode) => match current_mode.mode() {
-            Mode::Normal => true,
-            m => {
-                eprintln!("FAIL! Expected 'n', got '{:?}'", m);
-                false
-            }
-        },
-        Err(e) => print_error_return_false!(e),
-    }
+#[nvim_test]
+fn test_nvim_get_mode() {
+    let current_mode = self::api::nvim::nvim_get_mode().unwrap();
+
+    assert_eq!(current_mode.mode(), Mode::Normal);
 }
 
-#[no_mangle]
-pub extern "C" fn test_nvim_set_global_option() -> bool {
+#[nvim_test]
+fn test_nvim_set_global_option() {
     // Boolean option
     {
         let option_name = "autoread";
 
-        match self::api::nvim::nvim_get_global_option(option_name) {
-            Ok(value) => {
-                if !value.as_boolean_unchecked() {
-                    eprintln!(
-                        "FAIL! Expected `true`, got: {}",
-                        value.as_boolean_unchecked()
-                    );
-                    return false;
-                }
-            }
-            Err(e) => print_error_return_false!(e),
-        }
+        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        assert!(value.into_boolean_unchecked());
 
-        match self::api::nvim::nvim_set_global_option(option_name, false) {
-            Ok(_) => match self::api::nvim::nvim_get_global_option(option_name) {
-                Ok(value) => {
-                    let v = value.as_boolean_unchecked();
+        self::api::nvim::nvim_set_global_option(option_name, false).unwrap();
 
-                    if v {
-                        eprintln!("FAIL! Expected `false`, got: {}", v);
-                        return false;
-                    }
-                }
-                Err(e) => print_error_return_false!(e),
-            },
-            Err(e) => print_error_return_false!(e),
-        }
+        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        assert!(!value.as_boolean_unchecked());
     }
 
     // Integer option
     {
         let option_name = "aleph";
 
-        match self::api::nvim::nvim_get_global_option(option_name) {
-            Ok(value) => {
-                if !value.as_integer_unchecked() == 224 {
-                    eprintln!("FAIL! Expected 224, got: {}", value.as_integer_unchecked());
-                    return false;
-                }
-            }
-            Err(e) => print_error_return_false!(e),
-        }
+        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        assert_eq!(value.into_integer_unchecked(), 224);
 
-        match self::api::nvim::nvim_set_global_option(option_name, 225) {
-            Ok(_) => match self::api::nvim::nvim_get_global_option(option_name) {
-                Ok(value) => {
-                    if !value.as_integer_unchecked() == 225 {
-                        eprintln!("FAIL! Expected 225, got: {}", value.as_integer_unchecked());
-                        return false;
-                    }
-                }
-                Err(e) => print_error_return_false!(e),
-            },
-            Err(e) => print_error_return_false!(e),
-        }
+        self::api::nvim::nvim_set_global_option(option_name, 225).unwrap();
+
+        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        assert_eq!(value.into_integer_unchecked(), 225);
     }
 
     // String option
     {
         let option_name = "pastetoggle";
 
-        match self::api::nvim::nvim_get_global_option(option_name) {
-            Ok(value) => {
-                let expected = "";
+        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        let expected = "";
 
-                if Borrow::<str>::borrow(value.as_string_unchecked()) != expected {
-                    eprintln!(
-                        "FAIL! Expected `\"{}\"`, got: `\"{}\"`",
-                        expected,
-                        value.as_string_unchecked()
-                    );
-                    return false;
-                }
-            }
-            Err(e) => print_error_return_false!(e),
-        }
+        assert_eq!(Borrow::<str>::borrow(value.as_string_unchecked()), expected);
 
         let expected_in = NvimString::new_unchecked("<F8>");
         let expected = NvimString::new_unchecked("<F8>");
 
-        match self::api::nvim::nvim_set_global_option(option_name, expected_in) {
-            Ok(_) => match self::api::nvim::nvim_get_global_option(option_name) {
-                Ok(value) => {
-                    if value.as_string_unchecked() != &expected {
-                        eprintln!(
-                            "FAIL! Expected `\"{}\"`, got: `\"{}\"`",
-                            expected,
-                            value.as_string_unchecked()
-                        );
-                        return false;
-                    }
-                }
-                Err(e) => print_error_return_false!(e),
-            },
-            Err(e) => print_error_return_false!(e),
-        }
-    }
+        self::api::nvim::nvim_set_global_option(option_name, expected_in).unwrap();
 
-    true
+        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        assert_eq!(value.into_string_unchecked(), expected);
+    }
 }
