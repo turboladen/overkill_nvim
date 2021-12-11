@@ -11,24 +11,21 @@ pub fn nvim_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #[no_mangle]
         pub extern "C" fn #fn_name() -> bool {
             std::panic::set_hook(Box::new(|panic_info| {
-                if let Some(location) = panic_info.location() {
-                    eprintln!(
-                        "panic occurred in file '{}' at line {}",
-                        location.file(),
-                        location.line()
-                    );
-                } else {
-                    eprintln!("panic occurred but can't get location information...");
+                match (panic_info.payload().downcast_ref::<String>(), panic_info.location()) {
+                    (Some(payload), Some(location)) => {
+                        eprintln!("FAIL! [{}:{}]\n{}", location.file(), location.line(), payload)
+                    }
+                    (Some(payload), None) => {
+                        eprintln!("FAIL! [unknown location]\n{}", payload)
+                    }
+                    (None, Some(location)) => {
+                        eprintln!("FAIL! [{}:{}]", location.file(), location.line())
+                    }
+                    (None, None) => {
+                        eprintln!("FAIL! [unknown location")
+                    }
                 }
 
-                if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-                    eprintln!("FAIL: {}", s);
-                    return;
-                }
-
-                if let Some(s) = panic_info.payload().downcast_ref::<String>() {
-                    eprintln!("FAIL: {}", s);
-                }
             }));
 
             let result = std::panic::catch_unwind(|| #block);
