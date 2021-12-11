@@ -8,7 +8,7 @@ use crate::{
         ShortMessItem, StringOption,
     },
 };
-use nvim_test_proc_macro::nvim_test;
+use nvim_api_test::nvim_test;
 
 #[nvim_test]
 fn test_overkill_set_global_string_option() {

@@ -1,5 +1,5 @@
 [package]
-name = "nvim_test-proc_macro"
+name = "nvim_api_test"
 version = "0.1.0"
 edition = "2021"
 

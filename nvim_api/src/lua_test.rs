@@ -2,7 +2,7 @@
 
 use crate::api::{self, Mode, Object, RustObject};
 use neovim_sys::api::nvim::{Array, Dictionary, KeyValuePair, NvimString, ObjectType};
-use nvim_test_proc_macro::nvim_test;
+use nvim_api_test::nvim_test;
 use std::borrow::Borrow;
 
 fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) {
