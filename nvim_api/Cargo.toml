@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 approx = { version = "0.5", optional = true }
 neovim_sys = { path = "../neovim_sys" }
+nvim_api_test = { path = "../nvim_api_test" }
 thiserror = "1.0"
 
 [features]

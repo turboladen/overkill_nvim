@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 nvim_api = { path = "../nvim_api/" }
+nvim_api_test = { path = "../nvim_api_test" }
 thiserror = "1.0"
 
 [features]

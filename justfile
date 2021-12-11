@@ -7,7 +7,7 @@ test-miri:
   cargo +nightly miri test --workspace
 
 test-lua:
-  cargo build --features lua_test --package nvim-api --package overkill-nvim
+  cargo build --features lua_test --package nvim_api --package overkill_nvim
   nvim --headless -n -c "PlenaryBustedDirectory tests/plenary {minimal_init = 'tests/minimal_init.vim'}"
 
 fix-clippies:
