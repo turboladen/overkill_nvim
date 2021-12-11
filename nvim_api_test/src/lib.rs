@@ -3,8 +3,7 @@ use proc_macro::TokenStream;
 #[proc_macro_attribute]
 pub fn nvim_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::ItemFn);
-    let fn_name = input.sig.ident.clone();
-    // input.sig.ident = Ident::new(&format!("__{}", input.sig.ident), Span::call_site());
+    let fn_name = &input.sig.ident;
     let block = input.block;
 
     let test_code = quote::quote! {
