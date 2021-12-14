@@ -1,10 +1,16 @@
 //!
 //! This module contains functionality that's common to both `Array` and `Dictionary`.
 //!
+
+pub mod into_iter;
+
+pub use self::into_iter::IntoIter;
+
 use std::{
     fmt,
-    mem::{self, MaybeUninit},
-    ptr::addr_of_mut,
+    marker::PhantomData,
+    mem::{self, ManuallyDrop, MaybeUninit},
+    ptr::{addr_of_mut, NonNull},
     slice,
 };
 
@@ -81,6 +87,13 @@ impl<T> Collection<T> {
         self.capacity
     }
 
+    /// A mutable pointer to the inner `items`.
+    ///
+    #[inline]
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.items
+    }
+
     /// Returns an iterator over `&T`.
     ///
     #[inline]
@@ -90,7 +103,10 @@ impl<T> Collection<T> {
     }
 }
 
-impl<T: Clone> Clone for Collection<T> {
+impl<T> Clone for Collection<T>
+where
+    T: Clone,
+{
     #[inline]
     fn clone(&self) -> Self {
         Self::new(self.as_slice().to_vec())
@@ -105,7 +121,10 @@ impl<T> Drop for Collection<T> {
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Collection<T> {
+impl<T> fmt::Debug for Collection<T>
+where
+    T: fmt::Debug,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
@@ -134,5 +153,28 @@ where
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(self.as_slice(), other.as_slice())
+    }
+}
+
+impl<T> IntoIterator for Collection<T> {
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        unsafe {
+            let mut me = ManuallyDrop::new(self);
+            let begin = me.as_mut_ptr();
+            let end = begin.add(me.len());
+            let cap = me.capacity();
+
+            IntoIter {
+                buf: NonNull::new_unchecked(begin),
+                phantom: PhantomData,
+                cap,
+                ptr: begin,
+                end,
+            }
+        }
     }
 }
