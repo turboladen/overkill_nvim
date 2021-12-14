@@ -2,7 +2,7 @@
 //! This module contains functionality for dealing with neovim's Lua `Dictionary` type.
 //!
 
-use super::{collection::Collection, NvimString, Object};
+use super::{collection::Collection, Array, Boolean, Float, Integer, NvimString, Object};
 use std::{borrow::Borrow, fmt};
 
 /// Wrapper for neovim's `Dictionary` type.
@@ -26,6 +26,72 @@ impl Dictionary {
                 None
             }
         })
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Boolean`. Only call this if
+    /// you're 100% sure the value is a `Boolean`.
+    ///
+    pub fn get_as_boolean<Q: ?Sized>(&self, k: &Q) -> Option<Boolean>
+    where
+        NvimString: Borrow<Q>,
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_boolean_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Integer`. Only call this if
+    /// you're 100% sure the value is a `Integer`.
+    ///
+    pub fn get_as_integer<Q: ?Sized>(&self, k: &Q) -> Option<Integer>
+    where
+        NvimString: Borrow<Q>,
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_integer_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Float`. Only call this if
+    /// you're 100% sure the value is a `Float`.
+    ///
+    pub fn get_as_float<Q: ?Sized>(&self, k: &Q) -> Option<Float>
+    where
+        NvimString: Borrow<Q>,
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_float_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `NvimString`. Only call this if
+    /// you're 100% sure the value is a `NvimString`.
+    ///
+    pub fn get_as_string<Q: ?Sized>(&self, k: &Q) -> Option<&NvimString>
+    where
+        NvimString: Borrow<Q>,
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_string_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Array`. Only call this if
+    /// you're 100% sure the value is a `Array`.
+    ///
+    pub fn get_as_array<Q: ?Sized>(&self, k: &Q) -> Option<&Array>
+    where
+        NvimString: Borrow<Q>,
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_array_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Dictionary`. Only call this if
+    /// you're 100% sure the value is a `Dictionary`.
+    ///
+    pub fn get_as_dictionary<Q: ?Sized>(&self, k: &Q) -> Option<&Self>
+    where
+        NvimString: Borrow<Q>,
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_dictionary_unchecked)
     }
 }
 
