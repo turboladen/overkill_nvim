@@ -2,6 +2,7 @@
 //! This module contains types and functions that give access to neovim similar to neovim's lua
 //! API.
 pub mod buffer;
+pub mod keymap;
 pub mod nvim;
 
 pub(crate) mod error;

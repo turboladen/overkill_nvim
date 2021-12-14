@@ -188,3 +188,32 @@ fn test_nvim_set_global_option() {
         assert_eq!(value.into_string_unchecked(), expected);
     }
 }
+
+#[nvim_test]
+fn test_set_map() {
+    let options = self::api::keymap::Options::default()
+        .nowait()
+        .silent()
+        .unique();
+
+    let result = self::api::keymap::set_map(
+        self::api::Mode::Normal,
+        "<C-9>",
+        "<cmd>echo \"hi\"",
+        Some(options),
+    );
+    assert!(result.is_ok());
+
+    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+
+    let mapping = maps
+        .iter()
+        .find(|map| map.lhs() == &NvimString::new_unchecked("<C-9>"))
+        .unwrap();
+
+    // Looks like nvim capitalizes the 'c' in "<cmd>"...
+    assert_eq!(
+        mapping.rhs(),
+        &NvimString::new_unchecked("<Cmd>echo \"hi\"")
+    );
+}

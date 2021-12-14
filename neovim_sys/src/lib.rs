@@ -23,6 +23,7 @@
 #![allow(non_camel_case_types)]
 
 pub mod api;
+pub mod getchar;
 pub mod globals;
 pub mod option;
 pub mod types;

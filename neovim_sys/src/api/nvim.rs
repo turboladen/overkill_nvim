@@ -94,4 +94,9 @@ extern "C" {
     /// Creates a new namespace, or gets and existing one.
     ///
     pub fn nvim_create_namespace(name: NvimString) -> Integer;
+
+    /// `mode` should be the 1-letter string of the mode ("n", "i", "v", etc).
+    /// Returns an `Array` of `Dictionary`s.
+    ///
+    pub fn nvim_get_keymap(mode: NvimString) -> Array;
 }

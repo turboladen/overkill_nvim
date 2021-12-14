@@ -1,4 +1,7 @@
-use neovim_sys::api::nvim::{Dictionary, NvimString};
+use neovim_sys::{
+    api::nvim::{Dictionary, NvimString},
+    getchar,
+};
 use std::convert::TryFrom;
 
 /// Represents any possible neovim "mode".
@@ -48,6 +51,24 @@ pub enum Mode {
     /// Terminal mode; maps to "t".
     ///
     Terminal,
+}
+
+impl Mode {
+    pub fn abbreviation(&self) -> &str {
+        match self {
+            Mode::Normal => "n",
+            Mode::Insert => "i",
+            Mode::Replace => "R",
+            Mode::Visual => "v",
+            Mode::VisualLine => "V",
+            Mode::VisualBlock => "C-v",
+            Mode::Command => "c",
+            Mode::Select => "s",
+            Mode::SelectLine => "S",
+            Mode::SelectBlock => "C-s",
+            Mode::Terminal => "t",
+        }
+    }
 }
 
 impl From<&str> for Mode {
@@ -111,6 +132,24 @@ impl From<Mode> for NvimString {
             Mode::Terminal => "t",
         };
         Self::new(s).unwrap()
+    }
+}
+
+impl From<Mode> for getchar::Mode {
+    fn from(api_mode: Mode) -> Self {
+        match api_mode {
+            Mode::Normal => getchar::Mode::Normal,
+            Mode::Insert => getchar::Mode::Insert,
+            Mode::Replace => getchar::Mode::Replace,
+            Mode::Visual => getchar::Mode::Visual,
+            Mode::VisualLine => todo!(),
+            Mode::VisualBlock => todo!(),
+            Mode::Command => getchar::Mode::CmdLine,
+            Mode::Select => getchar::Mode::SelectMode,
+            Mode::SelectLine => todo!(),
+            Mode::SelectBlock => todo!(),
+            Mode::Terminal => getchar::Mode::TermFocus,
+        }
     }
 }
 
