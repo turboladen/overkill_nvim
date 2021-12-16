@@ -54,7 +54,7 @@ pub enum Mode {
 }
 
 impl Mode {
-    pub fn abbreviation(&self) -> &str {
+    #[must_use] pub fn abbreviation(&self) -> &str {
         match self {
             Mode::Normal => "n",
             Mode::Insert => "i",
@@ -138,17 +138,17 @@ impl From<Mode> for NvimString {
 impl From<Mode> for getchar::Mode {
     fn from(api_mode: Mode) -> Self {
         match api_mode {
-            Mode::Normal => getchar::Mode::Normal,
-            Mode::Insert => getchar::Mode::Insert,
-            Mode::Replace => getchar::Mode::Replace,
-            Mode::Visual => getchar::Mode::Visual,
+            Mode::Normal => Self::Normal,
+            Mode::Insert => Self::Insert,
+            Mode::Replace => Self::Replace,
+            Mode::Visual => Self::Visual,
             Mode::VisualLine => todo!(),
             Mode::VisualBlock => todo!(),
-            Mode::Command => getchar::Mode::CmdLine,
-            Mode::Select => getchar::Mode::SelectMode,
+            Mode::Command => Self::CmdLine,
+            Mode::Select => Self::SelectMode,
             Mode::SelectLine => todo!(),
             Mode::SelectBlock => todo!(),
-            Mode::Terminal => getchar::Mode::TermFocus,
+            Mode::Terminal => Self::TermFocus,
         }
     }
 }

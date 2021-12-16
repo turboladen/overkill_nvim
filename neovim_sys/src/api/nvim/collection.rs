@@ -30,6 +30,7 @@ unsafe impl<T: Send> Send for Collection<T> {}
 unsafe impl<T: Sync> Sync for Collection<T> {}
 
 impl<T> Collection<T> {
+    #[must_use]
     pub fn new() -> Self {
         assert!(mem::size_of::<T>() != 0, "We're not ready to handle ZSTs");
 
@@ -57,7 +58,7 @@ impl<T> Collection<T> {
 
         // Ensure that the new allocation doesn't exceed `isize::MAX` bytes.
         assert!(
-            new_layout.size() <= isize::MAX as usize,
+            isize::try_from(new_layout.size()).is_ok(),
             "Allocation too large"
         );
 
@@ -65,12 +66,12 @@ impl<T> Collection<T> {
             unsafe { alloc::alloc(new_layout) }
         } else {
             let old_layout = Layout::array::<T>(self.capacity).unwrap();
-            let old_ptr = self.items.as_ptr() as *mut u8;
+            let old_ptr = self.items.as_ptr().cast::<u8>();
             unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) }
         };
 
         // If allocation fails, `new_ptr` will be null, in which case we abort.
-        self.items = match NonNull::new(new_ptr as *mut T) {
+        self.items = match NonNull::new(new_ptr.cast::<T>()) {
             Some(p) => p,
             None => alloc::handle_alloc_error(new_layout),
         };
@@ -224,7 +225,7 @@ impl<T> Drop for Collection<T> {
             let layout = Layout::array::<T>(self.capacity).unwrap();
 
             unsafe {
-                alloc::dealloc(self.items.as_ptr() as *mut u8, layout);
+                alloc::dealloc(self.items.as_ptr().cast::<u8>(), layout);
             }
         }
     }

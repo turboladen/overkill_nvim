@@ -241,7 +241,7 @@ pub fn get_maps(mode: Mode) -> Result<Vec<Mapping>, Error> {
 
     let mut output = Vec::with_capacity(maps.len());
 
-    for map in maps.into_iter() {
+    for map in maps {
         output.push(Mapping::try_from(map)?);
     }
 

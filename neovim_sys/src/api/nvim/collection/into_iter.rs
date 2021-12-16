@@ -41,6 +41,7 @@ impl<T> IntoIter<T> {
     /// assert_eq!(into_iter.as_slice(), &[Object::from(2.2), Object::from(3.3)]);
     /// ```
     ///
+    #[must_use]
     pub fn as_slice(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.start, self.len()) }
     }
