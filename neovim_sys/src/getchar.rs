@@ -78,8 +78,4 @@ extern "C" {
     /// - 5: entry not unique
     ///
     pub fn do_map(map_type: c_int, arg: *mut CharU, mode: c_int, is_abbrev: bool) -> c_int;
-
-    /// Returns an integer that corresponds to one of `Mode`.
-    ///
-    pub fn get_map_mode(cmd: *mut *const c_char, force_it: bool) -> c_int;
 }
