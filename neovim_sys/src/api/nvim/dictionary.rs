@@ -3,7 +3,7 @@
 //!
 
 use super::{collection::Collection, Array, Boolean, Float, Integer, NvimString, Object};
-use std::{borrow::Borrow, fmt};
+use std::fmt;
 
 /// Wrapper for neovim's `Dictionary` type.
 ///
@@ -16,7 +16,6 @@ impl Dictionary {
     #[inline]
     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&Object>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.iter().find_map(|kv| {
@@ -33,7 +32,6 @@ impl Dictionary {
     ///
     pub fn get_as_boolean<Q: ?Sized>(&self, k: &Q) -> Option<Boolean>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.get(k).map(Object::as_boolean_unchecked)
@@ -44,7 +42,6 @@ impl Dictionary {
     ///
     pub fn get_as_integer<Q: ?Sized>(&self, k: &Q) -> Option<Integer>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.get(k).map(Object::as_integer_unchecked)
@@ -55,7 +52,6 @@ impl Dictionary {
     ///
     pub fn get_as_float<Q: ?Sized>(&self, k: &Q) -> Option<Float>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.get(k).map(Object::as_float_unchecked)
@@ -66,7 +62,6 @@ impl Dictionary {
     ///
     pub fn get_as_string<Q: ?Sized>(&self, k: &Q) -> Option<&NvimString>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.get(k).map(Object::as_string_unchecked)
@@ -77,7 +72,6 @@ impl Dictionary {
     ///
     pub fn get_as_array<Q: ?Sized>(&self, k: &Q) -> Option<&Array>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.get(k).map(Object::as_array_unchecked)
@@ -88,7 +82,6 @@ impl Dictionary {
     ///
     pub fn get_as_dictionary<Q: ?Sized>(&self, k: &Q) -> Option<&Self>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.get(k).map(Object::as_dictionary_unchecked)
