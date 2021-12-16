@@ -1,7 +1,7 @@
 //! Types and functions related to those in nvim/getchar.c.
 //!
 use crate::types::CharU;
-use std::os::raw::{c_char, c_int};
+use std::os::raw::{c_int};
 
 /// Flag, specifically for `do_map()` and `buf_do_map()`.
 ///
