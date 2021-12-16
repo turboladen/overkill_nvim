@@ -27,6 +27,21 @@ impl Dictionary {
         })
     }
 
+    pub fn set<V>(&mut self, k: NvimString, v: V) -> Option<Object>
+    where
+        Object: From<V>,
+    {
+        if let Some(kv) = self.iter_mut().find(|kv| &k == kv.key()) {
+            let old = kv.value().clone();
+            kv.set_value(v);
+            return Some(old);
+        }
+
+        self.push(KeyValuePair::new(k, v));
+
+        None
+    }
+
     /// Convenience method for calling `get()` then forcing to a `Boolean`. Only call this if
     /// you're 100% sure the value is a `Boolean`.
     ///
@@ -101,8 +116,14 @@ impl KeyValuePair {
     /// Basic constructor.
     ///
     #[must_use]
-    pub const fn new(key: NvimString, value: Object) -> Self {
-        Self { key, value }
+    pub fn new<V>(key: NvimString, value: V) -> Self
+    where
+        Object: From<V>,
+    {
+        Self {
+            key,
+            value: Object::from(value),
+        }
     }
 
     /// A reference to the key.
@@ -119,6 +140,13 @@ impl KeyValuePair {
     #[must_use]
     pub const fn value(&self) -> &Object {
         &self.value
+    }
+
+    pub fn set_value<V>(&mut self, value: V)
+    where
+        Object: From<V>,
+    {
+        self.value = Object::from(value);
     }
 }
 
@@ -140,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_of_bool_values() {
-        let array = Dictionary::new([
+        let array = Dictionary::new_from([
             KeyValuePair::new(NvimString::new_unchecked("one"), Object::from(true)),
             KeyValuePair::new(NvimString::new_unchecked("two"), Object::from(false)),
         ]);
@@ -160,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_of_string_values() {
-        let array = Dictionary::new([
+        let array = Dictionary::new_from([
             KeyValuePair::new(
                 NvimString::new_unchecked("one"),
                 Object::from(NvimString::new_unchecked("first one")),
@@ -190,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_of_vecs() {
-        let inner1_dictionary = Dictionary::new([
+        let inner1_dictionary = Dictionary::new_from([
             KeyValuePair::new(NvimString::new_unchecked("inner one one"), Object::from(42)),
             KeyValuePair::new(
                 NvimString::new_unchecked("inner one two"),
@@ -198,7 +226,7 @@ mod tests {
             ),
         ]);
 
-        let inner2_dictionary = Dictionary::new([
+        let inner2_dictionary = Dictionary::new_from([
             KeyValuePair::new(
                 NvimString::new_unchecked("inner two one"),
                 Object::from(NvimString::new_unchecked("first one")),
@@ -209,7 +237,7 @@ mod tests {
             ),
         ]);
 
-        let dictionary = Dictionary::new([
+        let dictionary = Dictionary::new_from([
             KeyValuePair::new(
                 NvimString::new_unchecked("outer 1"),
                 Object::from(inner1_dictionary),
@@ -284,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let original_dict = Dictionary::new([KeyValuePair::new(
+        let original_dict = Dictionary::new_from([KeyValuePair::new(
             NvimString::new_unchecked("the key"),
             Object::from(NvimString::new_unchecked("the value")),
         )]);
@@ -318,7 +346,7 @@ mod tests {
 
     #[test]
     fn get_existing_key_test() {
-        let original_dict = Dictionary::new([KeyValuePair::new(
+        let original_dict = Dictionary::new_from([KeyValuePair::new(
             NvimString::new_unchecked("the key"),
             Object::from(NvimString::new_unchecked("the value")),
         )]);

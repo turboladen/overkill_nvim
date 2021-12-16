@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn try_from_dictionary_test() {
-        let dict = Dictionary::new([
+        let dict = Dictionary::new_from([
             KeyValuePair::new(
                 NvimString::new_unchecked("mode"),
                 Object::from(NvimString::new_unchecked("n")),

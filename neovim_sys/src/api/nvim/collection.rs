@@ -7,11 +7,12 @@ pub mod into_iter;
 pub use self::into_iter::IntoIter;
 
 use std::{
+    alloc::{self, Layout},
     fmt,
     marker::PhantomData,
     mem::{self, ManuallyDrop, MaybeUninit},
-    ptr::{addr_of_mut, NonNull},
-    slice,
+    ops::{Deref, DerefMut},
+    ptr::{self, addr_of_mut, NonNull},
 };
 
 /// Base type for `Array` and `Dictionary`. Since the behavior of those types are quite similar,
@@ -19,15 +20,66 @@ use std::{
 ///
 #[repr(C)]
 pub struct Collection<T> {
-    pub(super) items: *mut T,
+    pub(super) items: NonNull<T>,
     pub(super) size: usize,
     pub(super) capacity: usize,
+    pub(super) _marker: PhantomData<T>,
 }
 
+unsafe impl<T: Send> Send for Collection<T> {}
+unsafe impl<T: Sync> Sync for Collection<T> {}
+
 impl<T> Collection<T> {
+    pub fn new() -> Self {
+        assert!(mem::size_of::<T>() != 0, "We're not ready to handle ZSTs");
+
+        Self {
+            items: NonNull::dangling(),
+            size: 0,
+            capacity: 0,
+            _marker: PhantomData,
+        }
+    }
+
+    fn grow(&mut self) {
+        let (new_cap, new_layout) = if self.capacity == 0 {
+            (1, Layout::array::<T>(1).unwrap())
+        } else {
+            // This can't overflow since self.cap <= isize::MAX.
+            let new_cap = 2 * self.capacity;
+
+            // `Layout::array` checks that the number of bytes is <= usize::MAX,
+            // but this is redundant since old_layout.size() <= isize::MAX,
+            // so the `unwrap` should never fail.
+            let new_layout = Layout::array::<T>(new_cap).unwrap();
+            (new_cap, new_layout)
+        };
+
+        // Ensure that the new allocation doesn't exceed `isize::MAX` bytes.
+        assert!(
+            new_layout.size() <= isize::MAX as usize,
+            "Allocation too large"
+        );
+
+        let new_ptr = if self.capacity == 0 {
+            unsafe { alloc::alloc(new_layout) }
+        } else {
+            let old_layout = Layout::array::<T>(self.capacity).unwrap();
+            let old_ptr = self.items.as_ptr() as *mut u8;
+            unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) }
+        };
+
+        // If allocation fails, `new_ptr` will be null, in which case we abort.
+        self.items = match NonNull::new(new_ptr as *mut T) {
+            Some(p) => p,
+            None => alloc::handle_alloc_error(new_layout),
+        };
+        self.capacity = new_cap;
+    }
+
     /// Instantiates a new `Self` using any pararmeter that can be converted into a `Vec<T>`.
     ///
-    pub fn new<U: Into<Vec<T>>>(vec: U) -> Self {
+    pub fn new_from<U: Into<Vec<T>>>(vec: U) -> Self {
         let mut vec: Vec<T> = vec.into();
 
         let mut uninit: MaybeUninit<Self> = MaybeUninit::uninit();
@@ -41,7 +93,7 @@ impl<T> Collection<T> {
             addr_of_mut!((*ptr).capacity).write(vec.capacity());
         }
 
-        let new_items = vec.as_mut_ptr();
+        let new_items = unsafe { NonNull::new_unchecked(vec.as_mut_ptr()) };
 
         unsafe {
             // Initializing the `items` field
@@ -54,12 +106,71 @@ impl<T> Collection<T> {
         unsafe { uninit.assume_init() }
     }
 
+    pub fn push(&mut self, elem: T) {
+        if self.size == self.capacity {
+            self.grow();
+        }
+
+        unsafe {
+            ptr::write(self.items.as_ptr().add(self.size), elem);
+        }
+
+        // Can't fail, we'll OOM first.
+        self.size += 1;
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        if self.size == 0 {
+            None
+        } else {
+            self.size -= 1;
+            unsafe { Some(ptr::read(self.items.as_ptr().add(self.size))) }
+        }
+    }
+
+    pub fn insert(&mut self, index: usize, elem: T) {
+        // Note: `<=` because it's valid to insert after everything
+        // which would be equivalent to push.
+        assert!(index <= self.size, "index out of bounds");
+
+        if self.capacity == self.size {
+            self.grow();
+        }
+
+        unsafe {
+            ptr::copy(
+                self.items.as_ptr().add(index),
+                self.items.as_ptr().add(index + 1),
+                self.size - index,
+            );
+            ptr::write(self.items.as_ptr().add(index), elem);
+            self.size += 1;
+        }
+    }
+
+    pub fn remove(&mut self, index: usize) -> T {
+        // Note: `<` because it's *not* valid to remove after everything
+        assert!(index < self.size, "index out of bounds");
+
+        unsafe {
+            self.size -= 1;
+            let result = ptr::read(self.items.as_ptr().add(index));
+
+            ptr::copy(
+                self.items.as_ptr().add(index + 1),
+                self.items.as_ptr().add(index),
+                self.size - index,
+            );
+            result
+        }
+    }
+
     /// Builds a slice of all internal items.
     ///
     #[must_use]
     #[inline]
     pub fn as_slice(&self) -> &[T] {
-        unsafe { std::slice::from_raw_parts(self.items, self.size) }
+        unsafe { std::slice::from_raw_parts(self.items.as_ref(), self.size) }
     }
 
     /// The number of items in the collection.
@@ -91,15 +202,7 @@ impl<T> Collection<T> {
     ///
     #[inline]
     pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.items
-    }
-
-    /// Returns an iterator over `&T`.
-    ///
-    #[inline]
-    #[must_use]
-    pub fn iter(&self) -> slice::Iter<'_, T> {
-        self.as_slice().iter()
+        self.items.as_ptr()
     }
 }
 
@@ -109,15 +212,35 @@ where
 {
     #[inline]
     fn clone(&self) -> Self {
-        Self::new(self.as_slice().to_vec())
+        Self::new_from(self.as_slice().to_vec())
     }
 }
 
 impl<T> Drop for Collection<T> {
     fn drop(&mut self) {
-        if !self.items.is_null() {
-            let _vec = unsafe { Vec::from_raw_parts(self.items, self.size, self.capacity) };
+        if self.capacity != 0 {
+            while let Some(_) = self.pop() {}
+
+            let layout = Layout::array::<T>(self.capacity).unwrap();
+
+            unsafe {
+                alloc::dealloc(self.items.as_ptr() as *mut u8, layout);
+            }
         }
+    }
+}
+
+impl<T> Deref for Collection<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &[T] {
+        unsafe { std::slice::from_raw_parts(self.items.as_ptr(), self.size) }
+    }
+}
+
+impl<T> DerefMut for Collection<T> {
+    fn deref_mut(&mut self) -> &mut [T] {
+        unsafe { std::slice::from_raw_parts_mut(self.items.as_ptr(), self.size) }
     }
 }
 
@@ -132,8 +255,13 @@ where
 
 impl<T> From<Collection<T>> for Vec<T> {
     fn from(dictionary: Collection<T>) -> Self {
-        let v =
-            unsafe { Self::from_raw_parts(dictionary.items, dictionary.size, dictionary.capacity) };
+        let v = unsafe {
+            Self::from_raw_parts(
+                dictionary.items.as_ptr(),
+                dictionary.size,
+                dictionary.capacity,
+            )
+        };
         std::mem::forget(dictionary);
 
         v
@@ -163,17 +291,23 @@ impl<T> IntoIterator for Collection<T> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         unsafe {
+            let capacity = self.capacity;
+
             let mut me = ManuallyDrop::new(self);
-            let begin = me.as_mut_ptr();
-            let end = begin.add(me.len());
-            let cap = me.capacity();
+
+            let start = me.as_mut_ptr();
+            let end = if capacity == 0 {
+                start
+            } else {
+                start.add(me.len())
+            };
 
             IntoIter {
-                buf: NonNull::new_unchecked(begin),
-                phantom: PhantomData,
-                cap,
-                ptr: begin,
+                buf: NonNull::new_unchecked(start),
+                capacity,
+                start,
                 end,
+                _marker: PhantomData,
             }
         }
     }

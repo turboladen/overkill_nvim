@@ -2,7 +2,10 @@
 //! This module contains types and functions for working with neovim Lua `Object`s.
 //!
 use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, NvimString};
-use std::{borrow::Cow, convert::TryFrom, fmt::Debug, mem::ManuallyDrop, num::NonZeroI64};
+use std::{
+    borrow::Cow, convert::TryFrom, fmt::Debug, marker::PhantomData, mem::ManuallyDrop,
+    num::NonZeroI64,
+};
 
 /// An error that can only happen when dealing wit `Object`s.
 ///
@@ -325,6 +328,7 @@ impl Object {
             items: unsafe { self.data.array.items },
             size: unsafe { self.data.array.size },
             capacity: unsafe { self.data.array.capacity },
+            _marker: PhantomData,
         };
         std::mem::forget(self);
         a
@@ -343,6 +347,7 @@ impl Object {
             items: unsafe { self.data.dictionary.items },
             size: unsafe { self.data.dictionary.size },
             capacity: unsafe { self.data.array.capacity },
+            _marker: PhantomData,
         };
         std::mem::forget(self);
         d
@@ -813,8 +818,10 @@ mod tests {
     #[test]
     fn test_from_array() {
         fn do_it(input: &str) {
-            let subject = Object::from(Array::new([Object::from(NvimString::new(input).unwrap())]));
-            let expected = Array::new([Object::from(NvimString::new(input).unwrap())]);
+            let subject = Object::from(Array::new_from([Object::from(
+                NvimString::new(input).unwrap(),
+            )]));
+            let expected = Array::new_from([Object::from(NvimString::new(input).unwrap())]);
 
             assert_eq!(subject.object_type, ObjectType::kObjectTypeArray);
             assert_eq!(subject.as_array_unchecked(), &expected);

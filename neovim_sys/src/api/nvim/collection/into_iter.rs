@@ -13,14 +13,14 @@ use std::{
 /// ```
 /// use neovim_sys::api::nvim::{Array, Object};
 ///
-/// let a = Array::new([Object::from(0), Object::from(1), Object::from(2)]);
+/// let a = Array::new_from([Object::from(0), Object::from(1), Object::from(2)]);
 /// let iter: neovim_sys::api::nvim::collection::IntoIter<_> = a.into_iter();
 /// ```
 pub struct IntoIter<T> {
     pub(super) buf: NonNull<T>,
-    pub(super) phantom: PhantomData<T>,
-    pub(super) cap: usize,
-    pub(super) ptr: *const T,
+    pub(super) _marker: PhantomData<T>,
+    pub(super) capacity: usize,
+    pub(super) start: *const T,
     pub(super) end: *const T,
 }
 
@@ -32,7 +32,7 @@ impl<T> IntoIter<T> {
     /// ```
     /// use neovim_sys::api::nvim::{Array, Object};
     ///
-    /// let a = Array::new([Object::from(1.1), Object::from(2.2), Object::from(3.3)]);
+    /// let a = Array::new_from([Object::from(1.1), Object::from(2.2), Object::from(3.3)]);
     ///
     /// let mut into_iter = a.into_iter();
     /// assert_eq!(into_iter.as_slice(), &[Object::from(1.1), Object::from(2.2), Object::from(3.3)]);
@@ -42,7 +42,7 @@ impl<T> IntoIter<T> {
     /// ```
     ///
     pub fn as_slice(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.ptr, self.len()) }
+        unsafe { slice::from_raw_parts(self.start, self.len()) }
     }
 
     /// Returns the remaining items of this iterator as a mutable slice.
@@ -52,7 +52,7 @@ impl<T> IntoIter<T> {
     /// ```
     /// use neovim_sys::api::nvim::{Array, Object};
     ///
-    /// let a = Array::new([Object::from(1.1), Object::from(2.2), Object::from(3.3)]);
+    /// let a = Array::new_from([Object::from(1.1), Object::from(2.2), Object::from(3.3)]);
     ///
     /// let mut into_iter = a.into_iter();
     /// assert_eq!(into_iter.as_slice(), &[Object::from(1.1), Object::from(2.2), Object::from(3.3)]);
@@ -68,7 +68,7 @@ impl<T> IntoIter<T> {
     }
 
     fn as_raw_mut_slice(&mut self) -> *mut [T] {
-        ptr::slice_from_raw_parts_mut(self.ptr as *mut T, self.len())
+        ptr::slice_from_raw_parts_mut(self.start as *mut T, self.len())
     }
 }
 
@@ -86,11 +86,11 @@ impl<T> Iterator for IntoIter<T> {
 
     #[inline]
     fn next(&mut self) -> Option<T> {
-        if self.ptr == self.end {
+        if self.start == self.end {
             None
         } else {
-            let old = self.ptr;
-            self.ptr = unsafe { self.ptr.offset(1) };
+            let old = self.start;
+            self.start = unsafe { self.start.offset(1) };
 
             Some(unsafe { ptr::read(old) })
         }
@@ -111,7 +111,7 @@ impl<T> Iterator for IntoIter<T> {
 
 impl<T> ExactSizeIterator for IntoIter<T> {
     fn len(&self) -> usize {
-        unsafe { self.end.offset_from(self.ptr) as usize }
+        unsafe { self.end.offset_from(self.start) as usize }
     }
 }
 
@@ -121,9 +121,9 @@ impl<T> Drop for IntoIter<T> {
 
         impl<T> Drop for DropGuard<'_, T> {
             fn drop(&mut self) {
-                let len = unsafe { self.0.end.offset_from(self.0.ptr) as usize };
+                let len = unsafe { self.0.end.offset_from(self.0.start) as usize };
                 unsafe {
-                    let _ = Vec::from_raw_parts(self.0.buf.as_ptr(), len, self.0.cap);
+                    let _ = Vec::from_raw_parts(self.0.buf.as_ptr(), len, self.0.capacity);
                 }
             }
         }

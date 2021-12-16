@@ -68,7 +68,7 @@ fn test_nvim_set_var() {
     {
         fn make_subject() -> Array {
             let o = Object::from(4242);
-            Array::new([o])
+            Array::new_from([o])
         }
         let value = Object::from(make_subject());
         let var = "nvim_set_var_test_array";
@@ -81,7 +81,7 @@ fn test_nvim_set_var() {
         fn make_subject() -> Dictionary {
             let key = NvimString::new_unchecked("meow");
             let value = Object::from(4242);
-            Dictionary::new([KeyValuePair::new(key, value)])
+            Dictionary::new_from([KeyValuePair::new(key, value)])
         }
         let value = Object::from(make_subject());
         let var = "nvim_set_var_test_dictionary";
@@ -110,7 +110,7 @@ fn test_nvim_buf_set_var() {
     fn make_subject() -> Dictionary {
         let key = NvimString::new_unchecked("meow");
         let value = Object::from(4242);
-        Dictionary::new([KeyValuePair::new(key, value)])
+        Dictionary::new_from([KeyValuePair::new(key, value)])
     }
 
     let value = Object::from(make_subject());
