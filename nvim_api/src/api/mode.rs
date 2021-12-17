@@ -54,7 +54,8 @@ pub enum Mode {
 }
 
 impl Mode {
-    #[must_use] pub fn abbreviation(&self) -> &str {
+    #[must_use]
+    pub const fn abbreviation(&self) -> &str {
         match self {
             Mode::Normal => "n",
             Mode::Insert => "i",

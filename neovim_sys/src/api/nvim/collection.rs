@@ -30,6 +30,13 @@ unsafe impl<T: Send> Send for Collection<T> {}
 unsafe impl<T: Sync> Sync for Collection<T> {}
 
 impl<T> Collection<T> {
+    /// Basic constructor. See also `new_from()`.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if `T` isn't `Sized` (which shouldn't be a problem since a `Collection`
+    /// should only represent nvim things, which are all sized).
+    ///
     #[must_use]
     pub fn new() -> Self {
         assert!(mem::size_of::<T>() != 0, "We're not ready to handle ZSTs");
@@ -107,6 +114,10 @@ impl<T> Collection<T> {
         unsafe { uninit.assume_init() }
     }
 
+    /// Appends `elem` to the end of the collection. Note that for `Dictionary`s, no key-sorting is
+    /// done (i.e. like a `BTreeMap` or `HashMap`); the item is simply added to the end of the
+    /// collection.
+    ///
     pub fn push(&mut self, elem: T) {
         if self.size == self.capacity {
             self.grow();
@@ -120,6 +131,9 @@ impl<T> Collection<T> {
         self.size += 1;
     }
 
+    /// Removes and return the last element in the collection. If the collection is empty, it
+    /// returns `None`.
+    ///
     pub fn pop(&mut self) -> Option<T> {
         if self.size == 0 {
             None
@@ -129,9 +143,16 @@ impl<T> Collection<T> {
         }
     }
 
+    /// Like `Vec::insert()`, this inserts and element at a specific index, shifting the existing
+    /// values towards the end of the collection.
+    ///
+    /// # Panics
+    ///
+    /// This panics if `index` is out-of-bounds.
+    ///
     pub fn insert(&mut self, index: usize, elem: T) {
-        // Note: `<=` because it's valid to insert after everything
-        // which would be equivalent to push.
+        // Note: `<=` because it's valid to insert after everything which would be equivalent to
+        // push.
         assert!(index <= self.size, "index out of bounds");
 
         if self.capacity == self.size {
@@ -149,6 +170,12 @@ impl<T> Collection<T> {
         }
     }
 
+    /// Like `Vec::remove()`, this removes the element at `index`.
+    ///
+    /// # Panics
+    ///
+    /// This panics if `index` is out of bounds.
+    ///
     pub fn remove(&mut self, index: usize) -> T {
         // Note: `<` because it's *not* valid to remove after everything
         assert!(index < self.size, "index out of bounds");
@@ -207,6 +234,12 @@ impl<T> Collection<T> {
     }
 }
 
+impl<T> Default for Collection<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Clone for Collection<T>
 where
     T: Clone,
@@ -220,7 +253,7 @@ where
 impl<T> Drop for Collection<T> {
     fn drop(&mut self) {
         if self.capacity != 0 {
-            while let Some(_) = self.pop() {}
+            while self.pop().is_some() {}
 
             let layout = Layout::array::<T>(self.capacity).unwrap();
 

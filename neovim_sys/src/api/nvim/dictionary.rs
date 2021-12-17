@@ -27,6 +27,11 @@ impl Dictionary {
         })
     }
 
+    /// Similar to Rust's `HashMap`/`BTreeMap::insert()`, this sets the key/value pair. If the key
+    /// already had a value, this is removed and returned. If the key didn't have a value, this returns
+    /// `None`.
+    ///
+    #[inline]
     pub fn set<V>(&mut self, k: NvimString, v: V) -> Option<Object>
     where
         Object: From<V>,
@@ -142,6 +147,9 @@ impl KeyValuePair {
         &self.value
     }
 
+    /// Sets the value.
+    ///
+    #[inline]
     pub fn set_value<V>(&mut self, value: V)
     where
         Object: From<V>,

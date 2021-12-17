@@ -1,5 +1,5 @@
 //!
-//! Borrowed from https://doc.rust-lang.org/src/alloc/vec/into_iter.rs.html
+//! Borrowed from <https://doc.rust-lang.org/src/alloc/vec/into_iter.rs.html>.
 //!
 use std::{
     fmt,
@@ -124,7 +124,7 @@ impl<T> Drop for IntoIter<T> {
             fn drop(&mut self) {
                 let len = unsafe { self.0.end.offset_from(self.0.start) as usize };
                 unsafe {
-                    let _ = Vec::from_raw_parts(self.0.buf.as_ptr(), len, self.0.capacity);
+                    let _v = Vec::from_raw_parts(self.0.buf.as_ptr(), len, self.0.capacity);
                 }
             }
         }
