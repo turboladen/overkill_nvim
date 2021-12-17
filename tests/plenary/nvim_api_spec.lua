@@ -9,6 +9,7 @@ ffi.cdef [[
     bool test_nvim_get_mode();
     bool test_nvim_set_global_option();
     bool test_set_map();
+    bool test_set_buf_map();
   ]]
 
 local suffix = ffi.os == "OSX" and ".dylib" or ".so"
@@ -65,6 +66,12 @@ describe(
             "tests api::keymap::map()",
             function()
                 assert.True(lib.test_set_map())
+            end
+        )
+        it(
+            "tests api::keymap::buf_map()",
+            function()
+                assert.True(lib.test_set_buf_map())
             end
         )
     end

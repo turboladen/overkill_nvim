@@ -3,8 +3,12 @@
 use super::Mode;
 use core::fmt;
 use neovim_sys::{
-    api::nvim::{Boolean, Integer, NvimString, Object},
-    getchar::{self, MapType},
+    api::{
+        buffer::Buffer,
+        nvim::{Boolean, Integer, LuaError, NvimString, Object},
+        private,
+    },
+    getchar::{self, MapArguments, MapType},
 };
 use std::{ffi::CString, os::raw::c_int};
 
@@ -87,6 +91,9 @@ pub enum Error {
 
     #[error(transparent)]
     NulError(#[from] std::ffi::NulError),
+
+    #[error(transparent)]
+    LuaError(#[from] LuaError),
 }
 
 #[derive(Debug, Clone)]
@@ -248,6 +255,49 @@ pub fn get_maps(mode: Mode) -> Result<Vec<Mapping>, Error> {
     Ok(output)
 }
 
-// pub fn noremap(mode: getchar::Mode, lhs: &str, rhs: &str, options: Option<Options>) {
-//     todo!()
-// }
+pub fn set_buf_map(
+    buffer: Buffer,
+    mode: Mode,
+    lhs: &str,
+    rhs: &str,
+    options: Option<Options>,
+) -> Result<(), Error> {
+    let is_unmap = false;
+    let mut map_args = MapArguments::new();
+
+    {
+        let string_arg = options.map_or_else(
+            || format!("{} {}", lhs, rhs),
+            |o| format!("{} {} {}", o, lhs, rhs),
+        );
+        let cstring = CString::new(string_arg)?;
+        let args = cstring.into_bytes_with_nul();
+
+        unsafe { getchar::str_to_mapargs(args.as_ptr(), is_unmap, &mut map_args) };
+    };
+
+    let mut out_err = LuaError::default();
+    let buf = unsafe { private::find_buffer_by_handle(buffer, &mut out_err) };
+
+    if out_err.is_err() {
+        return Err(Error::from(out_err));
+    }
+
+    let result = unsafe {
+        getchar::buf_do_map(
+            MapType::Map as c_int,
+            &map_args,
+            getchar::Mode::from(mode) as c_int,
+            is_unmap,
+            buf,
+        )
+    };
+
+    match result {
+        0 => Ok(()),
+        1 => Err(Error::InvalidArguments(rhs.to_string())),
+        2 => Err(Error::NoMatches(lhs.to_string())),
+        5 => Err(Error::EntryNotUnique(lhs.to_string())),
+        v => Err(Error::Unknown(v)),
+    }
+}

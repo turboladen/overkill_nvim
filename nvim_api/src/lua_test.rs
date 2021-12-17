@@ -217,3 +217,33 @@ fn test_set_map() {
         &NvimString::new_unchecked("<Cmd>echo \"hi\"")
     );
 }
+
+#[nvim_test]
+fn test_set_buf_map() {
+    let options = self::api::keymap::Options::default()
+        .nowait()
+        .silent()
+        .unique();
+
+    let result = self::api::keymap::set_buf_map(
+        0, // current buffer
+        self::api::Mode::Normal,
+        "<C-8>",
+        "<cmd>echo \"bye\"",
+        Some(options),
+    );
+    assert!(result.is_ok());
+
+    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+
+    let mapping = maps
+        .iter()
+        .find(|map| map.lhs() == &NvimString::new_unchecked("<C-8>"))
+        .unwrap();
+
+    // Looks like nvim capitalizes the 'c' in "<cmd>"...
+    assert_eq!(
+        mapping.rhs(),
+        &NvimString::new_unchecked("<Cmd>echo \"bye\"")
+    );
+}
