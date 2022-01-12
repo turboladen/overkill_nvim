@@ -255,6 +255,16 @@ pub fn get_maps(mode: Mode) -> Result<Vec<Mapping>, Error> {
     Ok(output)
 }
 
+/// Similar to `nvim_buf_set_keymap()`.
+///
+/// # Errors
+///
+/// This will error if:
+///
+/// - `lhs` and `rhs` can't be coerced to a `CString`.
+/// - `lhs` and `rhs` can't be parsed into valid mapping arguments.
+/// - nvim returns an error.
+///
 pub fn set_buf_map(
     buffer: Buffer,
     mode: Mode,
