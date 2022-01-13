@@ -259,6 +259,108 @@ impl Object {
         self.data.dictionary()
     }
 
+    /// Owned/consuming version of `try_as_boolean()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Boolean`.
+    ///
+    #[inline]
+    pub fn try_into_boolean(self) -> Result<Boolean, Error> {
+        match self.object_type {
+            ObjectType::kObjectTypeBoolean => Ok(self.data.boolean()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeBoolean,
+                actual: self.object_type,
+            }),
+        }
+    }
+
+    /// Owned/consuming version of `try_as_integer()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Integer`.
+    ///
+    #[inline]
+    pub fn try_into_integer(self) -> Result<Integer, Error> {
+        match self.object_type {
+            ObjectType::kObjectTypeInteger => Ok(self.data.integer()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeInteger,
+                actual: self.object_type,
+            }),
+        }
+    }
+
+    /// Owned/consuming version of `try_as_float()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Float`.
+    ///
+    #[inline]
+    pub fn try_into_float(self) -> Result<Float, Error> {
+        match self.object_type {
+            ObjectType::kObjectTypeFloat => Ok(self.data.float()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeFloat,
+                actual: self.object_type,
+            }),
+        }
+    }
+
+    /// Owned/consuming version of `try_as_string()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `NvimString`.
+    ///
+    #[inline]
+    pub fn try_into_string(self) -> Result<NvimString, Error> {
+        match self.object_type {
+            ObjectType::kObjectTypeString => Ok(self.into_string_unchecked()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeString,
+                actual: self.object_type,
+            }),
+        }
+    }
+
+    /// Owned/consuming version of `try_as_array()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Array`.
+    ///
+    #[inline]
+    pub fn try_into_array(self) -> Result<Array, Error> {
+        match self.object_type {
+            ObjectType::kObjectTypeArray => Ok(self.into_array_unchecked()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeArray,
+                actual: self.object_type,
+            }),
+        }
+    }
+
+    /// Owned/consuming version of `try_as_dictionary()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Dictionary`.
+    ///
+    #[inline]
+    pub fn try_into_dictionary(self) -> Result<Dictionary, Error> {
+        match self.object_type {
+            ObjectType::kObjectTypeDictionary => Ok(self.into_dictionary_unchecked()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::kObjectTypeDictionary,
+                actual: self.object_type,
+            }),
+        }
+    }
+
     /// Similar to `as_boolean_unchecked()`, where it does not check `self`'s `object_type` (thus
     /// calling this if `self`'s internal data represents another type will give unexpected
     /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
@@ -750,9 +852,8 @@ impl ObjectData {
 
 #[cfg(test)]
 mod tests {
-    use approx::assert_ulps_eq;
-
     use super::*;
+    use approx::assert_ulps_eq;
 
     #[test]
     fn test_from_boolean() {
