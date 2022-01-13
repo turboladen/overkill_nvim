@@ -221,6 +221,37 @@ fn test_set_map() {
 }
 
 #[nvim_test]
+fn test_set_noremap() {
+    let options = self::api::keymap::SpecialArguments::default()
+        .nowait()
+        .silent()
+        .unique();
+
+    let result = self::api::keymap::set_noremap(
+        self::api::Mode::Normal,
+        "<C-1>",
+        "<cmd>echo \"meow\"",
+        Some(options),
+    );
+    assert!(result.is_ok());
+
+    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+
+    let mapping = maps
+        .iter()
+        .find(|map| {
+            map.get("lhs").unwrap().try_as_string().unwrap() == &NvimString::new_unchecked("<C-1>")
+        })
+        .unwrap();
+
+    // Looks like nvim capitalizes the 'c' in "<cmd>"...
+    assert_eq!(
+        mapping.get("rhs").unwrap().try_as_string().unwrap(),
+        &NvimString::new_unchecked("<Cmd>echo \"meow\"")
+    );
+}
+
+#[nvim_test]
 fn test_set_buf_map() {
     let options = self::api::keymap::SpecialArguments::default()
         .nowait()
@@ -249,5 +280,37 @@ fn test_set_buf_map() {
     assert_eq!(
         mapping.get("rhs").unwrap().try_as_string().unwrap(),
         &NvimString::new_unchecked("<Cmd>echo \"bye\"")
+    );
+}
+
+#[nvim_test]
+fn test_set_buf_noremap() {
+    let options = self::api::keymap::SpecialArguments::default()
+        .nowait()
+        .silent()
+        .unique();
+
+    let result = self::api::keymap::set_buf_noremap(
+        0, // current buffer
+        self::api::Mode::Normal,
+        "<C-2>",
+        "<cmd>echo \"tacos\"",
+        Some(options),
+    );
+    assert!(result.is_ok());
+
+    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+
+    let mapping = maps
+        .iter()
+        .find(|map| {
+            map.get("lhs").unwrap().try_as_string().unwrap() == &NvimString::new_unchecked("<C-2>")
+        })
+        .unwrap();
+
+    // Looks like nvim capitalizes the 'c' in "<cmd>"...
+    assert_eq!(
+        mapping.get("rhs").unwrap().try_as_string().unwrap(),
+        &NvimString::new_unchecked("<Cmd>echo \"tacos\"")
     );
 }

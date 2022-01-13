@@ -114,6 +114,34 @@ pub fn set_map(
     rhs: &str,
     special_arguments: Option<SpecialArguments>,
 ) -> Result<(), Error> {
+    map(MapType::Map, mode, lhs, rhs, special_arguments)
+}
+
+/// Defines a `noremap` mapping for `mode` that maps `lhs` to `rhs`.
+///
+/// # Errors
+///
+/// This will error if:
+///
+/// - `lhs` and `rhs` can't be coerced to a `CString`.
+/// - nvim returns an error.
+///
+pub fn set_noremap(
+    mode: Mode,
+    lhs: &str,
+    rhs: &str,
+    special_arguments: Option<SpecialArguments>,
+) -> Result<(), Error> {
+    map(MapType::NoRemap, mode, lhs, rhs, special_arguments)
+}
+
+fn map(
+    map_type: MapType,
+    mode: Mode,
+    lhs: &str,
+    rhs: &str,
+    special_arguments: Option<SpecialArguments>,
+) -> Result<(), Error> {
     let string_arg = special_arguments.map_or_else(
         || format!("{} {}", lhs, rhs),
         |o| format!("{} {} {}", o, lhs, rhs),
@@ -123,7 +151,7 @@ pub fn set_map(
 
     let result = unsafe {
         getchar::do_map(
-            MapType::Map as c_int,
+            map_type as c_int,
             arg.as_mut_ptr(),
             getchar::Mode::from(mode) as c_int,
             false,
@@ -138,7 +166,6 @@ pub fn set_map(
         v => Err(Error::Unknown(v)),
     }
 }
-
 /// # Errors
 ///
 /// This will error if a `Mapping` can't be built from any of the `Dictionary`s returned by the
@@ -152,7 +179,7 @@ pub fn get_maps(mode: Mode) -> Result<Vec<Dictionary>, Error> {
     let mut output = Vec::with_capacity(maps.len());
 
     for object in maps {
-        output.push(object.try_into_dictionary()?)
+        output.push(object.try_into_dictionary()?);
     }
 
     Ok(output)
@@ -169,6 +196,37 @@ pub fn get_maps(mode: Mode) -> Result<Vec<Dictionary>, Error> {
 /// - nvim returns an error.
 ///
 pub fn set_buf_map(
+    buffer: Buffer,
+    mode: Mode,
+    lhs: &str,
+    rhs: &str,
+    options: Option<SpecialArguments>,
+) -> Result<(), Error> {
+    buf_map(MapType::Map, buffer, mode, lhs, rhs, options)
+}
+
+/// Similar to `nvim_buf_set_keymap()`, but passing `{noremap = true}` with the options.
+///
+/// # Errors
+///
+/// This will error if:
+///
+/// - `lhs` and `rhs` can't be coerced to a `CString`.
+/// - `lhs` and `rhs` can't be parsed into valid mapping arguments.
+/// - nvim returns an error.
+///
+pub fn set_buf_noremap(
+    buffer: Buffer,
+    mode: Mode,
+    lhs: &str,
+    rhs: &str,
+    options: Option<SpecialArguments>,
+) -> Result<(), Error> {
+    buf_map(MapType::NoRemap, buffer, mode, lhs, rhs, options)
+}
+
+fn buf_map(
+    map_type: MapType,
     buffer: Buffer,
     mode: Mode,
     lhs: &str,
@@ -198,7 +256,7 @@ pub fn set_buf_map(
 
     let result = unsafe {
         getchar::buf_do_map(
-            MapType::Map as c_int,
+            map_type as c_int,
             &map_args,
             getchar::Mode::from(mode) as c_int,
             is_unmap,
