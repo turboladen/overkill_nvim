@@ -191,7 +191,7 @@ fn test_nvim_set_global_option() {
 
 #[nvim_test]
 fn test_set_map() {
-    let options = self::api::keymap::Options::default()
+    let options = self::api::keymap::SpecialArguments::default()
         .nowait()
         .silent()
         .unique();
@@ -222,7 +222,7 @@ fn test_set_map() {
 
 #[nvim_test]
 fn test_set_buf_map() {
-    let options = self::api::keymap::Options::default()
+    let options = self::api::keymap::SpecialArguments::default()
         .nowait()
         .silent()
         .unique();

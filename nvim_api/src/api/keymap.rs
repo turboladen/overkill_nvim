@@ -1,25 +1,25 @@
-// pub use neovim_sys::getchar::Mode;
-
 use super::Mode;
 use core::fmt;
 use neovim_sys::{
     api::{
         buffer::Buffer,
-        nvim::{Boolean, Integer, LuaError, NvimString, Object},
+        nvim::{object, Dictionary, LuaError, NvimString},
         private,
     },
     getchar::{self, MapArguments, MapType},
 };
 use std::{ffi::CString, os::raw::c_int};
 
+/// Correlates to Section 1.2 in `map.txt` (`:map-arguements`).
+///
 #[derive(Debug, Default, Clone, Copy)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct Options {
+pub struct SpecialArguments {
     buffer: bool,
-    nowait: bool,
-    silent: bool,
-    script: bool,
     expr: bool,
+    nowait: bool,
+    script: bool,
+    silent: bool,
     unique: bool,
 }
 
@@ -34,16 +34,16 @@ macro_rules! def_bool_meth {
     };
 }
 
-impl Options {
+impl SpecialArguments {
     def_bool_meth!(buffer);
-    def_bool_meth!(nowait);
-    def_bool_meth!(silent);
-    def_bool_meth!(script);
     def_bool_meth!(expr);
+    def_bool_meth!(nowait);
+    def_bool_meth!(script);
+    def_bool_meth!(silent);
     def_bool_meth!(unique);
 }
 
-impl fmt::Display for Options {
+impl fmt::Display for SpecialArguments {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.buffer {
             f.write_str("<buffer>")?;
@@ -108,8 +108,13 @@ pub enum Error {
 /// - `lhs` and `rhs` can't be coerced to a `CString`.
 /// - nvim returns an error.
 ///
-pub fn set_map(mode: Mode, lhs: &str, rhs: &str, options: Option<Options>) -> Result<(), Error> {
-    let string_arg = options.map_or_else(
+pub fn set_map(
+    mode: Mode,
+    lhs: &str,
+    rhs: &str,
+    special_arguments: Option<SpecialArguments>,
+) -> Result<(), Error> {
+    let string_arg = special_arguments.map_or_else(
         || format!("{} {}", lhs, rhs),
         |o| format!("{} {} {}", o, lhs, rhs),
     );
@@ -168,7 +173,7 @@ pub fn set_buf_map(
     mode: Mode,
     lhs: &str,
     rhs: &str,
-    options: Option<Options>,
+    options: Option<SpecialArguments>,
 ) -> Result<(), Error> {
     let is_unmap = false;
     let mut map_args = MapArguments::new();
