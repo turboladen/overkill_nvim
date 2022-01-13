@@ -208,12 +208,14 @@ fn test_set_map() {
 
     let mapping = maps
         .iter()
-        .find(|map| map.lhs() == &NvimString::new_unchecked("<C-9>"))
+        .find(|map| {
+            map.get("lhs").unwrap().try_as_string().unwrap() == &NvimString::new_unchecked("<C-9>")
+        })
         .unwrap();
 
     // Looks like nvim capitalizes the 'c' in "<cmd>"...
     assert_eq!(
-        mapping.rhs(),
+        mapping.get("rhs").unwrap().try_as_string().unwrap(),
         &NvimString::new_unchecked("<Cmd>echo \"hi\"")
     );
 }
@@ -238,12 +240,14 @@ fn test_set_buf_map() {
 
     let mapping = maps
         .iter()
-        .find(|map| map.lhs() == &NvimString::new_unchecked("<C-8>"))
+        .find(|map| {
+            map.get("lhs").unwrap().try_as_string().unwrap() == &NvimString::new_unchecked("<C-8>")
+        })
         .unwrap();
 
     // Looks like nvim capitalizes the 'c' in "<cmd>"...
     assert_eq!(
-        mapping.rhs(),
+        mapping.get("rhs").unwrap().try_as_string().unwrap(),
         &NvimString::new_unchecked("<Cmd>echo \"bye\"")
     );
 }

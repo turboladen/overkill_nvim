@@ -94,111 +94,9 @@ pub enum Error {
 
     #[error(transparent)]
     LuaError(#[from] LuaError),
-}
 
-#[derive(Debug, Clone)]
-pub struct Mapping {
-    mode: NvimString,
-    lhs: NvimString,
-    rhs: NvimString,
-    sid: Integer,
-    lnum: Integer,
-    buffer: Boolean,
-    expr: Boolean,
-    noremap: Boolean,
-    nowait: Boolean,
-    script: Boolean,
-    silent: Boolean,
-}
-
-impl Mapping {
-    /// Get a reference to the mapping's mode.
-    #[must_use]
-    pub const fn mode(&self) -> &NvimString {
-        &self.mode
-    }
-
-    /// Get a reference to the mapping's lhs.
-    #[must_use]
-    pub const fn lhs(&self) -> &NvimString {
-        &self.lhs
-    }
-
-    /// Get a reference to the mapping's rhs.
-    #[must_use]
-    pub const fn rhs(&self) -> &NvimString {
-        &self.rhs
-    }
-
-    /// Get a reference to the mapping's sid.
-    #[must_use]
-    pub const fn sid(&self) -> i64 {
-        self.sid
-    }
-
-    /// Get a reference to the mapping's lnum.
-    #[must_use]
-    pub const fn lnum(&self) -> i64 {
-        self.lnum
-    }
-
-    /// Get a reference to the mapping's buffer.
-    #[must_use]
-    pub const fn buffer(&self) -> bool {
-        self.buffer
-    }
-
-    /// Get a reference to the mapping's expr.
-    #[must_use]
-    pub const fn expr(&self) -> bool {
-        self.expr
-    }
-
-    /// Get a reference to the mapping's noremap.
-    #[must_use]
-    pub const fn noremap(&self) -> bool {
-        self.noremap
-    }
-
-    /// Get a reference to the mapping's nowait.
-    #[must_use]
-    pub const fn nowait(&self) -> bool {
-        self.nowait
-    }
-
-    /// Get a reference to the mapping's script.
-    #[must_use]
-    pub const fn script(&self) -> bool {
-        self.script
-    }
-
-    /// Get a reference to the mapping's silent.
-    #[must_use]
-    pub const fn silent(&self) -> bool {
-        self.silent
-    }
-}
-
-impl TryFrom<Object> for Mapping {
-    type Error = Error;
-
-    fn try_from(object: Object) -> Result<Self, Self::Error> {
-        let value = object.into_dictionary_unchecked();
-
-        Ok(Self {
-            mode: value.get_as_string("mode").unwrap().clone(),
-            lhs: value.get_as_string("lhs").unwrap().clone(),
-            rhs: value.get_as_string("rhs").unwrap().clone(),
-            lnum: value.get_as_integer("lnum").unwrap(),
-            sid: value.get_as_integer("sid").unwrap(),
-            buffer: value.get_as_boolean("buffer").unwrap(),
-            expr: value.get_as_boolean("expr").unwrap(),
-            noremap: value.get_as_boolean("noremap").unwrap(),
-            nowait: value.get_as_boolean("nowait").unwrap(),
-            script: value.get_as_boolean("script").unwrap(),
-            silent: value.get_as_boolean("silent").unwrap(),
-        })
-    }
+    #[error(transparent)]
+    ObjectError(#[from] object::Error),
 }
 
 /// Defines a mapping for `mode` that maps `lhs` to `rhs`.
@@ -241,15 +139,15 @@ pub fn set_map(mode: Mode, lhs: &str, rhs: &str, options: Option<Options>) -> Re
 /// This will error if a `Mapping` can't be built from any of the `Dictionary`s returned by the
 /// call to `nvim_get_keymap()`.
 ///
-pub fn get_maps(mode: Mode) -> Result<Vec<Mapping>, Error> {
+pub fn get_maps(mode: Mode) -> Result<Vec<Dictionary>, Error> {
     let maps = unsafe {
         neovim_sys::api::nvim::nvim_get_keymap(NvimString::new_unchecked(mode.abbreviation()))
     };
 
     let mut output = Vec::with_capacity(maps.len());
 
-    for map in maps {
-        output.push(Mapping::try_from(map)?);
+    for object in maps {
+        output.push(object.try_into_dictionary()?)
     }
 
     Ok(output)

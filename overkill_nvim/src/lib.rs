@@ -21,10 +21,11 @@
 )]
 
 pub mod key_code;
+pub mod mapping;
 pub mod option;
 
 #[cfg(feature = "lua_test")]
 pub mod lua_test;
 
-pub use nvim_api::api::{Array, Boolean, Dictionary, Float, Integer, NvimString, Object};
 pub use nvim_api as api;
+pub use nvim_api::api::{Array, Boolean, Dictionary, Float, Integer, NvimString, Object};
