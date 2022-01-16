@@ -22,6 +22,7 @@
 
 pub mod key_code;
 pub mod mapping;
+// pub mod mode;
 pub mod option;
 
 #[cfg(feature = "lua_test")]
