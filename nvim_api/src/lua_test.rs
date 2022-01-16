@@ -1,6 +1,6 @@
 #![allow(missing_docs, clippy::missing_panics_doc)]
 
-use crate::api::{self, Mode, Object, RustObject};
+use crate::api::{self, Object, RustObject};
 use neovim_sys::api::nvim::{Array, Dictionary, KeyValuePair, NvimString, ObjectType};
 use nvim_api_test::nvim_test;
 use std::borrow::Borrow;
@@ -132,14 +132,17 @@ fn test_nvim_get_current_buf() {
 
 #[nvim_test]
 fn test_nvim_feedkeys() {
-    self::api::nvim::nvim_feedkeys("j", Mode::Normal, false).unwrap();
+    self::api::nvim::nvim_feedkeys("j", "n", false).unwrap();
 }
 
 #[nvim_test]
 fn test_nvim_get_mode() {
-    let current_mode = self::api::nvim::nvim_get_mode().unwrap();
+    let current_mode = self::api::nvim::nvim_get_mode();
 
-    assert_eq!(current_mode.mode(), Mode::Normal);
+    assert_eq!(
+        current_mode.get("mode").unwrap().as_string_unchecked(),
+        "n",
+    );
 }
 
 #[nvim_test]
@@ -196,15 +199,10 @@ fn test_set_map() {
         .silent()
         .unique();
 
-    let result = self::api::keymap::set_map(
-        self::api::Mode::Normal,
-        "<C-9>",
-        "<cmd>echo \"hi\"",
-        Some(options),
-    );
+    let result = self::api::keymap::set_map("n", "<C-9>", "<cmd>echo \"hi\"", Some(options));
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+    let maps = self::api::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()
@@ -227,15 +225,10 @@ fn test_set_noremap() {
         .silent()
         .unique();
 
-    let result = self::api::keymap::set_noremap(
-        self::api::Mode::Normal,
-        "<C-1>",
-        "<cmd>echo \"meow\"",
-        Some(options),
-    );
+    let result = self::api::keymap::set_noremap("n", "<C-1>", "<cmd>echo \"meow\"", Some(options));
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+    let maps = self::api::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()
@@ -260,14 +253,14 @@ fn test_set_buf_map() {
 
     let result = self::api::keymap::set_buf_map(
         0, // current buffer
-        self::api::Mode::Normal,
+        "n",
         "<C-8>",
         "<cmd>echo \"bye\"",
         Some(options),
     );
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+    let maps = self::api::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()
@@ -292,14 +285,14 @@ fn test_set_buf_noremap() {
 
     let result = self::api::keymap::set_buf_noremap(
         0, // current buffer
-        self::api::Mode::Normal,
+        "n",
         "<C-2>",
         "<cmd>echo \"tacos\"",
         Some(options),
     );
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps(self::api::Mode::Normal).unwrap();
+    let maps = self::api::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()

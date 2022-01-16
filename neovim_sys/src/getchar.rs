@@ -1,7 +1,7 @@
 //! Types and functions related to those in nvim/getchar.c.
 //!
 use crate::{buffer_defs::buf_T, types::CharU};
-use std::os::raw::c_int;
+use std::{os::raw::c_int, str::FromStr};
 
 /// Flag, specifically for `do_map()` and `buf_do_map()`.
 ///
@@ -64,6 +64,42 @@ pub enum Mode {
 
     /// :tmap
     TermFocus = 0x2000,
+}
+
+/// Error for if we get a mode string that we don't yet handle properly. When this library is
+/// mature, this coult/should probably go away, but for now it will serve as a flag to implement
+/// things that haven't yet been done.
+///
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Unknown mode: {mode}")]
+pub struct UnexpectedMode {
+    mode: String,
+}
+
+impl FromStr for Mode {
+    type Err = UnexpectedMode;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "n" => Ok(Self::Normal),
+            "x" => Ok(Self::Visual),
+            "o" => Ok(Self::OpPending),
+            "c" => Ok(Self::CmdLine),
+            "i" => Ok(Self::Insert),
+            "l" => Ok(Self::LangMap),
+            "R" => Ok(Self::Replace),
+            "gR" => Ok(Self::VReplace),
+            // "?" => Ok(Mode::LReplace),
+            "v" => Ok(Self::VisualSelectMode),
+            // "?" => Ok(Mode::Abbrev),
+            "!" => Ok(Self::ExternCmd),
+            "s" => Ok(Self::SelectMode),
+            "t" => Ok(Self::TermFocus),
+            m => Err(UnexpectedMode {
+                mode: m.to_string(),
+            }),
+        }
+    }
 }
 
 /// Some vim map-related calls require the mapping arguments (that were provided via a string) be

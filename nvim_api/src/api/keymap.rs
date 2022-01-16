@@ -1,4 +1,3 @@
-use super::Mode;
 use core::fmt;
 use neovim_sys::{
     api::{
@@ -6,9 +5,9 @@ use neovim_sys::{
         nvim::{object, Dictionary, LuaError, NvimString},
         private,
     },
-    getchar::{self, MapArguments, MapType},
+    getchar::{self, MapArguments, MapType, UnexpectedMode},
 };
-use std::{ffi::CString, os::raw::c_int};
+use std::{ffi::CString, os::raw::c_int, str::FromStr};
 
 /// Correlates to Section 1.2 in `map.txt` (`:map-arguements`).
 ///
@@ -97,6 +96,9 @@ pub enum Error {
 
     #[error(transparent)]
     ObjectError(#[from] object::Error),
+
+    #[error(transparent)]
+    UnexpectedMode(#[from] UnexpectedMode),
 }
 
 /// Defines a mapping for `mode` that maps `lhs` to `rhs`.
@@ -109,7 +111,7 @@ pub enum Error {
 /// - nvim returns an error.
 ///
 pub fn set_map(
-    mode: Mode,
+    mode: &str,
     lhs: &str,
     rhs: &str,
     special_arguments: Option<SpecialArguments>,
@@ -127,7 +129,7 @@ pub fn set_map(
 /// - nvim returns an error.
 ///
 pub fn set_noremap(
-    mode: Mode,
+    mode: &str,
     lhs: &str,
     rhs: &str,
     special_arguments: Option<SpecialArguments>,
@@ -137,7 +139,7 @@ pub fn set_noremap(
 
 fn map(
     map_type: MapType,
-    mode: Mode,
+    mode: &str,
     lhs: &str,
     rhs: &str,
     special_arguments: Option<SpecialArguments>,
@@ -153,7 +155,7 @@ fn map(
         getchar::do_map(
             map_type as c_int,
             arg.as_mut_ptr(),
-            getchar::Mode::from(mode) as c_int,
+            getchar::Mode::from_str(mode)? as c_int,
             false,
         )
     };
@@ -171,11 +173,8 @@ fn map(
 /// This will error if a `Mapping` can't be built from any of the `Dictionary`s returned by the
 /// call to `nvim_get_keymap()`.
 ///
-pub fn get_maps(mode: Mode) -> Result<Vec<Dictionary>, Error> {
-    let maps = unsafe {
-        neovim_sys::api::nvim::nvim_get_keymap(NvimString::new_unchecked(mode.abbreviation()))
-    };
-
+pub fn get_maps(mode: &str) -> Result<Vec<Dictionary>, Error> {
+    let maps = unsafe { neovim_sys::api::nvim::nvim_get_keymap(NvimString::new(mode)?) };
     let mut output = Vec::with_capacity(maps.len());
 
     for object in maps {
@@ -197,7 +196,7 @@ pub fn get_maps(mode: Mode) -> Result<Vec<Dictionary>, Error> {
 ///
 pub fn set_buf_map(
     buffer: Buffer,
-    mode: Mode,
+    mode: &str,
     lhs: &str,
     rhs: &str,
     options: Option<SpecialArguments>,
@@ -217,7 +216,7 @@ pub fn set_buf_map(
 ///
 pub fn set_buf_noremap(
     buffer: Buffer,
-    mode: Mode,
+    mode: &str,
     lhs: &str,
     rhs: &str,
     options: Option<SpecialArguments>,
@@ -228,7 +227,7 @@ pub fn set_buf_noremap(
 fn buf_map(
     map_type: MapType,
     buffer: Buffer,
-    mode: Mode,
+    mode: &str,
     lhs: &str,
     rhs: &str,
     options: Option<SpecialArguments>,
@@ -258,7 +257,7 @@ fn buf_map(
         getchar::buf_do_map(
             map_type as c_int,
             &map_args,
-            getchar::Mode::from(mode) as c_int,
+            getchar::Mode::from_str(mode)? as c_int,
             is_unmap,
             buf,
         )
