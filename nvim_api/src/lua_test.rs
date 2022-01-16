@@ -139,10 +139,7 @@ fn test_nvim_feedkeys() {
 fn test_nvim_get_mode() {
     let current_mode = self::api::nvim::nvim_get_mode();
 
-    assert_eq!(
-        current_mode.get("mode").unwrap().as_string_unchecked(),
-        "n",
-    );
+    assert_eq!(current_mode.get("mode").unwrap().as_string_unchecked(), "n",);
 }
 
 #[nvim_test]

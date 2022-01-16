@@ -315,6 +315,7 @@ pub fn nvim_get_current_buf() -> Buffer {
 
 /// The `Dictionary` returned from nvim  contains both a `mode` and `blocking` key.
 ///
+#[must_use]
 pub fn nvim_get_mode() -> Dictionary {
     unsafe { nvim::nvim_get_mode() }
 }
