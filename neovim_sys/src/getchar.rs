@@ -53,6 +53,12 @@ pub enum Mode {
     /// :vmap
     VisualSelectMode = 0x02 + 0x1000, // Visual + SelectMode
 
+    /// :map
+    NormalVisualSelectOpPending = 0x01 + 0x02 + 0x1000 + 0x04, // Visual + SelectMode
+
+    /// :map!
+    InsertCmdLine = 0x10 + 0x08,
+
     /// Abbreviation instead of mapping
     Abbrev = 0x500,
 
