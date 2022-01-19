@@ -1126,6 +1126,60 @@ mod tests {
         }
     }
 
+    mod into_unchecked {
+        use super::*;
+        use crate::api::nvim::KeyValuePair;
+
+        #[test]
+        fn test_boolean_into_boolean_unchecked() {
+            let subject = Object::from(true);
+            assert!(subject.into_boolean_unchecked());
+        }
+
+        #[test]
+        fn test_integer_into_integer_unchecked() {
+            let subject = Object::from(42_u8);
+            assert_eq!(subject.into_integer_unchecked(), 42);
+        }
+
+        #[test]
+        fn test_float_into_float_unchecked() {
+            let subject = Object::from(42.42);
+            assert_ulps_eq!(subject.into_float_unchecked(), 42.42);
+        }
+
+        #[test]
+        fn test_string_into_string_unchecked() {
+            let subject = Object::try_from("stuff").unwrap();
+            assert_eq!(&subject.into_string_unchecked(), "stuff");
+        }
+
+        #[test]
+        fn test_array_into_array_unchecked() {
+            let subject = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+            assert_eq!(
+                subject.into_array_unchecked(),
+                Array::new_from(vec![1.into(), 2.into(), 3.into()])
+            );
+        }
+
+        #[test]
+        fn test_dictionary_into_dictionary_unchecked() {
+            let subject = Object::from(Dictionary::new_from([KeyValuePair::new(
+                NvimString::new_unchecked("things"),
+                Object::from(42_u8),
+            )]));
+
+            assert_eq!(
+                subject.into_dictionary_unchecked(),
+                Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8)
+                )])
+            );
+        }
+    }
+
     mod from {
         use super::*;
 
