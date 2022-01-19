@@ -84,10 +84,28 @@ macro_rules! try_as_type {
     };
 }
 
+macro_rules! try_into_type {
+    ($_self:expr, $object_type_variant:ident, $field_name:ident) => {
+        try_as_type!($_self, $object_type_variant, $field_name)
+    };
+}
+
 macro_rules! try_as_ref_type {
     ($_self:expr, $object_type_variant:ident, $field_name:ident) => {
         match $_self.object_type {
             ObjectType::$object_type_variant => Ok($_self.data.$field_name()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::$object_type_variant,
+                actual: $_self.object_type,
+            }),
+        }
+    };
+}
+
+macro_rules! try_into_ref_type {
+    ($_self:expr, $object_type_variant:ident, $meth_name:ident) => {
+        match $_self.object_type {
+            ObjectType::$object_type_variant => Ok($_self.$meth_name()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::$object_type_variant,
                 actual: $_self.object_type,
@@ -267,13 +285,7 @@ impl Object {
     ///
     #[inline]
     pub fn try_into_boolean(self) -> Result<Boolean, Error> {
-        match self.object_type {
-            ObjectType::kObjectTypeBoolean => Ok(self.data.boolean()),
-            _ => Err(Error::TypeError {
-                expected: ObjectType::kObjectTypeBoolean,
-                actual: self.object_type,
-            }),
-        }
+        try_into_type!(self, kObjectTypeBoolean, boolean)
     }
 
     /// Owned/consuming version of `try_as_integer()`.
@@ -284,13 +296,7 @@ impl Object {
     ///
     #[inline]
     pub fn try_into_integer(self) -> Result<Integer, Error> {
-        match self.object_type {
-            ObjectType::kObjectTypeInteger => Ok(self.data.integer()),
-            _ => Err(Error::TypeError {
-                expected: ObjectType::kObjectTypeInteger,
-                actual: self.object_type,
-            }),
-        }
+        try_into_type!(self, kObjectTypeInteger, integer)
     }
 
     /// Owned/consuming version of `try_as_float()`.
@@ -301,13 +307,7 @@ impl Object {
     ///
     #[inline]
     pub fn try_into_float(self) -> Result<Float, Error> {
-        match self.object_type {
-            ObjectType::kObjectTypeFloat => Ok(self.data.float()),
-            _ => Err(Error::TypeError {
-                expected: ObjectType::kObjectTypeFloat,
-                actual: self.object_type,
-            }),
-        }
+        try_into_type!(self, kObjectTypeFloat, float)
     }
 
     /// Owned/consuming version of `try_as_string()`.
@@ -318,13 +318,7 @@ impl Object {
     ///
     #[inline]
     pub fn try_into_string(self) -> Result<NvimString, Error> {
-        match self.object_type {
-            ObjectType::kObjectTypeString => Ok(self.into_string_unchecked()),
-            _ => Err(Error::TypeError {
-                expected: ObjectType::kObjectTypeString,
-                actual: self.object_type,
-            }),
-        }
+        try_into_ref_type!(self, kObjectTypeString, into_string_unchecked)
     }
 
     /// Owned/consuming version of `try_as_array()`.
@@ -335,13 +329,7 @@ impl Object {
     ///
     #[inline]
     pub fn try_into_array(self) -> Result<Array, Error> {
-        match self.object_type {
-            ObjectType::kObjectTypeArray => Ok(self.into_array_unchecked()),
-            _ => Err(Error::TypeError {
-                expected: ObjectType::kObjectTypeArray,
-                actual: self.object_type,
-            }),
-        }
+        try_into_ref_type!(self, kObjectTypeArray, into_array_unchecked)
     }
 
     /// Owned/consuming version of `try_as_dictionary()`.
@@ -352,13 +340,7 @@ impl Object {
     ///
     #[inline]
     pub fn try_into_dictionary(self) -> Result<Dictionary, Error> {
-        match self.object_type {
-            ObjectType::kObjectTypeDictionary => Ok(self.into_dictionary_unchecked()),
-            _ => Err(Error::TypeError {
-                expected: ObjectType::kObjectTypeDictionary,
-                actual: self.object_type,
-            }),
-        }
+        try_into_ref_type!(self, kObjectTypeDictionary, into_dictionary_unchecked)
     }
 
     /// Similar to `as_boolean_unchecked()`, where it does not check `self`'s `object_type` (thus
@@ -981,8 +963,8 @@ mod tests {
     }
 
     mod as_unchecked {
-        use crate::api::nvim::KeyValuePair;
         use super::*;
+        use crate::api::nvim::KeyValuePair;
 
         #[test]
         fn test_boolean_as_boolean_unchecked() {
@@ -1031,6 +1013,116 @@ mod tests {
                     Object::from(42_u8)
                 )])
             );
+        }
+    }
+
+    mod try_into {
+        use super::*;
+        use crate::api::nvim::KeyValuePair;
+
+        #[test]
+        fn test_try_into_boolean() {
+            // boolean
+            {
+                let object = Object::from(true);
+                let output = object.try_into_boolean().unwrap();
+                assert!(output);
+            }
+
+            // Not boolean
+            {
+                let object = Object::from(1.23);
+                assert!(object.try_into_boolean().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_integer() {
+            // integer
+            {
+                let object = Object::from(123);
+                let output = object.try_into_integer().unwrap();
+                assert_eq!(output, 123);
+            }
+
+            // Not integer
+            {
+                let object = Object::from(123.0);
+                assert!(object.try_into_integer().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_float() {
+            // float
+            {
+                let object = Object::from(2.0);
+                let output = object.try_into_float().unwrap();
+                assert_ulps_eq!(output, 2.0_f64);
+            }
+
+            // Not float
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_float().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_string() {
+            // string
+            {
+                let object = Object::try_from("things").unwrap();
+                let output = object.try_into_string().unwrap();
+                assert_eq!(&output, "things");
+            }
+
+            // Not string
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_string().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_array() {
+            // array
+            {
+                let object = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+                let output = object.try_into_array().unwrap();
+                assert_eq!(output, Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+            }
+
+            // Not array
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_array().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_dictionary() {
+            // dictionary
+            {
+                let object = Object::from(Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8),
+                )]));
+                let output = object.try_into_dictionary().unwrap();
+                assert_eq!(
+                    output,
+                    Dictionary::new_from([KeyValuePair::new(
+                        NvimString::new_unchecked("things"),
+                        Object::from(42_u8)
+                    )])
+                );
+            }
+
+            // Not dictionary
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_dictionary().is_err());
+            }
         }
     }
 
