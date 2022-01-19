@@ -856,8 +856,8 @@ mod tests {
     use approx::assert_ulps_eq;
 
     mod try_as {
-        use crate::api::nvim::KeyValuePair;
         use super::*;
+        use crate::api::nvim::KeyValuePair;
 
         #[test]
         fn test_try_as_nil() {
@@ -977,6 +977,60 @@ mod tests {
                 let object = Object::from(2);
                 assert!(object.try_as_dictionary().is_err());
             }
+        }
+    }
+
+    mod as_unchecked {
+        use crate::api::nvim::KeyValuePair;
+        use super::*;
+
+        #[test]
+        fn test_boolean_as_boolean_unchecked() {
+            let subject = Object::from(true);
+            assert!(subject.as_boolean_unchecked());
+        }
+
+        #[test]
+        fn test_integer_as_integer_unchecked() {
+            let subject = Object::from(42_u8);
+            assert_eq!(subject.as_integer_unchecked(), 42);
+        }
+
+        #[test]
+        fn test_float_as_float_unchecked() {
+            let subject = Object::from(42.42);
+            assert_ulps_eq!(subject.as_float_unchecked(), 42.42);
+        }
+
+        #[test]
+        fn test_string_as_string_unchecked() {
+            let subject = Object::try_from("stuff").unwrap();
+            assert_eq!(subject.as_string_unchecked(), "stuff");
+        }
+
+        #[test]
+        fn test_array_as_array_unchecked() {
+            let subject = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+            assert_eq!(
+                subject.as_array_unchecked(),
+                &Array::new_from(vec![1.into(), 2.into(), 3.into()])
+            );
+        }
+
+        #[test]
+        fn test_dictionary_as_dictionary_unchecked() {
+            let subject = Object::from(Dictionary::new_from([KeyValuePair::new(
+                NvimString::new_unchecked("things"),
+                Object::from(42_u8),
+            )]));
+
+            assert_eq!(
+                subject.as_dictionary_unchecked(),
+                &Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8)
+                )])
+            );
         }
     }
 
