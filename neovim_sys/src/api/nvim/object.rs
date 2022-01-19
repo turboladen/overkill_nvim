@@ -122,7 +122,7 @@ impl Object {
     pub fn new_nil() -> Self {
         Self {
             object_type: ObjectType::kObjectTypeNil,
-            data: ObjectData { boolean: false },
+            data: ObjectData { integer: 0 },
         }
     }
 
