@@ -855,81 +855,210 @@ mod tests {
     use super::*;
     use approx::assert_ulps_eq;
 
-    #[test]
-    fn test_from_boolean() {
-        fn do_it(input: Boolean) {
-            let subject = Object::from(input);
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeBoolean);
-            assert_eq!(subject.as_boolean_unchecked(), input);
+    mod try_as {
+        use crate::api::nvim::KeyValuePair;
+        use super::*;
+
+        #[test]
+        fn test_try_as_nil() {
+            // nil
+            {
+                let object = Object::new_nil();
+                object.try_as_nil().unwrap();
+            }
+
+            // Not nil
+            {
+                let object = Object::from(123);
+                assert!(object.try_as_nil().is_err());
+            }
         }
 
-        do_it(true);
-        do_it(false);
-    }
+        #[test]
+        fn test_try_as_boolean() {
+            // boolean
+            {
+                let object = Object::from(true);
+                let output = object.try_as_boolean().unwrap();
+                assert!(output);
+            }
 
-    #[test]
-    fn test_from_integer() {
-        fn do_it(input: Integer) {
-            let subject = Object::from(input);
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeInteger);
-            assert_eq!(subject.as_integer_unchecked(), input);
+            // Not boolean
+            {
+                let object = Object::from(123);
+                assert!(object.try_as_boolean().is_err());
+            }
         }
 
-        do_it(0);
-        do_it(i64::min_value());
-        do_it(i64::max_value());
+        #[test]
+        fn test_try_as_integer() {
+            // integer
+            {
+                let object = Object::from(123);
+                let output = object.try_as_integer().unwrap();
+                assert_eq!(output, 123);
+            }
+
+            // Not integer
+            {
+                let object = Object::from(123.0);
+                assert!(object.try_as_integer().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_as_float() {
+            // float
+            {
+                let object = Object::from(2.0);
+                let output = object.try_as_float().unwrap();
+                assert_ulps_eq!(output, 2.0_f64);
+            }
+
+            // Not float
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_float().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_as_string() {
+            // string
+            {
+                let object = Object::try_from("things").unwrap();
+                let output = object.try_as_string().unwrap();
+                assert_eq!(output, "things");
+            }
+
+            // Not string
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_string().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_as_array() {
+            // array
+            {
+                let object = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+                let output = object.try_as_array().unwrap();
+                assert_eq!(output, &Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+            }
+
+            // Not array
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_array().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_as_dictionary() {
+            // dictionary
+            {
+                let object = Object::from(Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8),
+                )]));
+                let output = object.try_as_dictionary().unwrap();
+                assert_eq!(
+                    output,
+                    &Dictionary::new_from([KeyValuePair::new(
+                        NvimString::new_unchecked("things"),
+                        Object::from(42_u8)
+                    )])
+                );
+            }
+
+            // Not dictionary
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_dictionary().is_err());
+            }
+        }
     }
 
-    #[test]
-    fn test_from_float() {
-        fn do_it(input: Float) {
-            let subject = Object::from(input);
+    mod from {
+        use super::*;
+
+        #[test]
+        fn test_from_boolean() {
+            fn do_it(input: Boolean) {
+                let subject = Object::from(input);
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeBoolean);
+                assert_eq!(subject.as_boolean_unchecked(), input);
+            }
+
+            do_it(true);
+            do_it(false);
+        }
+
+        #[test]
+        fn test_from_integer() {
+            fn do_it(input: Integer) {
+                let subject = Object::from(input);
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeInteger);
+                assert_eq!(subject.as_integer_unchecked(), input);
+            }
+
+            do_it(0);
+            do_it(i64::min_value());
+            do_it(i64::max_value());
+        }
+
+        #[test]
+        fn test_from_float() {
+            fn do_it(input: Float) {
+                let subject = Object::from(input);
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeFloat);
+                assert_ulps_eq!(subject.as_float_unchecked(), input);
+            }
+
+            do_it(0.0);
+            do_it(f64::INFINITY);
+            do_it(f64::NEG_INFINITY);
+            do_it(f64::MIN);
+            do_it(f64::MAX);
+
+            let subject = Object::from(f64::NAN);
             assert_eq!(subject.object_type, ObjectType::kObjectTypeFloat);
-            assert_ulps_eq!(subject.as_float_unchecked(), input);
+            assert!(subject.as_float_unchecked().is_nan());
         }
 
-        do_it(0.0);
-        do_it(f64::INFINITY);
-        do_it(f64::NEG_INFINITY);
-        do_it(f64::MIN);
-        do_it(f64::MAX);
+        #[test]
+        fn test_from_string() {
+            fn do_it(input: &str) {
+                let subject = Object::from(NvimString::new(input).unwrap());
 
-        let subject = Object::from(f64::NAN);
-        assert_eq!(subject.object_type, ObjectType::kObjectTypeFloat);
-        assert!(subject.as_float_unchecked().is_nan());
-    }
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeString);
+                assert_eq!(
+                    subject.as_string_unchecked(),
+                    &NvimString::new(input).unwrap()
+                );
+            }
 
-    #[test]
-    fn test_from_string() {
-        fn do_it(input: &str) {
-            let subject = Object::from(NvimString::new(input).unwrap());
-
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeString);
-            assert_eq!(
-                subject.as_string_unchecked(),
-                &NvimString::new(input).unwrap()
-            );
+            do_it("");
+            do_it("one \n three");
+            do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
         }
 
-        do_it("");
-        do_it("one \n three");
-        do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
-    }
+        #[test]
+        fn test_from_array() {
+            fn do_it(input: &str) {
+                let subject = Object::from(Array::new_from([Object::from(
+                    NvimString::new(input).unwrap(),
+                )]));
+                let expected = Array::new_from([Object::from(NvimString::new(input).unwrap())]);
 
-    #[test]
-    fn test_from_array() {
-        fn do_it(input: &str) {
-            let subject = Object::from(Array::new_from([Object::from(
-                NvimString::new(input).unwrap(),
-            )]));
-            let expected = Array::new_from([Object::from(NvimString::new(input).unwrap())]);
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeArray);
+                assert_eq!(subject.as_array_unchecked(), &expected);
+            }
 
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeArray);
-            assert_eq!(subject.as_array_unchecked(), &expected);
+            do_it("");
+            do_it("one \n three");
+            do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
         }
-
-        do_it("");
-        do_it("one \n three");
-        do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
     }
 }
