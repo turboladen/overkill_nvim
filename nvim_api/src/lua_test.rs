@@ -1,16 +1,14 @@
 #![allow(missing_docs, clippy::missing_panics_doc)]
 
-use crate::api::{self, Object, RustObject};
+use crate::{Object, RustObject};
 use neovim_sys::api::nvim::{Array, Dictionary, KeyValuePair, NvimString, ObjectType};
 use nvim_api_test::nvim_test;
 use std::borrow::Borrow;
 
 fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) {
-    self::api::nvim::nvim_set_var(var, value).unwrap();
+    crate::nvim::nvim_set_var(var, value).unwrap();
 
-    let t = self::api::nvim::nvim_get_var(var)
-        .map(RustObject::from)
-        .unwrap();
+    let t = crate::nvim::nvim_get_var(var).map(RustObject::from).unwrap();
 
     assert_eq!(
         t, *expected_object_variant,
@@ -96,9 +94,9 @@ fn test_nvim_set_vvar() {
     let string = NvimString::new_unchecked("meow");
     let value = Object::from(string);
 
-    self::api::nvim::nvim_set_vvar(vvar, value).unwrap();
+    crate::nvim::nvim_set_vvar(vvar, value).unwrap();
 
-    let object = self::api::nvim::nvim_get_vvar(vvar).unwrap();
+    let object = crate::nvim::nvim_get_vvar(vvar).unwrap();
     assert_eq!(object.object_type(), ObjectType::kObjectTypeString);
 
     let string = object.into_string_unchecked();
@@ -116,9 +114,9 @@ fn test_nvim_buf_set_var() {
     let value = Object::from(make_subject());
     let var = "nvim_rs_buf_set_get_var";
 
-    self::api::buffer::nvim_buf_set_var(0, var, value).unwrap();
+    crate::buffer::nvim_buf_set_var(0, var, value).unwrap();
 
-    let object = self::api::buffer::nvim_buf_get_var(0, var).unwrap();
+    let object = crate::buffer::nvim_buf_get_var(0, var).unwrap();
     assert_eq!(object.object_type(), ObjectType::kObjectTypeDictionary);
 
     let dict = object.into_dictionary_unchecked();
@@ -127,17 +125,17 @@ fn test_nvim_buf_set_var() {
 
 #[nvim_test]
 fn test_nvim_get_current_buf() {
-    assert_eq!(self::api::nvim::nvim_get_current_buf(), 1);
+    assert_eq!(crate::nvim::nvim_get_current_buf(), 1);
 }
 
 #[nvim_test]
 fn test_nvim_feedkeys() {
-    self::api::nvim::nvim_feedkeys("j", "n", false).unwrap();
+    crate::nvim::nvim_feedkeys("j", "n", false).unwrap();
 }
 
 #[nvim_test]
 fn test_nvim_get_mode() {
-    let current_mode = self::api::nvim::nvim_get_mode();
+    let current_mode = crate::nvim::nvim_get_mode();
 
     assert_eq!(current_mode.get("mode").unwrap().as_string_unchecked(), "n",);
 }
@@ -148,12 +146,12 @@ fn test_nvim_set_global_option() {
     {
         let option_name = "autoread";
 
-        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        let value = crate::nvim::nvim_get_global_option(option_name).unwrap();
         assert!(value.into_boolean_unchecked());
 
-        self::api::nvim::nvim_set_global_option(option_name, false).unwrap();
+        crate::nvim::nvim_set_global_option(option_name, false).unwrap();
 
-        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        let value = crate::nvim::nvim_get_global_option(option_name).unwrap();
         assert!(!value.as_boolean_unchecked());
     }
 
@@ -161,12 +159,12 @@ fn test_nvim_set_global_option() {
     {
         let option_name = "aleph";
 
-        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        let value = crate::nvim::nvim_get_global_option(option_name).unwrap();
         assert_eq!(value.into_integer_unchecked(), 224);
 
-        self::api::nvim::nvim_set_global_option(option_name, 225).unwrap();
+        crate::nvim::nvim_set_global_option(option_name, 225).unwrap();
 
-        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        let value = crate::nvim::nvim_get_global_option(option_name).unwrap();
         assert_eq!(value.into_integer_unchecked(), 225);
     }
 
@@ -174,7 +172,7 @@ fn test_nvim_set_global_option() {
     {
         let option_name = "pastetoggle";
 
-        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        let value = crate::nvim::nvim_get_global_option(option_name).unwrap();
         let expected = "";
 
         assert_eq!(Borrow::<str>::borrow(value.as_string_unchecked()), expected);
@@ -182,24 +180,24 @@ fn test_nvim_set_global_option() {
         let expected_in = NvimString::new_unchecked("<F8>");
         let expected = NvimString::new_unchecked("<F8>");
 
-        self::api::nvim::nvim_set_global_option(option_name, expected_in).unwrap();
+        crate::nvim::nvim_set_global_option(option_name, expected_in).unwrap();
 
-        let value = self::api::nvim::nvim_get_global_option(option_name).unwrap();
+        let value = crate::nvim::nvim_get_global_option(option_name).unwrap();
         assert_eq!(value.into_string_unchecked(), expected);
     }
 }
 
 #[nvim_test]
 fn test_set_map() {
-    let options = self::api::keymap::SpecialArguments::default()
+    let options = crate::keymap::SpecialArguments::default()
         .nowait()
         .silent()
         .unique();
 
-    let result = self::api::keymap::set_map("n", "<C-9>", "<cmd>echo \"hi\"", Some(options));
+    let result = crate::keymap::set_map("n", "<C-9>", "<cmd>echo \"hi\"", Some(options));
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps("n").unwrap();
+    let maps = crate::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()
@@ -217,15 +215,15 @@ fn test_set_map() {
 
 #[nvim_test]
 fn test_set_noremap() {
-    let options = self::api::keymap::SpecialArguments::default()
+    let options = crate::keymap::SpecialArguments::default()
         .nowait()
         .silent()
         .unique();
 
-    let result = self::api::keymap::set_noremap("n", "<C-1>", "<cmd>echo \"meow\"", Some(options));
+    let result = crate::keymap::set_noremap("n", "<C-1>", "<cmd>echo \"meow\"", Some(options));
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps("n").unwrap();
+    let maps = crate::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()
@@ -243,12 +241,12 @@ fn test_set_noremap() {
 
 #[nvim_test]
 fn test_set_buf_map() {
-    let options = self::api::keymap::SpecialArguments::default()
+    let options = crate::keymap::SpecialArguments::default()
         .nowait()
         .silent()
         .unique();
 
-    let result = self::api::keymap::set_buf_map(
+    let result = crate::keymap::set_buf_map(
         0, // current buffer
         "n",
         "<C-8>",
@@ -257,7 +255,7 @@ fn test_set_buf_map() {
     );
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps("n").unwrap();
+    let maps = crate::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()
@@ -275,12 +273,12 @@ fn test_set_buf_map() {
 
 #[nvim_test]
 fn test_set_buf_noremap() {
-    let options = self::api::keymap::SpecialArguments::default()
+    let options = crate::keymap::SpecialArguments::default()
         .nowait()
         .silent()
         .unique();
 
-    let result = self::api::keymap::set_buf_noremap(
+    let result = crate::keymap::set_buf_noremap(
         0, // current buffer
         "n",
         "<C-2>",
@@ -289,7 +287,7 @@ fn test_set_buf_noremap() {
     );
     assert!(result.is_ok());
 
-    let maps = self::api::keymap::get_maps("n").unwrap();
+    let maps = crate::keymap::get_maps("n").unwrap();
 
     let mapping = maps
         .iter()

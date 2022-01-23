@@ -1,7 +1,7 @@
 //! Defines a type for each of the seven map-modes (see `:help map-modes`) and their supported
 //! permutations.
 //!
-use nvim_api::{api::NvimString, sys::getchar};
+use nvim_api::{NvimString, sys::getchar};
 
 /// Represents any possible neovim "mode".
 ///

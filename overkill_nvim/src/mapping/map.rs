@@ -1,7 +1,7 @@
 //! Overkill API for getting and setting mappings.
 //!
 use super::MapMode;
-use nvim_api::api::{
+use nvim_api::{
     keymap::{get_maps, set_buf_map, set_buf_noremap, set_map, set_noremap, SpecialArguments},
     Buffer, Dictionary,
 };

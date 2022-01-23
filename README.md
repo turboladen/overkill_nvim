@@ -25,7 +25,7 @@ You can use `nvim-api` in a similar fashion to neovim's Lua API. For example, to
 `signcolumn` option to `"yes:4"`, you could do:
 
 ```rust
-use nvim_api::api::nvim;
+use nvim_api::nvim;
 
 #[no_mangle]
 pub extern "C" fn set_my_options() {

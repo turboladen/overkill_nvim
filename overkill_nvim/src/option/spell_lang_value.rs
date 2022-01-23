@@ -1,4 +1,4 @@
-use nvim_api::api::NvimString;
+use nvim_api::NvimString;
 
 use super::{NvimOptionError, StringFlags};
 use std::convert::TryFrom;

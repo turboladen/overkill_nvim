@@ -1,5 +1,5 @@
 use super::NvimOptionError;
-use nvim_api::{api::Integer, sys::api::nvim::Object};
+use nvim_api::{Object, Integer};
 use std::convert::TryFrom;
 
 /// Represents an option value for `'conceallevel'`.
