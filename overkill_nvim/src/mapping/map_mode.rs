@@ -1,7 +1,7 @@
 //! Defines a type for each of the seven map-modes (see `:help map-modes`) and their supported
 //! permutations.
 //!
-use nvim_api::{NvimString, sys::getchar};
+use nvim_api::{sys::getchar, NvimString};
 
 /// Represents any possible neovim "mode".
 ///
@@ -76,13 +76,14 @@ impl MapMode {
 impl From<&str> for MapMode {
     fn from(mode: &str) -> Self {
         match mode {
+            "" => Self::NormalVisualSelectOperatorPending,
             "n" => Self::Normal,
             "v" => Self::VisualSelect,
-            "s" => Self::Select,
             "x" => Self::Visual,
+            "s" => Self::Select,
             "o" => Self::OperatorPending,
-            "!" => Self::InsertAndCommandLine,
             "i" => Self::Insert,
+            "!" => Self::InsertAndCommandLine,
             "l" => Self::LanguageMapping,
             "c" => Self::CommandLine,
             "t" => Self::TerminalJob,
@@ -122,5 +123,44 @@ impl From<MapMode> for getchar::Mode {
             MapMode::TerminalJob => Self::TermFocus,
             MapMode::NormalVisualSelectOperatorPending => Self::NormalVisualSelectOpPending,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_as_str() {
+        assert_eq!(MapMode::Normal.as_str(), "n");
+        assert_eq!(MapMode::VisualSelect.as_str(), "v");
+        assert_eq!(MapMode::Visual.as_str(), "x");
+        assert_eq!(MapMode::Select.as_str(), "s");
+        assert_eq!(MapMode::OperatorPending.as_str(), "o");
+        assert_eq!(MapMode::Insert.as_str(), "i");
+        assert_eq!(MapMode::CommandLine.as_str(), "c");
+        assert_eq!(MapMode::TerminalJob.as_str(), "t");
+        assert_eq!(MapMode::InsertAndCommandLine.as_str(), "!");
+        assert_eq!(MapMode::LanguageMapping.as_str(), "l");
+        assert_eq!(MapMode::NormalVisualSelectOperatorPending.as_str(), "");
+    }
+
+    #[test]
+    fn test_from_str() {
+        assert_eq!(MapMode::from("n"), MapMode::Normal);
+        assert_eq!(MapMode::from("v"), MapMode::VisualSelect);
+        assert_eq!(MapMode::from("x"), MapMode::Visual);
+        assert_eq!(MapMode::from("s"), MapMode::Select);
+        assert_eq!(MapMode::from("o"), MapMode::OperatorPending);
+        assert_eq!(MapMode::from("i"), MapMode::Insert);
+        assert_eq!(MapMode::from("c"), MapMode::CommandLine);
+        assert_eq!(MapMode::from("t"), MapMode::TerminalJob);
+        assert_eq!(MapMode::from("!"), MapMode::InsertAndCommandLine);
+        assert_eq!(MapMode::from("l"), MapMode::LanguageMapping);
+        assert_eq!(
+            MapMode::from(""),
+            MapMode::NormalVisualSelectOperatorPending
+        );
+        assert_eq!(MapMode::from("anything else"), MapMode::Normal);
     }
 }
