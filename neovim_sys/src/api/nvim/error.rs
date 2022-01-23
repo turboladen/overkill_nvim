@@ -93,3 +93,38 @@ impl fmt::Debug for Error {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
+
+    #[test]
+    fn test_display() {
+        assert_eq!("", format!("{}", Error::default()));
+
+        let msg = CString::new("some message").unwrap();
+
+        assert_eq!(
+            "Exception: some message",
+            format!(
+                "{}",
+                Error {
+                    error_type: ErrorType::kErrorTypeException,
+                    msg: msg.as_ref().as_ptr() as *mut c_char
+                }
+            )
+        );
+
+        assert_eq!(
+            "Validation: some message",
+            format!(
+                "{}",
+                Error {
+                    error_type: ErrorType::kErrorTypeValidation,
+                    msg: msg.as_ref().as_ptr() as *mut c_char
+                }
+            )
+        );
+    }
+}
