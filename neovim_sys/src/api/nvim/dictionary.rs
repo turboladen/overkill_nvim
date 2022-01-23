@@ -352,15 +352,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn get_existing_key_test() {
-        let original_dict = Dictionary::new_from([KeyValuePair::new(
-            NvimString::new_unchecked("the key"),
-            Object::from(NvimString::new_unchecked("the value")),
-        )]);
+    mod get_set {
+        use super::*;
 
-        let value = original_dict.get("the key").unwrap();
-        let string = value.as_string_unchecked();
-        assert_eq!(string.to_string_lossy(), "the value");
+        #[test]
+        fn test_get_existing_key() {
+            let original_dict = Dictionary::new_from([KeyValuePair::new(
+                NvimString::new_unchecked("the key"),
+                Object::from(NvimString::new_unchecked("the value")),
+            )]);
+
+            let value = original_dict.get("the key").unwrap();
+            let string = value.as_string_unchecked();
+            assert_eq!(string.to_string_lossy(), "the value");
+        }
+
+        #[test]
+        fn test_get_missing_key() {
+            let original_dict = Dictionary::default();
+            assert!(original_dict.get("the key").is_none());
+        }
+
+        #[test]
+        fn test_set() {
+            let mut original_dict = Dictionary::default();
+            original_dict.set(NvimString::new_unchecked("the key"), 42.42);
+            assert_eq!(original_dict.get("the key").unwrap(), &Object::from(42.42));
+        }
     }
 }
