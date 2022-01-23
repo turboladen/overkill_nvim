@@ -11,8 +11,9 @@ use std::{
     fmt,
     marker::PhantomData,
     mem::{self, ManuallyDrop, MaybeUninit},
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut, Index, IndexMut},
     ptr::{self, addr_of_mut, NonNull},
+    slice::SliceIndex,
 };
 
 /// Base type for `Array` and `Dictionary`. Since the behavior of those types are quite similar,
@@ -201,6 +202,14 @@ impl<T> Collection<T> {
         unsafe { std::slice::from_raw_parts(self.items.as_ref(), self.size) }
     }
 
+    /// Builds a mutable slice of all internal items.
+    ///
+    #[must_use]
+    #[inline]
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        unsafe { std::slice::from_raw_parts_mut(self.items.as_ptr(), self.size) }
+    }
+
     /// The number of items in the collection.
     ///
     #[inline]
@@ -268,13 +277,13 @@ impl<T> Deref for Collection<T> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        unsafe { std::slice::from_raw_parts(self.items.as_ptr(), self.size) }
+        self.as_slice()
     }
 }
 
 impl<T> DerefMut for Collection<T> {
     fn deref_mut(&mut self) -> &mut [T] {
-        unsafe { std::slice::from_raw_parts_mut(self.items.as_ptr(), self.size) }
+        self.as_mut_slice()
     }
 }
 
@@ -287,24 +296,50 @@ where
     }
 }
 
+impl<T> From<Vec<T>> for Collection<T> {
+    fn from(vec: Vec<T>) -> Self {
+        Self::new_from(vec)
+    }
+}
+
 impl<T> From<Collection<T>> for Vec<T> {
-    fn from(dictionary: Collection<T>) -> Self {
+    fn from(collection: Collection<T>) -> Self {
         let v = unsafe {
             Self::from_raw_parts(
-                dictionary.items.as_ptr(),
-                dictionary.size,
-                dictionary.capacity,
+                collection.items.as_ptr(),
+                collection.size,
+                collection.capacity,
             )
         };
-        std::mem::forget(dictionary);
+        std::mem::forget(collection);
 
         v
     }
 }
 
 impl<'a, T> From<&'a Collection<T>> for &'a [T] {
-    fn from(dict: &'a Collection<T>) -> Self {
-        dict.as_slice()
+    fn from(collection: &'a Collection<T>) -> Self {
+        collection.as_slice()
+    }
+}
+
+impl<I, T> Index<I> for Collection<T>
+where
+    I: SliceIndex<[T]>,
+{
+    type Output = <I as SliceIndex<[T]>>::Output;
+
+    fn index(&self, index: I) -> &Self::Output {
+        self.deref().index(index)
+    }
+}
+
+impl<I, T> IndexMut<I> for Collection<T>
+where
+    I: SliceIndex<[T]>,
+{
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        self.deref_mut().index_mut(index)
     }
 }
 
@@ -344,5 +379,183 @@ impl<T> IntoIterator for Collection<T> {
                 _marker: PhantomData,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::api::nvim::{Array, Dictionary, NvimString, Object};
+
+    #[test]
+    fn test_new_array() {
+        let array = Array::new();
+        assert_eq!(array.len(), 0);
+        assert_eq!(array.capacity(), 0);
+    }
+
+    #[test]
+    fn test_new_dictionary() {
+        let dict = Dictionary::new();
+        assert_eq!(dict.len(), 0);
+        assert_eq!(dict.capacity(), 0);
+    }
+
+    #[test]
+    fn test_push() {
+        let mut array = Array::new();
+        assert_eq!(array.len(), 0);
+        assert_eq!(array.capacity(), 0);
+
+        array.push(Object::from(true));
+        assert_eq!(array.len(), 1);
+        assert_eq!(array.capacity(), 1);
+
+        array.push(Object::from(4.56));
+        assert_eq!(array.len(), 2);
+        assert_eq!(array.capacity(), 2);
+
+        array.push(Object::from(-4));
+        assert_eq!(array.len(), 3);
+        assert_eq!(array.capacity(), 4);
+
+        array.push(Object::from(NvimString::new_unchecked("bobo the clown")));
+        assert_eq!(array.len(), 4);
+        assert_eq!(array.capacity(), 4);
+
+        array.push(Object::new_nil());
+        assert_eq!(array.len(), 5);
+        assert_eq!(array.capacity(), 8);
+    }
+
+    #[test]
+    fn test_pop() {
+        let mut array = Array::new();
+        assert_eq!(array.len(), 0);
+        assert_eq!(array.capacity(), 0);
+
+        array.push(Object::from(true));
+        assert_eq!(array.len(), 1);
+        assert_eq!(array.capacity(), 1);
+
+        let _x = array.pop().unwrap();
+        assert_eq!(array.len(), 0);
+        assert_eq!(array.capacity(), 1);
+
+        assert!(array.pop().is_none());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_insert_out_of_bounds() {
+        let mut array = Array::new();
+        array.insert(1, Object::from(42));
+    }
+
+    #[test]
+    fn test_insert() {
+        let mut array = Array::new();
+        array.insert(0, Object::from(1));
+        assert_eq!(array[0], Object::from(1));
+
+        // Insert at the end
+        array.insert(1, Object::from(2));
+        assert_eq!(array[0], Object::from(1));
+        assert_eq!(array[1], Object::from(2));
+
+        // Insert at the beginning
+        array.insert(0, Object::from(3));
+        assert_eq!(array[0], Object::from(3));
+        assert_eq!(array[1], Object::from(1));
+        assert_eq!(array[2], Object::from(2));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_remove_out_of_bounds() {
+        let mut array = Array::new();
+        array.remove(1);
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut array = Array::new();
+
+        array.push(Object::from(1));
+        let item = array.remove(0);
+        assert_eq!(item, Object::from(1));
+
+        array.push(Object::from(2));
+        let item = array.remove(0);
+        assert_eq!(item, Object::from(2));
+
+        array.push(Object::from(3));
+        array.push(Object::from(4));
+        let item = array.remove(1);
+        assert_eq!(item, Object::from(4));
+    }
+
+    #[test]
+    fn test_as_slice() {
+        let mut array = Array::new();
+        array.push(Object::new_nil());
+        array.push(Object::from(false));
+
+        let s = array.as_slice();
+        assert_eq!(s, &[Object::new_nil(), Object::from(false)]);
+    }
+
+    #[test]
+    fn test_deref() {
+        let mut array = Array::new();
+        array.push(Object::from(false));
+        array.push(Object::from(4.567));
+
+        let s = &*array;
+        assert_eq!(s, &[Object::from(false), Object::from(4.567)]);
+    }
+
+    #[test]
+    fn test_deref_mut() {
+        let mut array = Array::new();
+        array.push(Object::from(false));
+        array.push(Object::from(4.567));
+
+        let s = &mut *array;
+
+        if let Some(first) = s.first_mut() {
+            *first = Object::from(123);
+        }
+        assert_eq!(s, &[Object::from(123), Object::from(4.567)]);
+    }
+
+    #[test]
+    fn test_clone() {
+        let v = vec![
+            Object::from(true),
+            Object::from(123),
+            Object::from(4.56),
+            Object::from(NvimString::new_unchecked("meow")),
+        ];
+        let original = Array::from(v);
+        let clone = original.clone();
+        assert_eq!(original, clone);
+    }
+
+    #[test]
+    fn test_from_vec() {
+        let v = vec![Object::from(true), Object::from(123), Object::from(4.56)];
+        let array = Array::from(v);
+        assert_eq!(array[0], Object::from(true));
+        assert_eq!(array[1], Object::from(123));
+        assert_eq!(array[2], Object::from(4.56));
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let v = vec![Object::from(1u8), Object::from(2u8), Object::from(3u8)];
+        let array = Array::from(v.clone());
+
+        let new_v: Vec<_> = array.into_iter().collect();
+        assert_eq!(new_v, v);
     }
 }
