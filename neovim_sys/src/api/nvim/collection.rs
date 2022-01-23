@@ -199,7 +199,9 @@ impl<T> Collection<T> {
     #[must_use]
     #[inline]
     pub fn as_slice(&self) -> &[T] {
-        unsafe { std::slice::from_raw_parts(self.items.as_ref(), self.size) }
+        // It's important to use `as_ptr()` here instead of `as_ref()` since if the `Collection`
+        // hasn't yet been written to, `self.items` will still be dangling.
+        unsafe { std::slice::from_raw_parts(self.items.as_ptr(), self.size) }
     }
 
     /// Builds a mutable slice of all internal items.
@@ -207,6 +209,8 @@ impl<T> Collection<T> {
     #[must_use]
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
+        // It's important to use `as_ptr()` here instead of `as_ref()` since if the `Collection`
+        // hasn't yet been written to, `self.items` will still be dangling.
         unsafe { std::slice::from_raw_parts_mut(self.items.as_ptr(), self.size) }
     }
 
@@ -235,7 +239,8 @@ impl<T> Collection<T> {
         self.capacity
     }
 
-    /// A mutable pointer to the inner `items`.
+    /// A mutable pointer to the inner `items`. Note that if the `Collection` hasn't yet been
+    /// written to, this pointer may still be uninitialized (dangling).
     ///
     #[inline]
     pub fn as_mut_ptr(&mut self) -> *mut T {
