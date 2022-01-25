@@ -43,7 +43,7 @@ pub use self::{
 
 use crate::key_code::KeyCode;
 use nvim_api::{
-    api::{nvim, Integer, NvimString, Object},
+    {nvim, Integer, NvimString, Object},
     sys::api::nvim::ObjectType,
 };
 use std::convert::{Infallible, TryFrom};
@@ -70,7 +70,7 @@ pub trait NvimOption {
     /// Errors if nvim errors on the call.
     ///
     fn get_object() -> Result<Object, NvimOptionError> {
-        Ok(nvim_api::api::nvim::nvim_get_option(Self::SHORT_NAME)?)
+        Ok(nvim_api::nvim::nvim_get_option(Self::SHORT_NAME)?)
     }
 
     /// Calls `nvim_set_option()`, and handles converting the `value` param from a `Self::Value`
@@ -424,7 +424,7 @@ pub enum NvimOptionError {
     /// Can occur if an error occurred in nvim when getting/setting the option.
     ///
     #[error(transparent)]
-    ApiError(#[from] nvim_api::api::Error),
+    ApiError(#[from] nvim_api::Error),
 
     /// Shouldn't but theoretically could occur if using an integer type that's smaller than an
     /// `Integer`, and nvim returns a value outside of the capacity of that type. For example,

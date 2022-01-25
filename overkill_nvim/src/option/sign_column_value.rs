@@ -1,5 +1,5 @@
 use super::NvimOptionError;
-use nvim_api::api::{NvimString, Object};
+use nvim_api::{NvimString, Object};
 use std::num::NonZeroU8;
 
 /// Represents an option value for `'signcolumn'`.

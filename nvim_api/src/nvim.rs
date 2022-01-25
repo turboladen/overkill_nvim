@@ -2,16 +2,15 @@
 //! This module contains function wrappers for neovim functions defined in
 //! `neovim/src/nvim/api/vim.c`.
 //!
-use super::{mode, Buffer, Error, Mode};
+use super::{Buffer, Error};
 use neovim_sys::{
     api::{
-        nvim::{self, LuaError, NvimString, Object, ObjectType},
+        nvim::{self, Dictionary, LuaError, NvimString, Object, ObjectType},
         private,
     },
     option::{self, OptionFlags, SOpt, SReq},
 };
 use std::{
-    convert::TryFrom,
     ffi::{c_void, CStr},
     mem::MaybeUninit,
     os::raw::c_char,
@@ -280,9 +279,9 @@ where
 /// * If `keys` can't be converted to a `NvimString`.
 /// * If nvim set an error to `v:errmsg`.
 ///
-pub fn nvim_feedkeys(keys: &str, mode: Mode, escape_csi: bool) -> Result<(), Error> {
+pub fn nvim_feedkeys(keys: &str, mode: &str, escape_csi: bool) -> Result<(), Error> {
     let api_keys = NvimString::new(keys)?;
-    let api_mode = NvimString::from(mode);
+    let api_mode = NvimString::new(mode)?;
 
     unsafe {
         nvim::nvim_feedkeys(api_keys, api_mode, escape_csi);
@@ -314,14 +313,11 @@ pub fn nvim_get_current_buf() -> Buffer {
     unsafe { nvim::nvim_get_current_buf() }
 }
 
-/// # Errors
+/// The `Dictionary` returned from nvim  contains both a `mode` and `blocking` key.
 ///
-/// If the `Dictionary` returned from nvim doesn't contain both a `mode` and `blocking` key.
-///
-pub fn nvim_get_mode() -> Result<mode::CurrentMode, mode::CurrentModeError> {
-    let d = unsafe { nvim::nvim_get_mode() };
-
-    mode::CurrentMode::try_from(d)
+#[must_use]
+pub fn nvim_get_mode() -> Dictionary {
+    unsafe { nvim::nvim_get_mode() }
 }
 
 //pub fn nvim_replace_termcodes(

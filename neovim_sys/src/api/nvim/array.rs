@@ -5,8 +5,9 @@
 use super::{collection::Collection, Object, ObjectType};
 use std::{
     convert::TryFrom,
+    marker::PhantomData,
     mem::{self, ManuallyDrop},
-    ptr,
+    ptr::{self, NonNull},
 };
 
 ///
@@ -25,16 +26,17 @@ impl TryFrom<Object> for Array {
                 let mut dst = ManuallyDrop::new(Vec::with_capacity(size));
 
                 unsafe {
-                    ptr::copy(data.array().items, dst.as_mut_ptr(), size);
+                    ptr::copy(data.array().items.as_ptr(), dst.as_mut_ptr(), size);
                     dst.set_len(size);
                 }
 
-                let ptr = dst.as_mut_ptr();
+                let ptr = unsafe { NonNull::new_unchecked(dst.as_mut_ptr()) };
 
                 let a = Self {
                     items: ptr,
                     size,
                     capacity: size,
+                    _marker: PhantomData,
                 };
                 mem::forget(value);
                 Ok(a)
@@ -54,20 +56,20 @@ mod tests {
     use approx::assert_ulps_eq;
 
     #[test]
-    fn test_new() {
-        let subject = Array::new([]);
+    fn test_new_from() {
+        let subject = Array::new_from([]);
         assert_eq!(subject.len(), 0);
 
-        let subject = Array::new([Object::from(4.2)]);
+        let subject = Array::new_from([Object::from(4.2)]);
         assert_eq!(subject.len(), 1);
 
-        let subject = Array::new([Object::from(4.2), Object::new_nil()]);
+        let subject = Array::new_from([Object::from(4.2), Object::new_nil()]);
         assert_eq!(subject.len(), 2);
     }
 
     #[test]
     fn test_vec_from_bool() {
-        let array = Array::new([Object::from(true), Object::from(false)]);
+        let array = Array::new_from([Object::from(true), Object::from(false)]);
         assert_eq!(array.len(), 2);
         assert_eq!(array.capacity(), 2);
 
@@ -81,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_int() {
-        let array = Array::new([
+        let array = Array::new_from([
             Object::from(i64::max_value()),
             Object::from(i64::min_value()),
         ]);
@@ -98,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_floats() {
-        let array = Array::new([Object::from(f64::MAX), Object::from(f64::MIN)]);
+        let array = Array::new_from([Object::from(f64::MAX), Object::from(f64::MIN)]);
         assert_eq!(array.len(), 2);
         assert_eq!(array.capacity(), 2);
 
@@ -112,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_vec_strings() {
-        let array = Array::new([
+        let array = Array::new_from([
             Object::from(NvimString::new_unchecked("first one")),
             Object::from(NvimString::new_unchecked("second one")),
         ]);
@@ -135,14 +137,14 @@ mod tests {
 
     #[test]
     fn test_from_vec_of_vecs() {
-        let inner1_array = Array::new([Object::from(42), Object::from(42.42)]);
+        let inner1_array = Array::new_from([Object::from(42), Object::from(42.42)]);
 
-        let inner2_array = Array::new([
+        let inner2_array = Array::new_from([
             Object::from(NvimString::new_unchecked("first one")),
             Object::from(true),
         ]);
 
-        let array = Array::new([Object::from(inner1_array), Object::from(inner2_array)]);
+        let array = Array::new_from([Object::from(inner1_array), Object::from(inner2_array)]);
         assert_eq!(array.len(), 2);
         assert_eq!(array.capacity(), 2);
 
@@ -176,7 +178,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let original_array = {
-            Array::new([
+            Array::new_from([
                 Object::from(NvimString::new_unchecked("first one")),
                 Object::from(NvimString::new_unchecked("second one")),
             ])

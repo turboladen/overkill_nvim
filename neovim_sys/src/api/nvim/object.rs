@@ -2,7 +2,10 @@
 //! This module contains types and functions for working with neovim Lua `Object`s.
 //!
 use super::{Array, Boolean, Dictionary, Float, Integer, LuaRef, NvimString};
-use std::{borrow::Cow, convert::TryFrom, fmt::Debug, mem::ManuallyDrop, num::NonZeroI64};
+use std::{
+    borrow::Cow, convert::TryFrom, fmt::Debug, marker::PhantomData, mem::ManuallyDrop,
+    num::NonZeroI64,
+};
 
 /// An error that can only happen when dealing wit `Object`s.
 ///
@@ -81,10 +84,28 @@ macro_rules! try_as_type {
     };
 }
 
+macro_rules! try_into_type {
+    ($_self:expr, $object_type_variant:ident, $field_name:ident) => {
+        try_as_type!($_self, $object_type_variant, $field_name)
+    };
+}
+
 macro_rules! try_as_ref_type {
     ($_self:expr, $object_type_variant:ident, $field_name:ident) => {
         match $_self.object_type {
             ObjectType::$object_type_variant => Ok($_self.data.$field_name()),
+            _ => Err(Error::TypeError {
+                expected: ObjectType::$object_type_variant,
+                actual: $_self.object_type,
+            }),
+        }
+    };
+}
+
+macro_rules! try_into_ref_type {
+    ($_self:expr, $object_type_variant:ident, $meth_name:ident) => {
+        match $_self.object_type {
+            ObjectType::$object_type_variant => Ok($_self.$meth_name()),
             _ => Err(Error::TypeError {
                 expected: ObjectType::$object_type_variant,
                 actual: $_self.object_type,
@@ -101,7 +122,7 @@ impl Object {
     pub fn new_nil() -> Self {
         Self {
             object_type: ObjectType::kObjectTypeNil,
-            data: ObjectData { boolean: false },
+            data: ObjectData { integer: 0 },
         }
     }
 
@@ -256,6 +277,72 @@ impl Object {
         self.data.dictionary()
     }
 
+    /// Owned/consuming version of `try_as_boolean()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Boolean`.
+    ///
+    #[inline]
+    pub fn try_into_boolean(self) -> Result<Boolean, Error> {
+        try_into_type!(self, kObjectTypeBoolean, boolean)
+    }
+
+    /// Owned/consuming version of `try_as_integer()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Integer`.
+    ///
+    #[inline]
+    pub fn try_into_integer(self) -> Result<Integer, Error> {
+        try_into_type!(self, kObjectTypeInteger, integer)
+    }
+
+    /// Owned/consuming version of `try_as_float()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Float`.
+    ///
+    #[inline]
+    pub fn try_into_float(self) -> Result<Float, Error> {
+        try_into_type!(self, kObjectTypeFloat, float)
+    }
+
+    /// Owned/consuming version of `try_as_string()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `NvimString`.
+    ///
+    #[inline]
+    pub fn try_into_string(self) -> Result<NvimString, Error> {
+        try_into_ref_type!(self, kObjectTypeString, into_string_unchecked)
+    }
+
+    /// Owned/consuming version of `try_as_array()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Array`.
+    ///
+    #[inline]
+    pub fn try_into_array(self) -> Result<Array, Error> {
+        try_into_ref_type!(self, kObjectTypeArray, into_array_unchecked)
+    }
+
+    /// Owned/consuming version of `try_as_dictionary()`.
+    ///
+    /// # Errors
+    ///
+    /// If the wrapped type is not a `Dictionary`.
+    ///
+    #[inline]
+    pub fn try_into_dictionary(self) -> Result<Dictionary, Error> {
+        try_into_ref_type!(self, kObjectTypeDictionary, into_dictionary_unchecked)
+    }
+
     /// Similar to `as_boolean_unchecked()`, where it does not check `self`'s `object_type` (thus
     /// calling this if `self`'s internal data represents another type will give unexpected
     /// results), but instead of taking a reference to `self`, this consumes `self` and returns the
@@ -325,6 +412,7 @@ impl Object {
             items: unsafe { self.data.array.items },
             size: unsafe { self.data.array.size },
             capacity: unsafe { self.data.array.capacity },
+            _marker: PhantomData,
         };
         std::mem::forget(self);
         a
@@ -343,6 +431,7 @@ impl Object {
             items: unsafe { self.data.dictionary.items },
             size: unsafe { self.data.dictionary.size },
             capacity: unsafe { self.data.array.capacity },
+            _marker: PhantomData,
         };
         std::mem::forget(self);
         d
@@ -745,83 +834,431 @@ impl ObjectData {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use approx::assert_ulps_eq;
 
-    use super::*;
+    mod try_as {
+        use super::*;
+        use crate::api::nvim::KeyValuePair;
 
-    #[test]
-    fn test_from_boolean() {
-        fn do_it(input: Boolean) {
-            let subject = Object::from(input);
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeBoolean);
-            assert_eq!(subject.as_boolean_unchecked(), input);
+        #[test]
+        fn test_try_as_nil() {
+            // nil
+            {
+                let object = Object::new_nil();
+                object.try_as_nil().unwrap();
+            }
+
+            // Not nil
+            {
+                let object = Object::from(123);
+                assert!(object.try_as_nil().is_err());
+            }
         }
 
-        do_it(true);
-        do_it(false);
-    }
+        #[test]
+        fn test_try_as_boolean() {
+            // boolean
+            {
+                let object = Object::from(true);
+                let output = object.try_as_boolean().unwrap();
+                assert!(output);
+            }
 
-    #[test]
-    fn test_from_integer() {
-        fn do_it(input: Integer) {
-            let subject = Object::from(input);
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeInteger);
-            assert_eq!(subject.as_integer_unchecked(), input);
+            // Not boolean
+            {
+                let object = Object::from(123);
+                assert!(object.try_as_boolean().is_err());
+            }
         }
 
-        do_it(0);
-        do_it(i64::min_value());
-        do_it(i64::max_value());
-    }
+        #[test]
+        fn test_try_as_integer() {
+            // integer
+            {
+                let object = Object::from(123);
+                let output = object.try_as_integer().unwrap();
+                assert_eq!(output, 123);
+            }
 
-    #[test]
-    fn test_from_float() {
-        fn do_it(input: Float) {
-            let subject = Object::from(input);
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeFloat);
-            assert_ulps_eq!(subject.as_float_unchecked(), input);
+            // Not integer
+            {
+                let object = Object::from(123.0);
+                assert!(object.try_as_integer().is_err());
+            }
         }
 
-        do_it(0.0);
-        do_it(f64::INFINITY);
-        do_it(f64::NEG_INFINITY);
-        do_it(f64::MIN);
-        do_it(f64::MAX);
+        #[test]
+        fn test_try_as_float() {
+            // float
+            {
+                let object = Object::from(2.0);
+                let output = object.try_as_float().unwrap();
+                assert_ulps_eq!(output, 2.0_f64);
+            }
 
-        let subject = Object::from(f64::NAN);
-        assert_eq!(subject.object_type, ObjectType::kObjectTypeFloat);
-        assert!(subject.as_float_unchecked().is_nan());
+            // Not float
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_float().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_as_string() {
+            // string
+            {
+                let object = Object::try_from("things").unwrap();
+                let output = object.try_as_string().unwrap();
+                assert_eq!(output, "things");
+            }
+
+            // Not string
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_string().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_as_array() {
+            // array
+            {
+                let object = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+                let output = object.try_as_array().unwrap();
+                assert_eq!(output, &Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+            }
+
+            // Not array
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_array().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_as_dictionary() {
+            // dictionary
+            {
+                let object = Object::from(Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8),
+                )]));
+                let output = object.try_as_dictionary().unwrap();
+                assert_eq!(
+                    output,
+                    &Dictionary::new_from([KeyValuePair::new(
+                        NvimString::new_unchecked("things"),
+                        Object::from(42_u8)
+                    )])
+                );
+            }
+
+            // Not dictionary
+            {
+                let object = Object::from(2);
+                assert!(object.try_as_dictionary().is_err());
+            }
+        }
     }
 
-    #[test]
-    fn test_from_string() {
-        fn do_it(input: &str) {
-            let subject = Object::from(NvimString::new(input).unwrap());
+    mod as_unchecked {
+        use super::*;
+        use crate::api::nvim::KeyValuePair;
 
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeString);
+        #[test]
+        fn test_boolean_as_boolean_unchecked() {
+            let subject = Object::from(true);
+            assert!(subject.as_boolean_unchecked());
+        }
+
+        #[test]
+        fn test_integer_as_integer_unchecked() {
+            let subject = Object::from(42_u8);
+            assert_eq!(subject.as_integer_unchecked(), 42);
+        }
+
+        #[test]
+        fn test_float_as_float_unchecked() {
+            let subject = Object::from(42.42);
+            assert_ulps_eq!(subject.as_float_unchecked(), 42.42);
+        }
+
+        #[test]
+        fn test_string_as_string_unchecked() {
+            let subject = Object::try_from("stuff").unwrap();
+            assert_eq!(subject.as_string_unchecked(), "stuff");
+        }
+
+        #[test]
+        fn test_array_as_array_unchecked() {
+            let subject = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
             assert_eq!(
-                subject.as_string_unchecked(),
-                &NvimString::new(input).unwrap()
+                subject.as_array_unchecked(),
+                &Array::new_from(vec![1.into(), 2.into(), 3.into()])
             );
         }
 
-        do_it("");
-        do_it("one \n three");
-        do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
+        #[test]
+        fn test_dictionary_as_dictionary_unchecked() {
+            let subject = Object::from(Dictionary::new_from([KeyValuePair::new(
+                NvimString::new_unchecked("things"),
+                Object::from(42_u8),
+            )]));
+
+            assert_eq!(
+                subject.as_dictionary_unchecked(),
+                &Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8)
+                )])
+            );
+        }
     }
 
-    #[test]
-    fn test_from_array() {
-        fn do_it(input: &str) {
-            let subject = Object::from(Array::new([Object::from(NvimString::new(input).unwrap())]));
-            let expected = Array::new([Object::from(NvimString::new(input).unwrap())]);
+    mod try_into {
+        use super::*;
+        use crate::api::nvim::KeyValuePair;
 
-            assert_eq!(subject.object_type, ObjectType::kObjectTypeArray);
-            assert_eq!(subject.as_array_unchecked(), &expected);
+        #[test]
+        fn test_try_into_boolean() {
+            // boolean
+            {
+                let object = Object::from(true);
+                let output = object.try_into_boolean().unwrap();
+                assert!(output);
+            }
+
+            // Not boolean
+            {
+                let object = Object::from(1.23);
+                assert!(object.try_into_boolean().is_err());
+            }
         }
 
-        do_it("");
-        do_it("one \n three");
-        do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
+        #[test]
+        fn test_try_into_integer() {
+            // integer
+            {
+                let object = Object::from(123);
+                let output = object.try_into_integer().unwrap();
+                assert_eq!(output, 123);
+            }
+
+            // Not integer
+            {
+                let object = Object::from(123.0);
+                assert!(object.try_into_integer().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_float() {
+            // float
+            {
+                let object = Object::from(2.0);
+                let output = object.try_into_float().unwrap();
+                assert_ulps_eq!(output, 2.0_f64);
+            }
+
+            // Not float
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_float().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_string() {
+            // string
+            {
+                let object = Object::try_from("things").unwrap();
+                let output = object.try_into_string().unwrap();
+                assert_eq!(&output, "things");
+            }
+
+            // Not string
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_string().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_array() {
+            // array
+            {
+                let object = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+                let output = object.try_into_array().unwrap();
+                assert_eq!(output, Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+            }
+
+            // Not array
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_array().is_err());
+            }
+        }
+
+        #[test]
+        fn test_try_into_dictionary() {
+            // dictionary
+            {
+                let object = Object::from(Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8),
+                )]));
+                let output = object.try_into_dictionary().unwrap();
+                assert_eq!(
+                    output,
+                    Dictionary::new_from([KeyValuePair::new(
+                        NvimString::new_unchecked("things"),
+                        Object::from(42_u8)
+                    )])
+                );
+            }
+
+            // Not dictionary
+            {
+                let object = Object::from(2);
+                assert!(object.try_into_dictionary().is_err());
+            }
+        }
+    }
+
+    mod into_unchecked {
+        use super::*;
+        use crate::api::nvim::KeyValuePair;
+
+        #[test]
+        fn test_boolean_into_boolean_unchecked() {
+            let subject = Object::from(true);
+            assert!(subject.into_boolean_unchecked());
+        }
+
+        #[test]
+        fn test_integer_into_integer_unchecked() {
+            let subject = Object::from(42_u8);
+            assert_eq!(subject.into_integer_unchecked(), 42);
+        }
+
+        #[test]
+        fn test_float_into_float_unchecked() {
+            let subject = Object::from(42.42);
+            assert_ulps_eq!(subject.into_float_unchecked(), 42.42);
+        }
+
+        #[test]
+        fn test_string_into_string_unchecked() {
+            let subject = Object::try_from("stuff").unwrap();
+            assert_eq!(&subject.into_string_unchecked(), "stuff");
+        }
+
+        #[test]
+        fn test_array_into_array_unchecked() {
+            let subject = Object::from(Array::new_from(vec![1.into(), 2.into(), 3.into()]));
+            assert_eq!(
+                subject.into_array_unchecked(),
+                Array::new_from(vec![1.into(), 2.into(), 3.into()])
+            );
+        }
+
+        #[test]
+        fn test_dictionary_into_dictionary_unchecked() {
+            let subject = Object::from(Dictionary::new_from([KeyValuePair::new(
+                NvimString::new_unchecked("things"),
+                Object::from(42_u8),
+            )]));
+
+            assert_eq!(
+                subject.into_dictionary_unchecked(),
+                Dictionary::new_from([KeyValuePair::new(
+                    NvimString::new_unchecked("things"),
+                    Object::from(42_u8)
+                )])
+            );
+        }
+    }
+
+    mod from {
+        use super::*;
+
+        #[test]
+        fn test_from_boolean() {
+            fn do_it(input: Boolean) {
+                let subject = Object::from(input);
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeBoolean);
+                assert_eq!(subject.as_boolean_unchecked(), input);
+            }
+
+            do_it(true);
+            do_it(false);
+        }
+
+        #[test]
+        fn test_from_integer() {
+            fn do_it(input: Integer) {
+                let subject = Object::from(input);
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeInteger);
+                assert_eq!(subject.as_integer_unchecked(), input);
+            }
+
+            do_it(0);
+            do_it(i64::min_value());
+            do_it(i64::max_value());
+        }
+
+        #[test]
+        fn test_from_float() {
+            fn do_it(input: Float) {
+                let subject = Object::from(input);
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeFloat);
+                assert_ulps_eq!(subject.as_float_unchecked(), input);
+            }
+
+            do_it(0.0);
+            do_it(f64::INFINITY);
+            do_it(f64::NEG_INFINITY);
+            do_it(f64::MIN);
+            do_it(f64::MAX);
+
+            let subject = Object::from(f64::NAN);
+            assert_eq!(subject.object_type, ObjectType::kObjectTypeFloat);
+            assert!(subject.as_float_unchecked().is_nan());
+        }
+
+        #[test]
+        fn test_from_string() {
+            fn do_it(input: &str) {
+                let subject = Object::from(NvimString::new(input).unwrap());
+
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeString);
+                assert_eq!(
+                    subject.as_string_unchecked(),
+                    &NvimString::new(input).unwrap()
+                );
+            }
+
+            do_it("");
+            do_it("one \n three");
+            do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
+        }
+
+        #[test]
+        fn test_from_array() {
+            fn do_it(input: &str) {
+                let subject = Object::from(Array::new_from([Object::from(
+                    NvimString::new(input).unwrap(),
+                )]));
+                let expected = Array::new_from([Object::from(NvimString::new(input).unwrap())]);
+
+                assert_eq!(subject.object_type, ObjectType::kObjectTypeArray);
+                assert_eq!(subject.as_array_unchecked(), &expected);
+            }
+
+            do_it("");
+            do_it("one \n three");
+            do_it("this is an emoji: \u{1f32e}. Tacos are cool.");
+        }
     }
 }

@@ -2,8 +2,8 @@
 //! This module contains functionality for dealing with neovim's Lua `Dictionary` type.
 //!
 
-use super::{collection::Collection, NvimString, Object};
-use std::{borrow::Borrow, fmt};
+use super::{collection::Collection, Array, Boolean, Float, Integer, NvimString, Object};
+use std::fmt;
 
 /// Wrapper for neovim's `Dictionary` type.
 ///
@@ -16,7 +16,6 @@ impl Dictionary {
     #[inline]
     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&Object>
     where
-        NvimString: Borrow<Q>,
         Q: PartialEq<NvimString>,
     {
         self.iter().find_map(|kv| {
@@ -26,6 +25,86 @@ impl Dictionary {
                 None
             }
         })
+    }
+
+    /// Similar to Rust's `HashMap`/`BTreeMap::insert()`, this sets the key/value pair. If the key
+    /// already had a value, this is removed and returned. If the key didn't have a value, this returns
+    /// `None`.
+    ///
+    #[inline]
+    pub fn set<V>(&mut self, k: NvimString, v: V) -> Option<Object>
+    where
+        Object: From<V>,
+    {
+        if let Some(kv) = self.iter_mut().find(|kv| &k == kv.key()) {
+            let old = kv.value().clone();
+            kv.set_value(v);
+            return Some(old);
+        }
+
+        self.push(KeyValuePair::new(k, v));
+
+        None
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Boolean`. Only call this if
+    /// you're 100% sure the value is a `Boolean`.
+    ///
+    pub fn get_as_boolean<Q: ?Sized>(&self, k: &Q) -> Option<Boolean>
+    where
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_boolean_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Integer`. Only call this if
+    /// you're 100% sure the value is a `Integer`.
+    ///
+    pub fn get_as_integer<Q: ?Sized>(&self, k: &Q) -> Option<Integer>
+    where
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_integer_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Float`. Only call this if
+    /// you're 100% sure the value is a `Float`.
+    ///
+    pub fn get_as_float<Q: ?Sized>(&self, k: &Q) -> Option<Float>
+    where
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_float_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `NvimString`. Only call this if
+    /// you're 100% sure the value is a `NvimString`.
+    ///
+    pub fn get_as_string<Q: ?Sized>(&self, k: &Q) -> Option<&NvimString>
+    where
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_string_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Array`. Only call this if
+    /// you're 100% sure the value is a `Array`.
+    ///
+    pub fn get_as_array<Q: ?Sized>(&self, k: &Q) -> Option<&Array>
+    where
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_array_unchecked)
+    }
+
+    /// Convenience method for calling `get()` then forcing to a `Dictionary`. Only call this if
+    /// you're 100% sure the value is a `Dictionary`.
+    ///
+    pub fn get_as_dictionary<Q: ?Sized>(&self, k: &Q) -> Option<&Self>
+    where
+        Q: PartialEq<NvimString>,
+    {
+        self.get(k).map(Object::as_dictionary_unchecked)
     }
 }
 
@@ -42,8 +121,14 @@ impl KeyValuePair {
     /// Basic constructor.
     ///
     #[must_use]
-    pub const fn new(key: NvimString, value: Object) -> Self {
-        Self { key, value }
+    pub fn new<V>(key: NvimString, value: V) -> Self
+    where
+        Object: From<V>,
+    {
+        Self {
+            key,
+            value: Object::from(value),
+        }
     }
 
     /// A reference to the key.
@@ -60,6 +145,16 @@ impl KeyValuePair {
     #[must_use]
     pub const fn value(&self) -> &Object {
         &self.value
+    }
+
+    /// Sets the value.
+    ///
+    #[inline]
+    pub fn set_value<V>(&mut self, value: V)
+    where
+        Object: From<V>,
+    {
+        self.value = Object::from(value);
     }
 }
 
@@ -81,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_of_bool_values() {
-        let array = Dictionary::new([
+        let array = Dictionary::new_from([
             KeyValuePair::new(NvimString::new_unchecked("one"), Object::from(true)),
             KeyValuePair::new(NvimString::new_unchecked("two"), Object::from(false)),
         ]);
@@ -101,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_of_string_values() {
-        let array = Dictionary::new([
+        let array = Dictionary::new_from([
             KeyValuePair::new(
                 NvimString::new_unchecked("one"),
                 Object::from(NvimString::new_unchecked("first one")),
@@ -131,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_from_vec_of_vecs() {
-        let inner1_dictionary = Dictionary::new([
+        let inner1_dictionary = Dictionary::new_from([
             KeyValuePair::new(NvimString::new_unchecked("inner one one"), Object::from(42)),
             KeyValuePair::new(
                 NvimString::new_unchecked("inner one two"),
@@ -139,7 +234,7 @@ mod tests {
             ),
         ]);
 
-        let inner2_dictionary = Dictionary::new([
+        let inner2_dictionary = Dictionary::new_from([
             KeyValuePair::new(
                 NvimString::new_unchecked("inner two one"),
                 Object::from(NvimString::new_unchecked("first one")),
@@ -150,7 +245,7 @@ mod tests {
             ),
         ]);
 
-        let dictionary = Dictionary::new([
+        let dictionary = Dictionary::new_from([
             KeyValuePair::new(
                 NvimString::new_unchecked("outer 1"),
                 Object::from(inner1_dictionary),
@@ -225,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let original_dict = Dictionary::new([KeyValuePair::new(
+        let original_dict = Dictionary::new_from([KeyValuePair::new(
             NvimString::new_unchecked("the key"),
             Object::from(NvimString::new_unchecked("the value")),
         )]);
@@ -257,15 +352,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn get_existing_key_test() {
-        let original_dict = Dictionary::new([KeyValuePair::new(
-            NvimString::new_unchecked("the key"),
-            Object::from(NvimString::new_unchecked("the value")),
-        )]);
+    mod get_set {
+        use super::*;
 
-        let value = original_dict.get("the key").unwrap();
-        let string = value.as_string_unchecked();
-        assert_eq!(string.to_string_lossy(), "the value");
+        #[test]
+        fn test_get_existing_key() {
+            let original_dict = Dictionary::new_from([KeyValuePair::new(
+                NvimString::new_unchecked("the key"),
+                Object::from(NvimString::new_unchecked("the value")),
+            )]);
+
+            let value = original_dict.get("the key").unwrap();
+            let string = value.as_string_unchecked();
+            assert_eq!(string.to_string_lossy(), "the value");
+        }
+
+        #[test]
+        fn test_get_missing_key() {
+            let original_dict = Dictionary::default();
+            assert!(original_dict.get("the key").is_none());
+        }
+
+        #[test]
+        fn test_set() {
+            let mut original_dict = Dictionary::default();
+            original_dict.set(NvimString::new_unchecked("the key"), 42.42);
+            assert_eq!(original_dict.get("the key").unwrap(), &Object::from(42.42));
+        }
     }
 }

@@ -240,6 +240,13 @@ impl PartialEq<String> for str {
     }
 }
 
+impl PartialEq<str> for String {
+    #[inline]
+    fn eq(&self, other: &str) -> bool {
+        other == self
+    }
+}
+
 impl Borrow<str> for String {
     #[inline]
     fn borrow(&self) -> &str {

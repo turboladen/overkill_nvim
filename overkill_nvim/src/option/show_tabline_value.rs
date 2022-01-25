@@ -1,5 +1,5 @@
 use super::NvimOptionError;
-use nvim_api::{api::Integer, sys::api::nvim::Object};
+use nvim_api::{Integer, Object};
 use std::convert::TryFrom;
 
 /// Represents an option value for `'showtabline'`.

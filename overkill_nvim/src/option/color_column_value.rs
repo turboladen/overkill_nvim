@@ -1,5 +1,5 @@
 use super::{NvimOptionError, StringFlags};
-use nvim_api::{api::NvimString, sys::api::nvim::Object};
+use nvim_api::{Object, NvimString};
 use std::{convert::TryFrom, num::NonZeroI64};
 
 /// Allows for setting `'colorcolumn'` in a typed manner. When used with `StringFlags`, you can set

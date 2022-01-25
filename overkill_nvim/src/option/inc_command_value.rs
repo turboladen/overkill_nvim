@@ -1,5 +1,5 @@
 use super::NvimOptionError;
-use nvim_api::{api::Object, sys::api::nvim::NvimString};
+use nvim_api::{Object, NvimString};
 use std::{borrow::Cow, convert::TryFrom};
 
 /// Represents an option value for `'inccommand'`.

@@ -8,6 +8,10 @@ ffi.cdef [[
     bool test_nvim_feedkeys();
     bool test_nvim_get_mode();
     bool test_nvim_set_global_option();
+    bool test_set_map();
+    bool test_set_noremap();
+    bool test_set_buf_map();
+    bool test_set_buf_noremap();
   ]]
 
 local suffix = ffi.os == "OSX" and ".dylib" or ".so"
@@ -58,6 +62,30 @@ describe(
             "tests nvim_set_global_option()",
             function()
                 assert.True(lib.test_nvim_set_global_option())
+            end
+        )
+        it(
+            "tests api::keymap::set_map()",
+            function()
+                assert.True(lib.test_set_map())
+            end
+        )
+        it(
+            "tests api::keymap::set_noremap()",
+            function()
+                assert.True(lib.test_set_noremap())
+            end
+        )
+        it(
+            "tests api::keymap::set_buf_map()",
+            function()
+                assert.True(lib.test_set_buf_map())
+            end
+        )
+        it(
+            "tests api::keymap::set_buf_noremap()",
+            function()
+                assert.True(lib.test_set_buf_noremap())
             end
         )
     end
