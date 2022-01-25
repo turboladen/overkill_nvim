@@ -1,7 +1,7 @@
 //! Defines a type for each of the seven map-modes (see `:help map-modes`) and their supported
 //! permutations.
 //!
-use nvim_api::{sys::getchar, NvimString};
+use nvim_api::{sys::vim, NvimString};
 
 /// Represents any possible neovim "mode".
 ///
@@ -73,10 +73,16 @@ impl MapMode {
     }
 }
 
+impl Default for MapMode {
+    fn default() -> Self {
+        MapMode::NormalVisualSelectOperatorPending
+    }
+}
+
 impl From<&str> for MapMode {
     fn from(mode: &str) -> Self {
         match mode {
-            "" => Self::NormalVisualSelectOperatorPending,
+            "" | " " => Self::NormalVisualSelectOperatorPending,
             "n" => Self::Normal,
             "v" => Self::VisualSelect,
             "x" => Self::Visual,
@@ -88,7 +94,7 @@ impl From<&str> for MapMode {
             "c" => Self::CommandLine,
             "t" => Self::TerminalJob,
             m => {
-                eprintln!("unknown mode {}, falling back to Mode::Normal", m);
+                eprintln!("unknown mode '{}', falling back to Mode::Normal", m);
                 Self::Normal
             }
         }
@@ -108,7 +114,7 @@ impl From<MapMode> for NvimString {
     }
 }
 
-impl From<MapMode> for getchar::Mode {
+impl From<MapMode> for vim::State {
     fn from(api_mode: MapMode) -> Self {
         match api_mode {
             MapMode::Normal => Self::Normal,

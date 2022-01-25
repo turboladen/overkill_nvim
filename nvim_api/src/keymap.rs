@@ -5,7 +5,8 @@ use neovim_sys::{
         nvim::{object, Dictionary, LuaError, NvimString},
         private,
     },
-    getchar::{self, MapArguments, MapType, UnexpectedMode},
+    getchar::{self, MapArguments, MapType},
+    vim::{State, UnexpectedState},
 };
 use std::{ffi::CString, os::raw::c_int, str::FromStr};
 
@@ -33,6 +34,15 @@ macro_rules! def_bool_meth {
     };
 }
 
+macro_rules! def_is_meth {
+    ($meth:ident, $field:ident) => {
+        #[must_use]
+        pub const fn $meth(&self) -> bool {
+            self.$field
+        }
+    };
+}
+
 impl SpecialArguments {
     def_bool_meth!(buffer);
     def_bool_meth!(expr);
@@ -40,6 +50,17 @@ impl SpecialArguments {
     def_bool_meth!(script);
     def_bool_meth!(silent);
     def_bool_meth!(unique);
+
+    def_is_meth!(is_buffer, buffer);
+    def_is_meth!(is_expr, expr);
+    def_is_meth!(is_nowait, nowait);
+    def_is_meth!(is_script, script);
+    def_is_meth!(is_silent, silent);
+    def_is_meth!(is_unique, unique);
+
+    pub fn any_set(&self) -> bool {
+        self.buffer || self.expr || self.nowait || self.script || self.silent || self.unique
+    }
 }
 
 impl fmt::Display for SpecialArguments {
@@ -98,7 +119,7 @@ pub enum Error {
     ObjectError(#[from] object::Error),
 
     #[error(transparent)]
-    UnexpectedMode(#[from] UnexpectedMode),
+    UnexpectedMode(#[from] UnexpectedState),
 }
 
 /// Defines a mapping for `mode` that maps `lhs` to `rhs`.
@@ -144,10 +165,15 @@ fn map(
     rhs: &str,
     special_arguments: Option<SpecialArguments>,
 ) -> Result<(), Error> {
-    let string_arg = special_arguments.map_or_else(
-        || format!("{} {}", lhs, rhs),
-        |o| format!("{} {} {}", o, lhs, rhs),
-    );
+    let string_arg = match special_arguments {
+        Some(args) if args.any_set() => {
+            format!("{} {} {}", args, lhs, rhs)
+        }
+        _ => {
+            format!("{} {}", lhs, rhs)
+        }
+    };
+
     let cstring = CString::new(string_arg)?;
     let mut arg = cstring.into_bytes_with_nul();
 
@@ -155,7 +181,7 @@ fn map(
         getchar::do_map(
             map_type as c_int,
             arg.as_mut_ptr(),
-            getchar::Mode::from_str(mode)? as c_int,
+            State::from_str(mode)? as c_int,
             false,
         )
     };
@@ -257,7 +283,7 @@ fn buf_map(
         getchar::buf_do_map(
             map_type as c_int,
             &map_args,
-            getchar::Mode::from_str(mode)? as c_int,
+            State::from_str(mode)? as c_int,
             is_unmap,
             buf,
         )

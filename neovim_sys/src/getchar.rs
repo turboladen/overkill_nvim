@@ -1,7 +1,7 @@
 //! Types and functions related to those in nvim/getchar.c.
 //!
 use crate::{buffer_defs::buf_T, types::CharU};
-use std::{os::raw::c_int, str::FromStr};
+use std::{os::raw::c_int};
 
 /// Flag, specifically for `do_map()` and `buf_do_map()`.
 ///
@@ -15,97 +15,6 @@ pub enum MapType {
 
     /// :noremap
     NoRemap = 2,
-}
-
-/// The mode for which the key-mapping should be defined.
-///
-/// See `nvim/vim.h`.
-///
-#[derive(Debug, Clone, Copy)]
-pub enum Mode {
-    /// Normal mode; command expected. `:nmap`
-    Normal = 0x01,
-
-    /// :xmap
-    Visual = 0x02,
-
-    /// Normal mode, operator is pending. `:omap`
-    OpPending = 0x04,
-
-    /// Editing command line. `:cmap`
-    CmdLine = 0x08,
-
-    /// :imap
-    Insert = 0x10,
-
-    /// :lmap
-    LangMap = 0x20,
-
-    /// Replace mode
-    Replace = 0x40 + 0x10, // ReplaceFlag + Insert
-
-    /// Virtual-replace
-    VReplace = 0x80 + 0x40 + 0x10, // VReplaceFlag + ReplaceFlag + Insert
-
-    /// Lang-replace
-    LReplace = 0x40 + 0x20, // ReplaceFlag + LangMap
-
-    /// :vmap
-    VisualSelectMode = 0x02 + 0x1000, // Visual + SelectMode
-
-    /// :map
-    NormalVisualSelectOpPending = 0x01 + 0x02 + 0x1000 + 0x04, // Visual + SelectMode
-
-    /// :map!
-    InsertCmdLine = 0x10 + 0x08,
-
-    /// Abbreviation instead of mapping
-    Abbrev = 0x500,
-
-    /// Executing an external command.
-    ExternCmd = 0x600,
-
-    /// Only for mappings; `smap`.
-    SelectMode = 0x1000,
-
-    /// :tmap
-    TermFocus = 0x2000,
-}
-
-/// Error for if we get a mode string that we don't yet handle properly. When this library is
-/// mature, this coult/should probably go away, but for now it will serve as a flag to implement
-/// things that haven't yet been done.
-///
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("Unknown mode: {mode}")]
-pub struct UnexpectedMode {
-    mode: String,
-}
-
-impl FromStr for Mode {
-    type Err = UnexpectedMode;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "n" => Ok(Self::Normal),
-            "x" => Ok(Self::Visual),
-            "o" => Ok(Self::OpPending),
-            "c" => Ok(Self::CmdLine),
-            "i" => Ok(Self::Insert),
-            "l" => Ok(Self::LangMap),
-            "R" => Ok(Self::Replace),
-            "gR" => Ok(Self::VReplace),
-            // "?" => Ok(Mode::LReplace),
-            "v" => Ok(Self::VisualSelectMode),
-            // "?" => Ok(Mode::Abbrev),
-            "!" => Ok(Self::ExternCmd),
-            "s" => Ok(Self::SelectMode),
-            "t" => Ok(Self::TermFocus),
-            m => Err(UnexpectedMode {
-                mode: m.to_string(),
-            }),
-        }
-    }
 }
 
 /// Some vim map-related calls require the mapping arguments (that were provided via a string) be
