@@ -23,6 +23,7 @@
 #![allow(non_camel_case_types)]
 
 pub mod api;
+pub mod autocmd;
 pub mod buffer_defs;
 pub mod getchar;
 pub mod globals;

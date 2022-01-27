@@ -8,7 +8,9 @@ use std::borrow::Borrow;
 fn _test_nvim_setget_var(var: &str, value: Object, expected_object_variant: &RustObject) {
     crate::nvim::nvim_set_var(var, value).unwrap();
 
-    let t = crate::nvim::nvim_get_var(var).map(RustObject::from).unwrap();
+    let t = crate::nvim::nvim_get_var(var)
+        .map(RustObject::from)
+        .unwrap();
 
     assert_eq!(
         t, *expected_object_variant,
@@ -301,4 +303,15 @@ fn test_set_buf_noremap() {
         mapping.get("rhs").unwrap().try_as_string().unwrap(),
         &NvimString::new_unchecked("<Cmd>echo \"tacos\"")
     );
+}
+
+#[nvim_test]
+fn test_augroup() {
+    crate::autocmd::augroup("Overkill").unwrap();
+    crate::autocmd::augroup("END").unwrap();
+    assert!(crate::autocmd::augroup_defined("Overkill").unwrap());
+    assert!(!crate::autocmd::augroup_defined("blarghOverkill").unwrap());
+
+    crate::autocmd::remove_augroup("Overkill").unwrap();
+    assert!(!crate::autocmd::augroup_defined("Overkill").unwrap());
 }

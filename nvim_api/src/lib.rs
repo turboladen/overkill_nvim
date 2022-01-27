@@ -20,11 +20,10 @@
     unused_qualifications
 )]
 
-pub use neovim_sys as sys;
-
 #[cfg(feature = "lua_test")]
 pub mod lua_test;
 
+pub mod autocmd;
 pub mod buffer;
 pub mod keymap;
 pub mod nvim;
@@ -33,6 +32,7 @@ pub(crate) mod error;
 pub(crate) mod rust_object;
 
 pub use self::{error::Error, rust_object::RustObject};
+pub use neovim_sys as sys;
 pub use neovim_sys::api::{
     buffer::Buffer,
     nvim::{Array, Boolean, Dictionary, Float, Integer, LuaRef, NvimString, Object},

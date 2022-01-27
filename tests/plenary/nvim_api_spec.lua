@@ -5,13 +5,17 @@ ffi.cdef [[
     bool test_nvim_set_vvar();
     bool test_nvim_buf_set_var();
     bool test_nvim_get_current_buf();
+
     bool test_nvim_feedkeys();
     bool test_nvim_get_mode();
     bool test_nvim_set_global_option();
+
     bool test_set_map();
     bool test_set_noremap();
     bool test_set_buf_map();
     bool test_set_buf_noremap();
+
+    bool test_augroup();
   ]]
 
 local suffix = ffi.os == "OSX" and ".dylib" or ".so"
@@ -86,6 +90,12 @@ describe(
             "tests api::keymap::set_buf_noremap()",
             function()
                 assert.True(lib.test_set_buf_noremap())
+            end
+        )
+        it(
+            "tests autocmd::augroup()",
+            function()
+                assert.True(lib.test_augroup())
             end
         )
     end
