@@ -309,9 +309,110 @@ fn test_set_buf_noremap() {
 fn test_augroup() {
     crate::autocmd::augroup("Overkill").unwrap();
     crate::autocmd::augroup("END").unwrap();
-    assert!(crate::autocmd::augroup_defined("Overkill").unwrap());
-    assert!(!crate::autocmd::augroup_defined("blarghOverkill").unwrap());
+    assert!(crate::autocmd::augroup_exists("Overkill").unwrap());
+    assert!(!crate::autocmd::augroup_exists("blarghOverkill").unwrap());
 
     crate::autocmd::remove_augroup("Overkill").unwrap();
-    assert!(!crate::autocmd::augroup_defined("Overkill").unwrap());
+    assert!(!crate::autocmd::augroup_exists("Overkill").unwrap());
+}
+
+#[nvim_test]
+fn test_autocmd() {
+    // Undefined event or group shouldn't exist
+    {
+        assert!(!crate::autocmd::autocmd_exists("NotAnEventOrGroup").unwrap());
+    }
+
+    // Ungrouped, built-in events...
+    {
+        crate::autocmd::autocmd("FileChangedShell *.meow,*.bobo echo hi").unwrap();
+        assert!(crate::autocmd::autocmd_exists("FileChangedShell").unwrap());
+        assert!(crate::autocmd::autocmd_exists("FileChangedShell *.meow").unwrap());
+        assert!(crate::autocmd::autocmd_exists("FileChangedShell *.bobo").unwrap());
+        assert!(crate::autocmd::autocmd_exists("FileChangedShell *.meow,*.bobo").unwrap());
+    }
+
+    // Ungrouped, user-defined events...
+    {
+        crate::autocmd::autocmd("User OverkillThing echo hi").unwrap();
+
+        // Any ungrouped User event will return true
+        assert!(crate::autocmd::autocmd_exists("User OverkillThing").unwrap());
+
+        // ...but one with a group will fail
+        assert!(!crate::autocmd::autocmd_exists("SomeGroup User NotOverkillThing").unwrap());
+    }
+
+    // Grouped, built-in events
+    {
+        crate::autocmd::augroup("OverkillBuiltIn").unwrap();
+        crate::autocmd::autocmd("FileChangedShell *.meow,*.bobo echo hi").unwrap();
+        crate::autocmd::augroup("END").unwrap();
+
+        assert!(crate::autocmd::autocmd_exists("OverkillBuiltIn#FileChangedShell#*.meow").unwrap());
+        assert!(crate::autocmd::autocmd_exists("OverkillBuiltIn#FileChangedShell").unwrap());
+        assert!(crate::autocmd::autocmd_exists("OverkillBuiltIn").unwrap());
+        assert!(crate::autocmd::autocmd_exists("FileChangedShell#*.bobo").unwrap());
+        assert!(crate::autocmd::autocmd_exists("FileChangedShell").unwrap());
+
+        assert!(!crate::autocmd::autocmd_exists("OverkillBuiltIn#FileChangedShell#*.txt").unwrap());
+        assert!(!crate::autocmd::autocmd_exists("FileChangedShell#*.txt").unwrap());
+    }
+
+    // Grouped, user-defined events
+    {
+        crate::autocmd::augroup("OverkillUserDef").unwrap();
+        crate::autocmd::autocmd("User OverkillThing echo hi").unwrap();
+        crate::autocmd::augroup("END").unwrap();
+
+        assert!(crate::autocmd::autocmd_exists("OverkillUserDef#User OverkillThing").unwrap());
+        assert!(crate::autocmd::autocmd_exists("OverkillUserDef").unwrap());
+        assert!(crate::autocmd::autocmd_exists("User OverkillThing").unwrap());
+    }
+}
+
+#[nvim_test]
+fn test_force_autocmd() {
+    // Ungrouped, built-in events...
+    {
+        crate::autocmd::autocmd("UILeave *.meow echo hi").unwrap();
+        crate::autocmd::force_autocmd("UILeave *.meow echo bye").unwrap();
+
+        assert!(crate::autocmd::autocmd_exists("UILeave").unwrap());
+        assert!(crate::autocmd::autocmd_exists("UILeave *.meow").unwrap());
+    }
+
+    // Ungrouped, user-defined events...
+    {
+        crate::autocmd::autocmd("User OverkillThing echo hi").unwrap();
+        crate::autocmd::force_autocmd("User OverkillThing echo bye").unwrap();
+
+        assert!(crate::autocmd::autocmd_exists("User OverkillThing").unwrap());
+    }
+
+    // Grouped, built-in events
+    {
+        crate::autocmd::augroup("OverkillBuiltIn").unwrap();
+        crate::autocmd::autocmd("UILeave *.meow echo hi").unwrap();
+        crate::autocmd::augroup("END").unwrap();
+
+        crate::autocmd::augroup("OverkillBuiltIn").unwrap();
+        crate::autocmd::autocmd("UILeave *.meow echo bye").unwrap();
+        crate::autocmd::augroup("END").unwrap();
+
+        assert!(crate::autocmd::autocmd_exists("OverkillBuiltIn#UILeave#*.meow").unwrap());
+    }
+
+    // Grouped, user-defined events
+    {
+        crate::autocmd::augroup("OverkillUserDef").unwrap();
+        crate::autocmd::autocmd("User OverkillThing echo hi").unwrap();
+        crate::autocmd::augroup("END").unwrap();
+
+        crate::autocmd::augroup("OverkillUserDef").unwrap();
+        crate::autocmd::force_autocmd("User OverkillThing echo bye").unwrap();
+        crate::autocmd::augroup("END").unwrap();
+
+        assert!(crate::autocmd::autocmd_exists("OverkillUserDef#User OverkillThing").unwrap());
+    }
 }

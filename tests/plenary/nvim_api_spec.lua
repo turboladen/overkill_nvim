@@ -16,6 +16,8 @@ ffi.cdef [[
     bool test_set_buf_noremap();
 
     bool test_augroup();
+    bool test_autocmd();
+    bool test_force_autocmd();
   ]]
 
 local suffix = ffi.os == "OSX" and ".dylib" or ".so"
@@ -96,6 +98,18 @@ describe(
             "tests autocmd::augroup()",
             function()
                 assert.True(lib.test_augroup())
+            end
+        )
+        it(
+            "tests autocmd::autocmd()",
+            function()
+                assert.True(lib.test_autocmd())
+            end
+        )
+        it(
+            "tests autocmd::force_autocmd()",
+            function()
+                assert.True(lib.test_force_autocmd())
             end
         )
     end
