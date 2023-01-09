@@ -1,2 +1,8 @@
 [workspace]
-members = ["neovim_sys", "nvim_api", "overkill_nvim", "nvim_api_test"]
+members = [
+  "neovim_sys",
+  "nvim_api",
+  "overkill_nvim",
+  "nvim_api_test",
+  "nvim_theemin",
+]
