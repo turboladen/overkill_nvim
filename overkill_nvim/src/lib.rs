@@ -11,7 +11,7 @@
     clippy::pedantic,
     future_incompatible,
     missing_copy_implementations,
-    missing_docs,
+    // missing_docs,
     nonstandard_style,
     rust_2018_idioms,
     trivial_casts,
@@ -20,6 +20,7 @@
     unused_qualifications
 )]
 
+pub mod autocmd;
 pub mod key_code;
 pub mod mapping;
 // pub mod mode;

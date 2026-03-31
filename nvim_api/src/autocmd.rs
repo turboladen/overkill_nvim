@@ -1,7 +1,12 @@
+use neovim_sys::api::nvim::NvimString;
 use std::ffi::{CString, NulError};
 
-use neovim_sys::api::nvim::NvimString;
-
+/// See `:h augroup`.
+///
+/// Handles:
+///
+/// - `:aug[group] {name}`
+///
 pub fn augroup(name: &str) -> Result<(), NulError> {
     let cstring = CString::new(name)?;
     let api_name = cstring.into_bytes_with_nul();
@@ -11,6 +16,12 @@ pub fn augroup(name: &str) -> Result<(), NulError> {
     Ok(())
 }
 
+/// See `:h augroup-delete`.
+///
+/// Handles:
+///
+/// - `:aug[group]! {name}`
+///
 pub fn remove_augroup(name: &str) -> Result<(), NulError> {
     let cstring = CString::new(name)?;
     let api_name = cstring.into_bytes_with_nul();
@@ -29,6 +40,13 @@ pub fn augroup_exists(name: &str) -> Result<bool, NulError> {
     Ok(result)
 }
 
+/// See `:h autocmd-define`, `:h autocmd-buflocal`.
+///
+/// Handles:
+///
+/// - `:au[tocmd] [group] {event} {pat} [++once] [++nested] {cmd}`
+/// - `:au[tocmd] [group] {event} {pat} [++once] [++nested] <buffer> {cmd}`
+///
 pub fn autocmd(name: &str) -> Result<(), NulError> {
     let cstring = CString::new(name)?;
     let api_name = cstring.into_bytes_with_nul();
@@ -38,7 +56,17 @@ pub fn autocmd(name: &str) -> Result<(), NulError> {
     Ok(())
 }
 
-pub fn force_autocmd(name: &str) -> Result<(), NulError> {
+/// See `:h autocmd-remove`.
+///
+/// Handles:
+///
+/// - `:au[tocmd]! [group] {event} {pat} [++once] [++nested] {cmd}`
+/// - `:au[tocmd]! [group] {event} {pat}`
+/// - `:au[tocmd]! [group] * {pat}`
+/// - `:au[tocmd]! [group] {event}`
+/// - `:au[tocmd]! [group]`
+///
+pub fn remove_autocmd(name: &str) -> Result<(), NulError> {
     let cstring = CString::new(name)?;
     let api_name = cstring.into_bytes_with_nul();
 

@@ -376,7 +376,7 @@ fn test_force_autocmd() {
     // Ungrouped, built-in events...
     {
         crate::autocmd::autocmd("UILeave *.meow echo hi").unwrap();
-        crate::autocmd::force_autocmd("UILeave *.meow echo bye").unwrap();
+        crate::autocmd::remove_autocmd("UILeave *.meow echo bye").unwrap();
 
         assert!(crate::autocmd::autocmd_exists("UILeave").unwrap());
         assert!(crate::autocmd::autocmd_exists("UILeave *.meow").unwrap());
@@ -385,7 +385,7 @@ fn test_force_autocmd() {
     // Ungrouped, user-defined events...
     {
         crate::autocmd::autocmd("User OverkillThing echo hi").unwrap();
-        crate::autocmd::force_autocmd("User OverkillThing echo bye").unwrap();
+        crate::autocmd::remove_autocmd("User OverkillThing echo bye").unwrap();
 
         assert!(crate::autocmd::autocmd_exists("User OverkillThing").unwrap());
     }
@@ -410,7 +410,7 @@ fn test_force_autocmd() {
         crate::autocmd::augroup("END").unwrap();
 
         crate::autocmd::augroup("OverkillUserDef").unwrap();
-        crate::autocmd::force_autocmd("User OverkillThing echo bye").unwrap();
+        crate::autocmd::remove_autocmd("User OverkillThing echo bye").unwrap();
         crate::autocmd::augroup("END").unwrap();
 
         assert!(crate::autocmd::autocmd_exists("OverkillUserDef#User OverkillThing").unwrap());
